@@ -15,8 +15,12 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import net.minecraft.block.Blocks;
+import net.minecraft.state.StateManager;
+import net.minecraft.state.property.Property;
+import net.minecraft.state.property.Properties;
 
 public class VoidBloomBlock extends PlantBlock {
+    public static final Property<Direction> FACING = Properties.FACING;
     public static final MapCodec<VoidBloomBlock> CODEC = createCodec(VoidBloomBlock::new);
 
     public VoidBloomBlock(Settings settings) {
@@ -26,11 +30,22 @@ public class VoidBloomBlock extends PlantBlock {
             .sounds(BlockSoundGroup.GRASS)
             .strength(0.0f)
             .ticksRandomly()
+            .offset(Block.OffsetType.NONE)
         );
+        this.setDefaultState(this.stateManager.getDefaultState().with(FACING, Direction.UP));
     }
 
     @Override
     public MapCodec<? extends PlantBlock> getCodec() { return CODEC; }
+
+    @Override
+    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    public Block.OffsetType getOffsetType() {
+        return Block.OffsetType.NONE; // disable random XZ offset for consistent placement
+    }
 
     @Override
     protected boolean canPlantOnTop(BlockState floor, BlockView world, BlockPos pos) {
