@@ -15,22 +15,31 @@ import net.minecraft.world.World;
 public final class VoidBloomChorusGrowthFeature {
     private VoidBloomChorusGrowthFeature() {}
 
-    /** 75% chance to place a void bloom adjacent to a mature chorus flower/plant */
+    /** 75% chance to place a void bloom adjacent to a fully mature chorus flower bud (not stem) */
     public static boolean tryGrow(World world, BlockPos chorusPos, Random random) {
         if (random.nextFloat() > 0.75f) return false;
 
-        // Check if the chorus is fully matured (chorus flower age 5) or a solid chorus plant block
+        // Only target chorus flower blocks (the buds), not chorus plant blocks (the stems)
         BlockState state = world.getBlockState(chorusPos);
-        boolean mature = state.isOf(Blocks.CHORUS_PLANT) ||
-            (state.isOf(Blocks.CHORUS_FLOWER) && state.get(net.minecraft.state.property.Properties.AGE_5) >= 5);
-        if (!mature) return false;
+        if (!state.isOf(Blocks.CHORUS_FLOWER)) return false;
+        
+        // Check if the chorus flower is fully matured (age 5, purple color)
+        int age = state.get(net.minecraft.state.property.Properties.AGE_5);
+        if (age < 5) return false;
 
-        Direction dir = Direction.random(random);
-        BlockPos target = chorusPos.offset(dir);
-        if (!world.getBlockState(target).isAir()) return false;
-
-        world.setBlockState(target, ModBlocks.VOID_BLOOM.getDefaultState(), 3);
-        return true;
+        // Try all 6 directions to find a valid spot
+        Direction[] directions = Direction.values();
+        for (int i = 0; i < 3; i++) { // Try up to 3 random directions
+            Direction dir = directions[random.nextInt(directions.length)];
+            BlockPos target = chorusPos.offset(dir);
+            
+            if (world.getBlockState(target).isAir()) {
+                world.setBlockState(target, ModBlocks.VOID_BLOOM.getDefaultState(), 3);
+                return true;
+            }
+        }
+        
+        return false;
     }
 }
 
