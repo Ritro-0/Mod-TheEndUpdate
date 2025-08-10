@@ -15,17 +15,17 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.state.property.Properties;
 
-public class VoidBloomBlock extends Block {
-    public static final Property<Direction> FACING = Properties.FACING;
+public class VoidBloomBlock extends net.minecraft.block.PlantBlock {
     public static final MapCodec<VoidBloomBlock> CODEC = createCodec(VoidBloomBlock::new);
 
     public VoidBloomBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState().with(FACING, Direction.UP));
     }
 
     @Override
-    public MapCodec<? extends Block> getCodec() { return CODEC; }
+    public MapCodec<? extends net.minecraft.block.PlantBlock> getCodec() { 
+        return CODEC; 
+    }
 
     @Override
     public BlockRenderType getRenderType(BlockState state) {
@@ -37,10 +37,7 @@ public class VoidBloomBlock extends Block {
         return 1.0f; // Full brightness for transparent blocks
     }
 
-    @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
+
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {

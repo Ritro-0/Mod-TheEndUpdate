@@ -34,11 +34,9 @@ public final class VoidBloomChorusGrowthFeature {
             BlockPos target = chorusPos.offset(dir);
             
             if (world.getBlockState(target).isAir()) {
-                // Set the FACING to point AWAY from the chorus flower bud (so bottom faces the bud)
-                Direction facingDirection = dir; // Use dir instead of dir.getOpposite() to flip orientation
-                com.theendupdate.TemplateMod.LOGGER.info("Placing Void Bloom at {} facing {} (bottom toward chorus bud at {})", target, facingDirection, chorusPos);
-                world.setBlockState(target, ModBlocks.VOID_BLOOM.getDefaultState().with(
-                    com.theendupdate.block.VoidBloomBlock.FACING, facingDirection), 3);
+                            // Place void bloom without rotation (simplified like BiomesOPlenty)
+            com.theendupdate.TemplateMod.LOGGER.info("Placing Void Bloom at {} (next to chorus bud at {})", target, chorusPos);
+            world.setBlockState(target, ModBlocks.VOID_BLOOM.getDefaultState(), 3);
                 return true;
             }
         }

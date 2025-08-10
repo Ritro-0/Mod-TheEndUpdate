@@ -38,12 +38,8 @@ public final class ModBlocks {
         "void_bloom",
         key -> new com.theendupdate.block.VoidBloomBlock(
             AbstractBlock.Settings
-                .create()
-                .mapColor(MapColor.DARK_GREEN)
-                .noCollision()
-                .breakInstantly()
-                .sounds(BlockSoundGroup.GRASS)
-                .nonOpaque()
+                .copy(Blocks.POPPY)
+                .offset(AbstractBlock.OffsetType.NONE)
                 .registryKey(key)
         )
     );
