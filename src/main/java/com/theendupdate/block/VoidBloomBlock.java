@@ -14,6 +14,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.block.Blocks;
 
 public class VoidBloomBlock extends PlantBlock {
     public static final MapCodec<VoidBloomBlock> CODEC = createCodec(VoidBloomBlock::new);
@@ -33,14 +34,26 @@ public class VoidBloomBlock extends PlantBlock {
 
     @Override
     protected boolean canPlantOnTop(BlockState floor, BlockView world, BlockPos pos) {
-        // Require a solid block for support
+        // Allow normal ground support
         return floor.isSolidBlock(world, pos);
     }
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
+        // Valid if sitting on a solid block below
         BlockPos below = pos.down();
-        return world.getBlockState(below).isSolidBlock(world, below);
+        if (world.getBlockState(below).isSolidBlock(world, below)) {
+            return true;
+        }
+        // Also valid if attached adjacent to a chorus flower (bud)
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = pos.offset(direction);
+            BlockState adjacentState = world.getBlockState(adjacentPos);
+            if (adjacentState.isOf(Blocks.CHORUS_FLOWER)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Removed problematic override - block support will be handled by randomTick
