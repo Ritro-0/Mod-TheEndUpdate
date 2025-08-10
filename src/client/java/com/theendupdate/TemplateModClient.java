@@ -5,7 +5,7 @@ import net.fabricmc.api.ClientModInitializer;
 public class TemplateModClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
-        // Client initialization
+        // API compatibility issues in 1.21.8 - using block-level override instead
     }
 }
 
