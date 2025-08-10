@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "theendupdate:void_bloom"
+    }
+  ],
+  "result": {
+    "item": "theendupdate:void_sap",
+    "count": 1
+  }
+}
