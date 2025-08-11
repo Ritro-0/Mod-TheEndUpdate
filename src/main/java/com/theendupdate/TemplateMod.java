@@ -38,6 +38,24 @@ public class TemplateMod implements ModInitializer {
                     }
                 }
                 LOGGER.info("Total '{}' recipes loaded: {}", MOD_ID, count);
+
+                // Debug: verify ethereal_planks is inside #minecraft:planks (items) at runtime
+                var itemRegistry = server.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.ITEM);
+                var planksTag = net.minecraft.registry.tag.ItemTags.PLANKS;
+                var nonFlammable = net.minecraft.registry.tag.ItemTags.NON_FLAMMABLE_WOOD;
+
+                var etherealPlanksItem = com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS.asItem();
+                var etherealId = net.minecraft.registry.Registries.ITEM.getId(etherealPlanksItem);
+                LOGGER.info("Item ID for ethereal_planks: {}", etherealId);
+                var etherealPlanksEntry = itemRegistry.getEntry(etherealId);
+                if (etherealPlanksEntry.isPresent()) {
+                    boolean inPlanks = etherealPlanksEntry.get().isIn(planksTag);
+                    boolean inNonFlam = etherealPlanksEntry.get().isIn(nonFlammable);
+                    LOGGER.info("Tag check: in #minecraft:planks = {} | #minecraft:non_flammable_wood = {}",
+                        inPlanks, inNonFlam);
+                } else {
+                    LOGGER.warn("Tag check: could not resolve registry entry for theendupdate:ethereal_planks");
+                }
             } catch (Throwable t) {
                 LOGGER.error("Error while logging recipes for namespace '{}'", MOD_ID, t);
             }
@@ -73,6 +91,24 @@ public class TemplateMod implements ModInitializer {
                 ctx.getSource().sendFeedback(() -> Text.literal("has " + id + ": " + present), false);
                 return present ? 1 : 0;
             })));
+
+            // Dump the contents of #minecraft:planks (items)
+            dispatcher.register(literal("teu_dump_planks_tag").executes(ctx -> {
+                var server = ctx.getSource().getServer();
+                var itemRegistry2 = server.getRegistryManager().getOrThrow(RegistryKeys.ITEM);
+                var planksTag = net.minecraft.registry.tag.ItemTags.PLANKS;
+                int count2 = 0;
+                for (var entry : itemRegistry2.iterateEntries(planksTag)) {
+                    var key = entry.getKey();
+                    if (key.isPresent()) {
+                        count2++;
+                        ctx.getSource().sendFeedback(() -> Text.literal(key.get().getValue().toString()), false);
+                    }
+                }
+                final int finalCount2 = count2;
+                ctx.getSource().sendFeedback(() -> Text.literal("#minecraft:planks size: " + finalCount2), false);
+                return 1;
+            }));
         });
     }
 }
