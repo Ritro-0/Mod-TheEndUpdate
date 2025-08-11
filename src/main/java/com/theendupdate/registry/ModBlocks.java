@@ -40,6 +40,7 @@ public final class ModBlocks {
             AbstractBlock.Settings
                 .copy(Blocks.POPPY)
                 .offset(AbstractBlock.OffsetType.NONE)
+                .nonOpaque()
                 .registryKey(key)
         )
     );

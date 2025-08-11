@@ -28,11 +28,6 @@ public class VoidBloomBlock extends net.minecraft.block.PlantBlock {
     }
 
     @Override
-    public BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
-    }
-
-    @Override
     public float getAmbientOcclusionLightLevel(BlockState state, net.minecraft.world.BlockView world, BlockPos pos) {
         return 1.0f; // Full brightness for transparent blocks
     }
