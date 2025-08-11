@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SS",
+    "SS"
+  ],
+  "key": {
+    "S": "theendupdate:ethereal_sporocarp"
+  },
+  "result": { "id": "theendupdate:ethereal_pustule", "count": 3 }
+}
+

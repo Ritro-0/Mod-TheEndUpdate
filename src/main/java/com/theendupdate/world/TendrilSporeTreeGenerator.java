@@ -60,8 +60,8 @@ public final class TendrilSporeTreeGenerator {
         // Generate main vertical trunk
         for (int y = 0; y < height; y++) {
             BlockPos pos = startPos.up(y);
-            world.setBlockState(pos, ModBlocks.ETHEREAL_SPOROCARPS.getDefaultState()
-                .with(com.theendupdate.block.EtherealSporocarpsBlock.AXIS, Direction.Axis.Y));
+            world.setBlockState(pos, ModBlocks.ETHEREAL_SPOROCARP.getDefaultState()
+                .with(com.theendupdate.block.EtherealSporocarpBlock.AXIS, Direction.Axis.Y));
         }
     }
 
@@ -92,8 +92,8 @@ public final class TendrilSporeTreeGenerator {
             if (world.getBlockState(branchPos).isAir() || world.getBlockState(branchPos).isReplaceable()) {
                 // Set the log with horizontal axis
                 Direction.Axis axis = direction.getAxis();
-                world.setBlockState(branchPos, ModBlocks.ETHEREAL_SPOROCARPS.getDefaultState()
-                    .with(com.theendupdate.block.EtherealSporocarpsBlock.AXIS, axis));
+                world.setBlockState(branchPos, ModBlocks.ETHEREAL_SPOROCARP.getDefaultState()
+                    .with(com.theendupdate.block.EtherealSporocarpBlock.AXIS, axis));
             }
         }
     }
@@ -117,14 +117,14 @@ public final class TendrilSporeTreeGenerator {
                 // 50% chance for horizontal or vertical tendril
                 if (random.nextBoolean()) {
                     // Horizontal tendril
-                    world.setBlockState(tendrilPos, ModBlocks.ETHEREAL_SPOROCARPS.getDefaultState()
-                        .with(com.theendupdate.block.EtherealSporocarpsBlock.AXIS, direction.getAxis()));
+                    world.setBlockState(tendrilPos, ModBlocks.ETHEREAL_SPOROCARP.getDefaultState()
+                        .with(com.theendupdate.block.EtherealSporocarpBlock.AXIS, direction.getAxis()));
                 } else {
                     // Vertical tendril (hanging down or reaching up)
                     BlockPos verticalPos = random.nextBoolean() ? tendrilPos.down() : tendrilPos.up();
                     if (world.getBlockState(verticalPos).isAir() || world.getBlockState(verticalPos).isReplaceable()) {
-                        world.setBlockState(verticalPos, ModBlocks.ETHEREAL_SPOROCARPS.getDefaultState()
-                            .with(com.theendupdate.block.EtherealSporocarpsBlock.AXIS, Direction.Axis.Y));
+                        world.setBlockState(verticalPos, ModBlocks.ETHEREAL_SPOROCARP.getDefaultState()
+                            .with(com.theendupdate.block.EtherealSporocarpBlock.AXIS, Direction.Axis.Y));
                     }
                 }
             }

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "P  ",
+    "PP ",
+    "PPP"
+  ],
+  "key": {
+    "P": "theendupdate:ethereal_planks"
+  },
+  "result": { "id": "theendupdate:ethereal_stairs", "count": 4 }
+}
+
+

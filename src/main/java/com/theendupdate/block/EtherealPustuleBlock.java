@@ -11,19 +11,17 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.Direction;
 
 /**
- * Ethereal Sporocarps - The "log" blocks that make up the Tendril Spore tree
- * These are rotatable like regular logs but have unique properties
+ * Ethereal Pustule - six-sided "wood" variant of Ethereal Sporocarp.
+ * Texture is the same on all six faces (like vanilla wood/hyphae),
+ * but placement is directional via the AXIS property just like logs/wood.
  */
-public class EtherealSporocarpsBlock extends PillarBlock {
-    public static final MapCodec<EtherealSporocarpsBlock> CODEC = createCodec(EtherealSporocarpsBlock::new);
-    
-    // Axis property for rotation (like regular logs)
+public class EtherealPustuleBlock extends PillarBlock {
+    public static final MapCodec<EtherealPustuleBlock> CODEC = createCodec(EtherealPustuleBlock::new);
     public static final EnumProperty<Direction.Axis> AXIS = Properties.AXIS;
 
-    public EtherealSporocarpsBlock(Settings settings) {
+    public EtherealPustuleBlock(Settings settings) {
         super(settings);
         this.setDefaultState(this.stateManager.getDefaultState().with(AXIS, Direction.Axis.Y));
-        com.theendupdate.TemplateMod.LOGGER.info("EtherealSporocarpsBlock initialized!");
     }
 
     @Override
@@ -38,13 +36,8 @@ public class EtherealSporocarpsBlock extends PillarBlock {
 
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
-        // Set axis based on clicked face (like logs)
         return this.getDefaultState().with(AXIS, ctx.getSide().getAxis());
     }
-
-    // These logs are special - they have a slight glow and unique properties
-    @Override
-    public float getAmbientOcclusionLightLevel(BlockState state, net.minecraft.world.BlockView world, net.minecraft.util.math.BlockPos pos) {
-        return 0.8f; // Slightly bright like End materials
-    }
 }
+
+

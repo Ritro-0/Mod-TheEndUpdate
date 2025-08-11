@@ -13,8 +13,21 @@
   "item.theendupdate.tendril_thread": "Tendril Thread",
   "block.theendupdate.tendril_core": "Tendril Core",
   "item.theendupdate.tendril_core": "Tendril Core",
-  "block.theendupdate.ethereal_sporocarps": "Ethereal Sporocarps",
-  "item.theendupdate.ethereal_sporocarps": "Ethereal Sporocarps"
+  "block.theendupdate.ethereal_sporocarp": "Ethereal Sporocarp",
+  "item.theendupdate.ethereal_sporocarp": "Ethereal Sporocarp",
+  "block.theendupdate.ethereal_pustule": "Ethereal Pustule",
+  "item.theendupdate.ethereal_pustule": "Ethereal Pustule",
+  "block.theendupdate.ethereal_planks": "Ethereal Planks",
+  "item.theendupdate.ethereal_planks": "Ethereal Planks",
+
+  "block.theendupdate.ethereal_stairs": "Ethereal Stairs",
+  "item.theendupdate.ethereal_stairs": "Ethereal Stairs",
+  "block.theendupdate.ethereal_slab": "Ethereal Slab",
+  "item.theendupdate.ethereal_slab": "Ethereal Slab",
+  "block.theendupdate.ethereal_button": "Ethereal Button",
+  "item.theendupdate.ethereal_button": "Ethereal Button",
+  "block.theendupdate.ethereal_pressure_plate": "Ethereal Pressure Plate",
+  "item.theendupdate.ethereal_pressure_plate": "Ethereal Pressure Plate"
 }
 
 

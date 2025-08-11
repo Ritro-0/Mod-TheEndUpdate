@@ -1,7 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [ "minecraft:dirt" ],
-  "result": { "id": "minecraft:stick", "count": 1 }
-}
-
-

@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "theendupdate:block/ethereal_planks",
+    "top": "theendupdate:block/ethereal_planks",
+    "side": "theendupdate:block/ethereal_planks"
+  }
+}
+
+

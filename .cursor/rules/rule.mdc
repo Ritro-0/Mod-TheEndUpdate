@@ -3,3 +3,20 @@ alwaysApply: true
 ---
 ALWAYS, ALWAYS, ALWAYS DOUBLE CHECK THE INTERNET TO BE SURE THAT THE METHODS YOU'RE USING ARE STANDARD AND UP-TO-DATE FOR MINECRAFT/FABRIC 1.21.8. THIS IS BECAUSE A LOT CHANGED IN MINECRAFT 1.21+
 I'm fairly new to coding. Please simplify your answers to accomidate, then provide brief explanations as to what the more technical side of it means.
+Use data/<modid>/recipe/ (singular). Do not keep duplicates under data/<modid>/recipes/.
+Shapeless crafting (1.21.8): ingredients as ["namespace:item"]; result as { "id": "namespace:item", "count": N }.
+Smelting (1.21.8): ingredient as "namespace:item"; result as { "id": "namespace:item" }; include "experience": 0.1 and "cookingtime": 200.
+The smelting time key is cookingtime (no underscore).
+After editing resources, restart the dev client (or run gradlew processResources and relaunch). /reload does not rebuild mod resources.
+If a recipe fails, read run/logs/latest.log for “Couldn’t parse data file …” and fix exactly what the log says.
+ /recipe give only unlocks crafting; it does not unlock furnace recipes. Test smelting in a furnace (or use a debug command to check presence).
+  Item textures in 1.21+: add assets/<modid>/items/<item>.json binding to point at model "<modid>:item/<item>".
+  Item model: parent "minecraft:item/generated"; textures.layer0 "theendupdate:block/<texture>" (or reference a block model if needed).
+  Register BlockItems for blocks that must exist as items (e.g., void_sap) so recipes can reference them.
+  Allow plant placement on any solid block by overriding canPlantOnTop to use Block.isFaceFullSquare(..., Direction.UP).
+  Growth should be vanilla-like: rely on random ticks; hasRandomTicks true only when not stunted and not fully grown; do not schedule self-ticks.
+  Simple smelts should give low XP; use experience: 0.1.
+  Keep recipe IDs/filenames simple; the recipe ID equals the filename (without .json).
+   If “Unknown recipe” appears, confirm the mod’s datapack is Enabled via /datapack list; then check logs for parse errors.
+   Remove duplicate/old recipes across recipe/ and recipes/ to avoid conflicts.
+   For block items with item textures (e.g., Ethereal Sporocarp): ensure items/<name>.json binding exists; item model can parent the block model or use generated with a texture layer.

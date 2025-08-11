@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "type=bottom": { "model": "theendupdate:block/ethereal_slab" },
+    "type=top":    { "model": "theendupdate:block/ethereal_slab_top" },
+    "type=double": { "model": "theendupdate:block/ethereal_planks" }
+  }
+}
+
+

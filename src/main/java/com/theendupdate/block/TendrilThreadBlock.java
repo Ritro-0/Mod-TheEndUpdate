@@ -61,12 +61,8 @@ public class TendrilThreadBlock extends PlantBlock implements Fertilizable {
 
     @Override
     protected boolean canPlantOnTop(BlockState floor, BlockView world, BlockPos pos) {
-        // Same placement rules as Tendril Sprout
-        return floor.isOf(Blocks.END_STONE) || 
-               floor.isOf(ModBlocks.END_MIRE) || 
-               floor.isOf(ModBlocks.MOLD_BLOCK) ||
-               floor.isIn(net.minecraft.registry.tag.BlockTags.DIRT) ||
-               floor.isIn(net.minecraft.registry.tag.BlockTags.SAND);
+        // Allow placement on any block with a solid top face
+        return Block.isFaceFullSquare(floor.getCollisionShape(world, pos), net.minecraft.util.math.Direction.UP);
     }
 
     @Override

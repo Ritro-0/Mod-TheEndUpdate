@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "axis=x": { "model": "theendupdate:block/ethereal_pustule" },
+    "axis=y": { "model": "theendupdate:block/ethereal_pustule" },
+    "axis=z": { "model": "theendupdate:block/ethereal_pustule" }
+  }
+}
+
+

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PP"
+  ],
+  "key": {
+    "P": "theendupdate:ethereal_planks"
+  },
+  "result": { "id": "theendupdate:ethereal_pressure_plate" }
+}
+
+

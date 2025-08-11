@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "axis=x": { "model": "theendupdate:block/ethereal_sporocarp_horizontal", "x": 90, "y": 90 },
+    "axis=y": { "model": "theendupdate:block/ethereal_sporocarp" },
+    "axis=z": { "model": "theendupdate:block/ethereal_sporocarp_horizontal", "x": 90 }
+  }
+}
+

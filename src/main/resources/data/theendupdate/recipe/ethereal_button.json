@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": ["theendupdate:ethereal_planks"],
+  "result": { "id": "theendupdate:ethereal_button" }
+}
+
+

@@ -3,8 +3,13 @@ package com.theendupdate.registry;
 import com.theendupdate.TemplateMod;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.Block;
+import net.minecraft.block.SlabBlock;
+import net.minecraft.block.StairsBlock;
+import net.minecraft.block.ButtonBlock;
+import net.minecraft.block.PressurePlateBlock;
+import net.minecraft.block.BlockSetType;
 
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -94,15 +99,73 @@ public final class ModBlocks {
         )
     );
 
-    public static final Block ETHEREAL_SPOROCARPS = registerBlock(
-        "ethereal_sporocarps",
-        key -> new com.theendupdate.block.EtherealSporocarpsBlock(
+    public static final Block ETHEREAL_SPOROCARP = registerBlock(
+        "ethereal_sporocarp",
+        key -> new com.theendupdate.block.EtherealSporocarpBlock(
             AbstractBlock.Settings
                 .copy(Blocks.END_STONE)
                 .sounds(BlockSoundGroup.WOOD)
                 .strength(2.0F, 3.0F) // Log-like durability
                 .luminance(state -> 2) // Slight glow like End materials
                 .registryKey(key)
+        )
+    );
+
+    public static final Block ETHEREAL_PUSTULE = registerBlock(
+        "ethereal_pustule",
+        key -> new com.theendupdate.block.EtherealPustuleBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_WOOD)
+                .sounds(BlockSoundGroup.WOOD)
+                .strength(2.0F, 3.0F)
+                .luminance(state -> 2)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block ETHEREAL_PLANKS = registerBlock(
+        "ethereal_planks",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_PLANKS)
+                .sounds(BlockSoundGroup.WOOD)
+                .luminance(state -> 2)
+                .registryKey(key)
+        )
+    );
+
+    // Plank variants
+    public static final Block ETHEREAL_STAIRS = registerBlock(
+        "ethereal_stairs",
+        key -> new StairsBlock(
+            ModBlocks.ETHEREAL_PLANKS.getDefaultState(),
+            AbstractBlock.Settings.copy(Blocks.OAK_STAIRS).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block ETHEREAL_SLAB = registerBlock(
+        "ethereal_slab",
+        key -> new SlabBlock(
+            AbstractBlock.Settings.copy(Blocks.OAK_SLAB).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    // Fences and fence gates omitted for now; can add later if desired
+
+    public static final Block ETHEREAL_BUTTON = registerBlock(
+        "ethereal_button",
+        key -> new ButtonBlock(
+            BlockSetType.OAK,
+            30,
+            AbstractBlock.Settings.copy(Blocks.OAK_BUTTON).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block ETHEREAL_PRESSURE_PLATE = registerBlock(
+        "ethereal_pressure_plate",
+        key -> new PressurePlateBlock(
+            BlockSetType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_PRESSURE_PLATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
 
