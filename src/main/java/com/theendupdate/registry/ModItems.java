@@ -12,7 +12,8 @@ import net.minecraft.util.Identifier;
 public final class ModItems {
     public static final Item VOID_SAP = registerItem(
         "void_sap",
-        key -> new com.theendupdate.item.VoidSapItem(
+        key -> new net.minecraft.item.BlockItem(
+            ModBlocks.VOID_SAP,
             new Item.Settings().registryKey(key)
         )
     );

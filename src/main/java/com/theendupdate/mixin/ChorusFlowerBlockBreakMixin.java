@@ -29,10 +29,15 @@ public class ChorusFlowerBlockBreakMixin {
             // ONLY if stem support exists, then check for Void Bloom protection
             for (Direction direction : Direction.values()) {
                 BlockPos adjacentPos = pos.offset(direction);
-                if (world.getBlockState(adjacentPos).isOf(ModBlocks.VOID_BLOOM)) {
-                    com.theendupdate.TemplateMod.LOGGER.info("Preventing chorus flower break at {} due to adjacent Void Bloom at {} (stem supported)", pos, adjacentPos);
-                    cir.setReturnValue(true); // Force the flower to stay valid only when Void Bloom is present AND stem exists
-                    return;
+                BlockState adjacentState = world.getBlockState(adjacentPos);
+                if (adjacentState.isOf(ModBlocks.VOID_BLOOM)) {
+                    // Check if the void bloom is properly attached to this chorus flower
+                    Direction attachmentFace = adjacentState.get(com.theendupdate.block.VoidBloomBlock.ATTACHMENT_FACE);
+                    if (attachmentFace == direction.getOpposite()) {
+                        com.theendupdate.TemplateMod.LOGGER.info("Preventing chorus flower break at {} due to properly attached Void Bloom at {} (stem supported)", pos, adjacentPos);
+                        cir.setReturnValue(true); // Force the flower to stay valid only when Void Bloom is present AND stem exists
+                        return;
+                    }
                 }
             }
         }

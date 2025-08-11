@@ -15,7 +15,12 @@ public class TemplateModClient implements ClientModInitializer {
     public void onInitializeClient() {
         // The CORRECT way to register transparent blocks in Fabric 1.21.8!
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);
-        System.out.println("Void Bloom registered with CUTOUT render layer!");
+        BlockRenderLayerMap.putBlock(ModBlocks.VOID_SAP, BlockRenderLayer.CUTOUT);
+        // New tendril plants render as crossed planes (need CUTOUT)
+        BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_SPROUT, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_THREAD, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_CORE, BlockRenderLayer.CUTOUT);
+        System.out.println("Void Bloom, Void Sap, and Tendril plants registered with CUTOUT render layer!");
     }
 }
 

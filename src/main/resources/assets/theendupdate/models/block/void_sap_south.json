@@ -1,0 +1,17 @@
+{
+  "render_type": "cutout",
+  "textures": {
+    "texture": "theendupdate:block/void_sap",
+    "particle": "theendupdate:block/void_sap"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 15],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#texture", "uv": [0, 0, 16, 16]},
+        "south": {"texture": "#texture", "uv": [0, 0, 16, 16]}
+      }
+    }
+  ]
+}

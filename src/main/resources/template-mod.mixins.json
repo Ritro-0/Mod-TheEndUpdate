@@ -5,7 +5,8 @@
 	"mixins": [
 		"TheEndUpdateMixin",
 		"ChorusFlowerBlockMixin",
-		"ChorusFlowerBlockBreakMixin"
+		"ChorusFlowerBlockBreakMixin",
+		"EntityWallSlidingMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

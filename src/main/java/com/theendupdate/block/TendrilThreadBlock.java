@@ -1,0 +1,142 @@
+package com.theendupdate.block;
+
+import com.mojang.serialization.MapCodec;
+import com.theendupdate.registry.ModBlocks;
+import net.minecraft.block.*;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.state.StateManager;
+import net.minecraft.state.property.BooleanProperty;
+import net.minecraft.state.property.IntProperty;
+import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.world.BlockView;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
+
+/**
+ * Tendril Thread - Second stage of the Tendril growth cycle
+ * Taller than sprout, grows into Tendril Core when ready
+ */
+public class TendrilThreadBlock extends PlantBlock implements Fertilizable {
+    public static final MapCodec<TendrilThreadBlock> CODEC = createCodec(TendrilThreadBlock::new);
+    
+    // Growth stage (0-7, grows into next stage at 7)
+    public static final IntProperty AGE = Properties.AGE_7;
+    
+    // Whether growth has been stunted with shears
+    public static final BooleanProperty STUNTED = BooleanProperty.of("stunted");
+    
+    // Shape for the medium-sized plant
+    private static final VoxelShape SHAPE = VoxelShapes.cuboid(0.2, 0.0, 0.2, 0.8, 0.8, 0.8);
+
+    public TendrilThreadBlock(Settings settings) {
+        super(settings);
+        this.setDefaultState(this.stateManager.getDefaultState()
+            .with(AGE, 0)
+            .with(STUNTED, false));
+    }
+
+    @Override
+    public MapCodec<? extends PlantBlock> getCodec() {
+        return CODEC;
+    }
+
+    @Override
+    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        builder.add(AGE, STUNTED);
+    }
+
+    @Override
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        return SHAPE;
+    }
+
+    @Override
+    protected boolean canPlantOnTop(BlockState floor, BlockView world, BlockPos pos) {
+        // Same placement rules as Tendril Sprout
+        return floor.isOf(Blocks.END_STONE) || 
+               floor.isOf(ModBlocks.END_MIRE) || 
+               floor.isOf(ModBlocks.MOLD_BLOCK) ||
+               floor.isIn(net.minecraft.registry.tag.BlockTags.DIRT) ||
+               floor.isIn(net.minecraft.registry.tag.BlockTags.SAND);
+    }
+
+    @Override
+    public boolean hasRandomTicks(BlockState state) {
+        return !state.get(STUNTED) && state.get(AGE) < 7;
+    }
+
+    @Override
+    public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        if (!state.get(STUNTED)) {
+            int age = state.get(AGE);
+            if (age < 7) {
+                // 20% chance to grow each tick (slightly slower than sprout)
+                if (random.nextInt(5) == 0) {
+                    if (age == 6) {
+                        // Ready to become Tendril Core
+                        world.setBlockState(pos, ModBlocks.TENDRIL_CORE.getDefaultState());
+                        com.theendupdate.TemplateMod.LOGGER.info("Tendril Thread grew into Tendril Core at " + pos);
+                    } else {
+                        world.setBlockState(pos, state.with(AGE, age + 1));
+                    }
+                }
+                // Rely solely on random ticks (no scheduled self-ticks)
+            }
+        }
+    }
+
+    // Remove scheduled ticks; rely on random ticks only, like vanilla
+
+    @Override
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+        ItemStack heldItem = player.getStackInHand(player.getActiveHand());
+        
+        // Right-click with shears to stunt growth
+        if (heldItem.isOf(Items.SHEARS)) {
+            if (!world.isClient) {
+                world.setBlockState(pos, state.with(STUNTED, true));
+                com.theendupdate.TemplateMod.LOGGER.info("Tendril Thread growth stunted with shears at " + pos);
+                
+                // Damage the shears
+                heldItem.damage(1, player, player.getActiveHand());
+            }
+            return ActionResult.SUCCESS;
+        }
+        
+        return ActionResult.PASS;
+    }
+
+    // Fertilizable implementation
+    @Override
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state) {
+        return !state.get(STUNTED) && state.get(AGE) < 7;
+    }
+
+    @Override
+    public boolean canGrow(World world, Random random, BlockPos pos, BlockState state) {
+        return !state.get(STUNTED) && state.get(AGE) < 7;
+    }
+
+    @Override
+    public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
+        if (!state.get(STUNTED)) {
+            int age = state.get(AGE);
+            if (age < 7) {
+                if (age == 6) {
+                    world.setBlockState(pos, ModBlocks.TENDRIL_CORE.getDefaultState());
+                } else {
+                    world.setBlockState(pos, state.with(AGE, Math.min(7, age + random.nextInt(2) + 1)));
+                }
+            }
+        }
+    }
+}

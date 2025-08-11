@@ -34,9 +34,17 @@ public final class VoidBloomChorusGrowthFeature {
             BlockPos target = chorusPos.offset(dir);
             
             if (world.getBlockState(target).isAir()) {
-                            // Place void bloom without rotation (simplified like BiomesOPlenty)
-            com.theendupdate.TemplateMod.LOGGER.info("Placing Void Bloom at {} (next to chorus bud at {})", target, chorusPos);
-            world.setBlockState(target, ModBlocks.VOID_BLOOM.getDefaultState(), 3);
+                // Calculate the attachment direction (from void bloom back to chorus flower)
+                Direction attachmentDirection = dir.getOpposite();
+                
+                // Create properly oriented void bloom state
+                var voidBloomBlock = (com.theendupdate.block.VoidBloomBlock) ModBlocks.VOID_BLOOM;
+                BlockState attachedState = voidBloomBlock.getAttachedState(attachmentDirection);
+                
+                com.theendupdate.TemplateMod.LOGGER.info("Placing Void Bloom at {} attached to chorus bud at {} (growth direction: {}, attachment face: {})", 
+                    target, chorusPos, dir, attachmentDirection);
+                    
+                world.setBlockState(target, attachedState, 3);
                 return true;
             }
         }

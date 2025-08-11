@@ -5,7 +5,16 @@
   "item.theendupdate.mold_block": "Mold Block",
   "block.theendupdate.void_bloom": "Void Bloom",
   "item.theendupdate.void_bloom": "Void Bloom",
-  "item.theendupdate.void_sap": "Void Sap"
+  "block.theendupdate.void_sap": "Void Sap",
+  "item.theendupdate.void_sap": "Void Sap",
+  "block.theendupdate.tendril_sprout": "Tendril Sprout",
+  "item.theendupdate.tendril_sprout": "Tendril Sprout",
+  "block.theendupdate.tendril_thread": "Tendril Thread",
+  "item.theendupdate.tendril_thread": "Tendril Thread",
+  "block.theendupdate.tendril_core": "Tendril Core",
+  "item.theendupdate.tendril_core": "Tendril Core",
+  "block.theendupdate.ethereal_sporocarps": "Ethereal Sporocarps",
+  "item.theendupdate.ethereal_sporocarps": "Ethereal Sporocarps"
 }
 
 

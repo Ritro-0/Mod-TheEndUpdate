@@ -1,0 +1,28 @@
+{
+  "multipart": [
+    {
+      "when": { "north": "true" },
+      "apply": { "model": "theendupdate:block/void_sap_north" }
+    },
+    {
+      "when": { "south": "true" },
+      "apply": { "model": "theendupdate:block/void_sap_south" }
+    },
+    {
+      "when": { "east": "true" },
+      "apply": { "model": "theendupdate:block/void_sap_east" }
+    },
+    {
+      "when": { "west": "true" },
+      "apply": { "model": "theendupdate:block/void_sap_west" }
+    },
+    {
+      "when": { "up": "true" },
+      "apply": { "model": "theendupdate:block/void_sap_up" }
+    },
+    {
+      "when": { "down": "true" },
+      "apply": { "model": "theendupdate:block/void_sap_down" }
+    }
+  ]
+}

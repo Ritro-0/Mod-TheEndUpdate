@@ -1,6 +1,11 @@
 {
   "variants": {
-    "": { "model": "theendupdate:block/void_bloom" }
+    "facing=down": { "model": "theendupdate:block/void_bloom", "x": 0 },
+    "facing=up": { "model": "theendupdate:block/void_bloom", "x": 180 },
+    "facing=north": { "model": "theendupdate:block/void_bloom", "x": 270 },
+    "facing=south": { "model": "theendupdate:block/void_bloom", "x": 90 },
+    "facing=west": { "model": "theendupdate:block/void_bloom", "x": 90, "y": 90 },
+    "facing=east": { "model": "theendupdate:block/void_bloom", "x": 90, "y": 270 }
   }
 }
 
