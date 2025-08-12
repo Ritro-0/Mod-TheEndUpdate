@@ -12,6 +12,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.util.ActionResult;
+import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,14 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModItems.registerModItems();
         LOGGER.info("Moldcrawl registered");
+
+        // Composting: mirror vanilla chances
+        // - Moss Block: 65%
+        // - Twisting Vines: 50%
+        // - Tall Grass: 30%
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_BLOCK.asItem(), 0.65f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_CRAWL.asItem(), 0.50f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.VOID_BLOOM.asItem(), 0.30f);
 
         // Log all recipes from this mod's namespace when the server starts
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
