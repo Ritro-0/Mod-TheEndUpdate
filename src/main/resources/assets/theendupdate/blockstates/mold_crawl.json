@@ -1,0 +1,15 @@
+{
+  "multipart": [
+    { "when": { "AND": [ { "facing": "north" }, { "OR": [ { "tip": false }, { "tip": true, "tip_vines": false } ] } ] }, "apply": { "model": "theendupdate:block/mold_crawl_plant_cross", "x": 90, "y": 0 } },
+    { "when": { "AND": [ { "facing": "south" }, { "OR": [ { "tip": false }, { "tip": true, "tip_vines": false } ] } ] }, "apply": { "model": "theendupdate:block/mold_crawl_plant_cross", "x": 90, "y": 180 } },
+    { "when": { "AND": [ { "facing": "east" }, { "OR": [ { "tip": false }, { "tip": true, "tip_vines": false } ] } ] }, "apply": { "model": "theendupdate:block/mold_crawl_plant_cross", "x": 90, "y": 90 } },
+    { "when": { "AND": [ { "facing": "west" }, { "OR": [ { "tip": false }, { "tip": true, "tip_vines": false } ] } ] }, "apply": { "model": "theendupdate:block/mold_crawl_plant_cross", "x": 90, "y": 270 } },
+
+    { "when": { "AND": [ { "facing": "north" }, { "tip": true }, { "tip_vines": true } ] }, "apply": { "model": "theendupdate:block/mold_crawl_vines_cross", "x": 90, "y": 0 } },
+    { "when": { "AND": [ { "facing": "south" }, { "tip": true }, { "tip_vines": true } ] }, "apply": { "model": "theendupdate:block/mold_crawl_vines_cross", "x": 90, "y": 180 } },
+    { "when": { "AND": [ { "facing": "east" }, { "tip": true }, { "tip_vines": true } ] }, "apply": { "model": "theendupdate:block/mold_crawl_vines_cross", "x": 90, "y": 90 } },
+    { "when": { "AND": [ { "facing": "west" }, { "tip": true }, { "tip_vines": true } ] }, "apply": { "model": "theendupdate:block/mold_crawl_vines_cross", "x": 90, "y": 270 } }
+  ]
+}
+
+

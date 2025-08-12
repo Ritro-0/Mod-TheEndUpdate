@@ -169,6 +169,18 @@ public final class ModBlocks {
         )
     );
 
+    public static final Block MOLD_CRAWL = registerBlock(
+        "mold_crawl",
+        key -> new com.theendupdate.block.MoldcrawlBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.TWISTING_VINES)
+                .nonOpaque()
+                .ticksRandomly()
+                .noCollision()
+                .registryKey(key)
+        )
+    );
+
     private static Block registerBlock(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);

@@ -23,6 +23,7 @@ public class TemplateMod implements ModInitializer {
         LOGGER.info("Initializing TheEndUpdate");
         com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModItems.registerModItems();
+        LOGGER.info("Moldcrawl registered");
 
         // Log all recipes from this mod's namespace when the server starts
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {

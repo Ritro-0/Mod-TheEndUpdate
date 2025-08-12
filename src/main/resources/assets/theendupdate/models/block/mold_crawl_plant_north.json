@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/flat",
+  "textures": { "texture": "theendupdate:block/mold_crawl_plant" },
+  "elements": [
+    { "from": [0, 4, 6], "to": [16, 12, 10], "faces": { "north": { "texture": "#texture", "uv": [0, 0, 16, 8] }, "south": { "texture": "#texture", "uv": [0, 0, 16, 8] } } }
+  ]
+}
+
+
