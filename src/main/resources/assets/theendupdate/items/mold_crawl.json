@@ -1,5 +1,8 @@
 {
-  "model": "theendupdate:item/mold_crawl"
+  "model": {
+    "type": "minecraft:model",
+    "model": "theendupdate:item/mold_crawl"
+  }
 }
 
 

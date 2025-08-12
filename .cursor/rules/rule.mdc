@@ -20,3 +20,4 @@ If a recipe fails, read run/logs/latest.log for “Couldn’t parse data file �
    If “Unknown recipe” appears, confirm the mod’s datapack is Enabled via /datapack list; then check logs for parse errors.
    Remove duplicate/old recipes across recipe/ and recipes/ to avoid conflicts.
    For block items with item textures (e.g., Ethereal Sporocarp): ensure items/<name>.json binding exists; item model can parent the block model or use generated with a texture layer.
+   For horizontal plant “cross” rendering: avoid parent cross, define two thin element quads (X/Z slices) with per-face UV rotation 90°, and rotate via blockstate (x: 90, y by facing) to keep textures horizontal.

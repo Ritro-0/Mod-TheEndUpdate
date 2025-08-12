@@ -74,6 +74,17 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 
     @Override
     public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        // Survival check first (mirror vines behavior of vanishing when unsupported)
+        if (!this.canPlaceAt(state, world, pos)) {
+            com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl randomTick unsupported at {} facing {}", pos.toShortString(), state.get(FACING));
+            // Attempt chain-wide reattachment before breaking
+            BlockState reattached = tryReattachChain(state, world, pos);
+            if (reattached == null) {
+                boolean drop = world.random.nextFloat() < 0.33f;
+                world.breakBlock(pos, drop);
+            }
+            return;
+        }
         // Only the tip grows, unless stunted or fully matured
         if (state.get(TIP) && !state.get(STUNTED) && state.get(AGE) < 25) {
             if (random.nextInt(5) == 0) {
@@ -108,7 +119,14 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         BlockPos supportPos = pos.offset(back);
         BlockState support = world.getBlockState(supportPos);
         if (support.isOf(this)) return true;
-        return support.isSideSolidFullSquare(world, supportPos, back.getOpposite());
+        boolean solid = support.isSideSolidFullSquare(world, supportPos, back.getOpposite());
+        if (!solid) {
+            try {
+                com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl canPlaceAt=FALSE at {} facing {} (support at {} {} solid)",
+                    pos.toShortString(), state.get(FACING), supportPos.toShortString(), solid);
+            } catch (Throwable ignored) {}
+        }
+        return solid;
     }
 
     // Interaction: allow right-click with bonemeal to pass through to Fertilizable handler
@@ -189,23 +207,103 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 
     // Do not annotate with @Override to remain mapping-safe
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, net.minecraft.world.WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        // Do not replace with AIR here to avoid pre-empting loot drops on player breaks.
+        // Attempt immediate reattachment (mutates world if successful).
+        if (!this.canPlaceAt(state, world, pos)) {
+            com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl neighborUpdate unsupported at {} facing {}", pos.toShortString(), state.get(FACING));
+            BlockState reattached = tryReattachChain(state, world, pos);
+            if (reattached != null) {
+                com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl neighborUpdate reattached at {} new facing {}", pos.toShortString(), reattached.get(FACING));
+            }
+            // Even if reattach fails, defer actual breaking to scheduledTick to avoid racing with player drops.
+        }
+        // Schedule a survival check to handle horizontal reattachment/breaking reliably
+        if (world instanceof net.minecraft.server.world.ServerWorld serverWorld) {
+            serverWorld.scheduleBlockTick(pos, this, 1);
+        }
+
+        // Update tip flags if the forward neighbor changed
         Direction dir = state.get(FACING);
         if (direction == dir) {
             boolean isTip = !neighborState.isOf(this);
             boolean tipVines = isTip && (state.get(STUNTED) || state.get(AGE) >= 25);
             return state.with(TIP, isTip).with(TIP_VINES, tipVines);
         }
-        // Break if support at the back is gone
-        Direction back = state.get(FACING).getOpposite();
-        if (direction == back) {
-            BlockPos supportPos = pos.offset(back);
-            BlockState support = world.getBlockState(supportPos);
-            boolean supported = support.isOf(this) || support.isSideSolidFullSquare(world, supportPos, back.getOpposite());
-            if (!supported) {
-                return net.minecraft.block.Blocks.AIR.getDefaultState();
-            }
-        }
+
         return state;
+    }
+
+    // Survival tick: break when unsupported (matches vines behavior of disappearing without drops)
+    @Override
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        if (this.canPlaceAt(state, world, pos)) return;
+        com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick unsupported at {} facing {}", pos.toShortString(), state.get(FACING));
+        BlockState reattached = tryReattachChain(state, world, pos);
+        if (reattached != null) {
+            com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick reattached at {} new facing {}", pos.toShortString(), reattached.get(FACING));
+            return;
+        }
+        // No reattachment possible; break with chance like vines (loot table's random_chance doesn't run here)
+        boolean drop = world.random.nextFloat() < 0.33f;
+        world.breakBlock(pos, drop);
+    }
+
+    private BlockState tryReattachChain(BlockState state, net.minecraft.world.WorldAccess world, BlockPos pos) {
+        Direction facing = state.get(FACING);
+        Direction back = facing.getOpposite();
+
+        // Determine contiguous chain bounds along current facing
+        BlockPos base = pos;
+        while (world.getBlockState(base.offset(back)).isOf(this)) {
+            base = base.offset(back);
+        }
+        BlockPos tip = pos;
+        while (world.getBlockState(tip.offset(facing)).isOf(this)) {
+            tip = tip.offset(facing);
+        }
+
+        // Is there support if we flip and attach at the current forward side of the tip?
+        BlockPos forwardPos = tip.offset(facing);
+        BlockState forward = world.getBlockState(forwardPos);
+        boolean forwardSupportBackFace = forward.isSideSolidFullSquare(world, forwardPos, back);
+        boolean forwardSupportFacingFace = forward.isSideSolidFullSquare(world, forwardPos, facing);
+        com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl chain base {} tip {} forward {} supportBackFace={} supportFacingFace={} (back={}, facing={})",
+            base.toShortString(), tip.toShortString(), forwardPos.toShortString(), forwardSupportBackFace, forwardSupportFacingFace, back, facing);
+        boolean forwardSupport = forwardSupportBackFace || forwardSupportFacingFace;
+        if (!forwardSupport) {
+            return null;
+        }
+
+        // Flip entire chain to face opposite (newFacing), new tip is at former base
+        Direction newFacing = facing.getOpposite();
+        BlockPos current = base;
+        while (true) {
+            BlockState currentState = world.getBlockState(current);
+            int age = currentState.getOrEmpty(AGE).orElse(0);
+            boolean isNewTip = current.equals(base);
+            boolean tipVines = isNewTip && (currentState.getOrEmpty(STUNTED).orElse(false) || age >= 25);
+            BlockState newState = this.getDefaultState()
+                .with(FACING, newFacing)
+                .with(AGE, age)
+                .with(TIP, isNewTip)
+                .with(STUNTED, false)
+                .with(TIP_VINES, tipVines);
+            ((net.minecraft.world.World)world).setBlockState(current, newState, Block.NOTIFY_ALL);
+            com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl flip set {} -> facing {} tip={} age={}", current.toShortString(), newFacing, isNewTip, age);
+            if (current.equals(tip)) break;
+            current = current.offset(facing);
+        }
+
+        // Return the new state at the original pos to satisfy the neighbor update path
+        return ((net.minecraft.world.World)world).getBlockState(pos);
+    }
+
+    @Override
+    protected void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        super.onBlockAdded(state, world, pos, oldState, notify);
+        if (!world.isClient) {
+            ((ServerWorld) world).scheduleBlockTick(pos, this, 1);
+        }
     }
 }
 
