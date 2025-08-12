@@ -6,6 +6,10 @@
 		"TheEndUpdateMixin",
 		"ChorusFlowerBlockMixin",
 		"ChorusFlowerBlockBreakMixin",
+		"ChorusPlantBlockMixin",
+		"ChorusPlantBlockStateMixin",
+		"ChorusFlowerEndStoneCompatMixin",
+		"ChorusPlantEndStoneCompatMixin",
 		"EntityWallSlidingMixin"
 	],
 	"injectors": {
