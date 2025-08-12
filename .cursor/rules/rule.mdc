@@ -21,3 +21,4 @@ If a recipe fails, read run/logs/latest.log for “Couldn’t parse data file �
    Remove duplicate/old recipes across recipe/ and recipes/ to avoid conflicts.
    For block items with item textures (e.g., Ethereal Sporocarp): ensure items/<name>.json binding exists; item model can parent the block model or use generated with a texture layer.
    For horizontal plant “cross” rendering: avoid parent cross, define two thin element quads (X/Z slices) with per-face UV rotation 90°, and rotate via blockstate (x: 90, y by facing) to keep textures horizontal.
+   Always drive behavior/visuals from authoritative server blockstate in 1.21.8: on any neighbor/place/break, recompute the real chain state and set properties server‑side (return the updated state), use mapping‑safe neighbor hooks (plus global place/break fallbacks) and schedule a 1‑tick recheck to avoid stale state/race issues—don’t rely on client rendering or a single callback.

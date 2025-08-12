@@ -9,6 +9,9 @@ import net.minecraft.util.Identifier;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.minecraft.util.ActionResult;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,6 +113,24 @@ public class TemplateMod implements ModInitializer {
                 ctx.getSource().sendFeedback(() -> Text.literal("#minecraft:planks size: " + finalCount2), false);
                 return 1;
             }));
+        });
+
+        // Global hooks to ensure mold_crawl reacts even if vanilla neighbor updates are skipped by renderer state:
+        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            if (!world.isClient) {
+                // Clicked block position
+                var clickedPos = hitResult.getBlockPos();
+                // Intended placed position is one block in the clicked face direction
+                var placedPos = clickedPos.offset(hitResult.getSide());
+                com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, clickedPos);
+                com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, placedPos);
+            }
+            return ActionResult.PASS;
+        });
+        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, entity) -> {
+            if (!world.isClient) {
+                com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, pos);
+            }
         });
     }
 }
