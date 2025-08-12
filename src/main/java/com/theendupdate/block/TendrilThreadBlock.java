@@ -127,10 +127,13 @@ public class TendrilThreadBlock extends PlantBlock implements Fertilizable {
         if (!state.get(STUNTED)) {
             int age = state.get(AGE);
             if (age < 7) {
-                if (age == 6) {
+                // Prevent overshoot to age 7 without transitioning to core.
+                int increment = 1 + random.nextInt(2); // +1 or +2
+                int newAge = Math.min(7, age + increment);
+                if (age == 6 || newAge >= 6) {
                     world.setBlockState(pos, ModBlocks.TENDRIL_CORE.getDefaultState());
                 } else {
-                    world.setBlockState(pos, state.with(AGE, Math.min(7, age + random.nextInt(2) + 1)));
+                    world.setBlockState(pos, state.with(AGE, newAge));
                 }
             }
         }

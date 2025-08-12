@@ -1,11 +1,9 @@
 package com.theendupdate.block;
 
 import com.mojang.serialization.MapCodec;
-import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.world.TendrilSporeTreeGenerator;
 import net.minecraft.block.*;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.world.ServerWorld;
@@ -14,7 +12,6 @@ import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
@@ -139,11 +136,13 @@ public class TendrilCoreBlock extends PlantBlock implements Fertilizable {
         if (!state.get(STUNTED)) {
             int age = state.get(AGE);
             if (age < 7) {
-                if (age == 6) {
-                    // Bonemeal instantly makes it grow into a tree
+                // Prevent overshoot to age 7 without generating the tree.
+                int increment = 1 + random.nextInt(2); // +1 or +2
+                int newAge = Math.min(7, age + increment);
+                if (age == 6 || newAge >= 6) {
                     generateTree(world, pos, random);
                 } else {
-                    world.setBlockState(pos, state.with(AGE, Math.min(7, age + random.nextInt(2) + 1)));
+                    world.setBlockState(pos, state.with(AGE, newAge));
                 }
             }
         }
