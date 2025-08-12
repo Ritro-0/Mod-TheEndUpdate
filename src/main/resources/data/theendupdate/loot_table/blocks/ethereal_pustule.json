@@ -3,9 +3,8 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [
-        { "type": "minecraft:item", "name": "theendupdate:ethereal_pustule" }
-      ]
+      "entries": [ { "type": "minecraft:item", "name": "theendupdate:ethereal_pustule" } ],
+      "conditions": [ { "condition": "minecraft:survives_explosion" } ]
     }
   ]
 }

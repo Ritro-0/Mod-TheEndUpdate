@@ -3,10 +3,10 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [
-        { "type": "minecraft:item", "name": "theendupdate:tendril_thread" }
-      ]
+      "entries": [ { "type": "minecraft:item", "name": "theendupdate:tendril_thread" } ],
+      "conditions": [ { "condition": "minecraft:survives_explosion" } ]
     }
   ]
 }
+
 

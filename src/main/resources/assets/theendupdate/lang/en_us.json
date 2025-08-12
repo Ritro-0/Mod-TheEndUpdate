@@ -28,8 +28,22 @@
   "item.theendupdate.ethereal_button": "Ethereal Button",
   "block.theendupdate.ethereal_pressure_plate": "Ethereal Pressure Plate",
   "item.theendupdate.ethereal_pressure_plate": "Ethereal Pressure Plate",
+  "block.theendupdate.ethereal_door": "Ethereal Door",
+  "item.theendupdate.ethereal_door": "Ethereal Door",
+  "block.theendupdate.ethereal_trapdoor": "Ethereal Trapdoor",
+  "item.theendupdate.ethereal_trapdoor": "Ethereal Trapdoor",
+  "block.theendupdate.ethereal_fence": "Ethereal Fence",
+  "item.theendupdate.ethereal_fence": "Ethereal Fence",
+  "block.theendupdate.ethereal_fence_gate": "Ethereal Fence Gate",
+  "item.theendupdate.ethereal_fence_gate": "Ethereal Fence Gate",
   "block.theendupdate.mold_crawl": "Mold Crawl",
-  "item.theendupdate.mold_crawl": "Mold Crawl"
+  "item.theendupdate.mold_crawl": "Mold Crawl",
+  "block.theendupdate.mold_spore": "Mold Spore",
+  "item.theendupdate.mold_spore": "Mold Spore",
+  "block.theendupdate.mold_spore_tuft": "Mold Spore Tuft",
+  "item.theendupdate.mold_spore_tuft": "Mold Spore Tuft",
+  "block.theendupdate.mold_spore_sprout": "Mold Spore Sprout",
+  "item.theendupdate.mold_spore_sprout": "Mold Spore Sprout"
 }
 
 

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "PPP"
+  ],
+  "key": {
+    "P": "theendupdate:ethereal_planks"
+  },
+  "result": { "id": "theendupdate:ethereal_trapdoor", "count": 2 }
+}
+
+

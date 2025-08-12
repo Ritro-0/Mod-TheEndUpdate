@@ -11,6 +11,7 @@ After editing resources, restart the dev client (or run gradlew processResources
 If a recipe fails, read run/logs/latest.log for “Couldn’t parse data file …” and fix exactly what the log says.
  /recipe give only unlocks crafting; it does not unlock furnace recipes. Test smelting in a furnace (or use a debug command to check presence).
   Item textures in 1.21+: add assets/<modid>/items/<item>.json binding to point at model "<modid>:item/<item>".
+  Loot tables: use data/<modid>/loot_table/blocks/<block>.json (singular path in this project); define drops and conditions here (e.g., shears-only and half=lower for double-tall), then run gradlew processResources and relaunch; check run/logs/latest.log for “Couldn’t parse data file …” if issues.
   Item model: parent "minecraft:item/generated"; textures.layer0 "theendupdate:block/<texture>" (or reference a block model if needed).
   Register BlockItems for blocks that must exist as items (e.g., void_sap) so recipes can reference them.
   Allow plant placement on any solid block by overriding canPlantOnTop to use Block.isFaceFullSquare(..., Direction.UP).
@@ -22,4 +23,4 @@ If a recipe fails, read run/logs/latest.log for “Couldn’t parse data file �
    For block items with item textures (e.g., Ethereal Sporocarp): ensure items/<name>.json binding exists; item model can parent the block model or use generated with a texture layer.
    For horizontal plant “cross” rendering: avoid parent cross, define two thin element quads (X/Z slices) with per-face UV rotation 90°, and rotate via blockstate (x: 90, y by facing) to keep textures horizontal.
    Always drive behavior/visuals from authoritative server blockstate in 1.21.8: on any neighbor/place/break, recompute the real chain state and set properties server‑side (return the updated state), use mapping‑safe neighbor hooks (plus global place/break fallbacks) and schedule a 1‑tick recheck to avoid stale state/race issues—don’t rely on client rendering or a single callback.
-   Do not use tags for chorus in 1.21.8—chorus hardcodes END_STONE; to support custom bases, wrap END_STONE checks in ChorusFlower/ChorusPlant and ensure the DOWN connection so all placement/growth/survival paths treat them like End Stone.
+   Do not use tags for chorus in 1.21.8—chorus hardcodes END_STONE; to support custom bases, wrap END_STONE checks in ChorusFlower/ChorusPlant and ensure the DOWN connection so all placement/growth/survival paths treat them like End Stone.                                                                         

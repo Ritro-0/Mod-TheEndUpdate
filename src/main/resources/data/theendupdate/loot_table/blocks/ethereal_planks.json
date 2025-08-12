@@ -3,9 +3,8 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [
-        { "type": "minecraft:item", "name": "theendupdate:ethereal_planks" }
-      ]
+      "entries": [ { "type": "minecraft:item", "name": "theendupdate:ethereal_planks" } ],
+      "conditions": [ { "condition": "minecraft:survives_explosion" } ]
     }
   ]
 }

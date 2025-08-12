@@ -22,6 +22,8 @@ public class TemplateMod implements ModInitializer {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+        
+
     @Override
     public void onInitialize() {
         LOGGER.info("Initializing TheEndUpdate");
@@ -36,6 +38,18 @@ public class TemplateMod implements ModInitializer {
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_BLOCK.asItem(), 0.65f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_CRAWL.asItem(), 0.50f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.VOID_BLOOM.asItem(), 0.30f);
+        // Mold plants composting (match vanilla equivalents):
+        // - Nether Sprouts ~30%
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_SPORE.asItem(), 0.30f);
+        // - Warped Roots ~65%
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_SPORE_TUFT.asItem(), 0.65f);
+        // - Large Fern (double-tall) ~65%
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_SPORE_SPROUT.asItem(), 0.65f);
+
+        // Tendril plants: match Warped Fungus (~65%)
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_SPROUT.asItem(), 0.65f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_THREAD.asItem(), 0.65f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_CORE.asItem(), 0.65f);
 
         // Log all recipes from this mod's namespace when the server starts
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
@@ -141,6 +155,8 @@ public class TemplateMod implements ModInitializer {
                 com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, pos);
             }
         });
+
+        
     }
 }
 

@@ -10,6 +10,10 @@ import net.minecraft.block.StairsBlock;
 import net.minecraft.block.ButtonBlock;
 import net.minecraft.block.PressurePlateBlock;
 import net.minecraft.block.BlockSetType;
+import net.minecraft.block.DoorBlock;
+import net.minecraft.block.TrapdoorBlock;
+import net.minecraft.block.FenceGateBlock;
+import net.minecraft.block.WoodType;
 
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -150,7 +154,37 @@ public final class ModBlocks {
         )
     );
 
-    // Fences and fence gates omitted for now; can add later if desired
+    // Wood set extensions
+    public static final Block ETHEREAL_DOOR = registerBlock(
+        "ethereal_door",
+        key -> new DoorBlock(
+            BlockSetType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_DOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
+        )
+    );
+
+    public static final Block ETHEREAL_TRAPDOOR = registerBlock(
+        "ethereal_trapdoor",
+        key -> new TrapdoorBlock(
+            BlockSetType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_TRAPDOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
+        )
+    );
+
+    public static final Block ETHEREAL_FENCE = registerBlock(
+        "ethereal_fence",
+        key -> new net.minecraft.block.FenceBlock(
+            AbstractBlock.Settings.copy(Blocks.OAK_FENCE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block ETHEREAL_FENCE_GATE = registerBlock(
+        "ethereal_fence_gate",
+        key -> new FenceGateBlock(
+            WoodType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_FENCE_GATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
 
     public static final Block ETHEREAL_BUTTON = registerBlock(
         "ethereal_button",
@@ -177,6 +211,45 @@ public final class ModBlocks {
                 .nonOpaque()
                 .ticksRandomly()
                 .noCollision()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block MOLD_SPORE = registerBlock(
+        "mold_spore",
+        key -> new com.theendupdate.block.MoldSporeBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.WARPED_ROOTS)
+                .nonOpaque()
+                .noCollision()
+                .sounds(BlockSoundGroup.NETHER_WART)
+                .offset(AbstractBlock.OffsetType.XZ)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block MOLD_SPORE_TUFT = registerBlock(
+        "mold_spore_tuft",
+        key -> new com.theendupdate.block.MoldSporeTuftBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.WARPED_ROOTS)
+                .nonOpaque()
+                .noCollision()
+                .sounds(BlockSoundGroup.NETHER_WART)
+                .offset(AbstractBlock.OffsetType.XZ)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block MOLD_SPORE_SPROUT = registerBlock(
+        "mold_spore_sprout",
+        key -> new com.theendupdate.block.MoldSporeSproutBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.ROSE_BUSH)
+                .nonOpaque()
+                .noCollision()
+                .sounds(BlockSoundGroup.GRASS)
+                .offset(AbstractBlock.OffsetType.XZ)
                 .registryKey(key)
         )
     );

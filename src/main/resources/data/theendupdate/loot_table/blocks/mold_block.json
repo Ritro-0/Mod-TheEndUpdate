@@ -3,15 +3,8 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "theendupdate:mold_block"
-        }
-      ],
-      "conditions": [
-        { "condition": "minecraft:survives_explosion" }
-      ]
+      "entries": [ { "type": "minecraft:item", "name": "theendupdate:mold_block" } ],
+      "conditions": [ { "condition": "minecraft:survives_explosion" } ]
     }
   ]
 }

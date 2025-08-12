@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SPS",
+    "SPS"
+  ],
+  "key": {
+    "P": "theendupdate:ethereal_planks",
+    "S": "minecraft:stick"
+  },
+  "result": { "id": "theendupdate:ethereal_fence_gate", "count": 1 }
+}
+
+
