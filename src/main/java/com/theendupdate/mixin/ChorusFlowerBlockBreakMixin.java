@@ -44,7 +44,6 @@ public class ChorusFlowerBlockBreakMixin {
                 if (adjacentState.isOf(ModBlocks.VOID_BLOOM)) {
                     Direction attachmentFace = adjacentState.get(com.theendupdate.block.VoidBloomBlock.ATTACHMENT_FACE);
                     if (attachmentFace == direction.getOpposite()) {
-                        TemplateMod.LOGGER.info("Preventing chorus flower break at {} due to properly attached Void Bloom at {} (base supported)", pos, adjacentPos);
                         cir.setReturnValue(true);
                         return;
                     }

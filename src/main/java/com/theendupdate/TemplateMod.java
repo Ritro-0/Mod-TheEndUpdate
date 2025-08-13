@@ -13,6 +13,8 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.util.ActionResult;
 import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
+import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
+// (no server tick hooks used currently)
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,10 +28,24 @@ public class TemplateMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Initializing TheEndUpdate");
+        // Initialize mod content
         com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModItems.registerModItems();
-        LOGGER.info("Moldcrawl registered");
+        // Fuels: make ethereal wood a poor fuel source (~half normal wood burn time)
+        FuelRegistryEvents.BUILD.register((builder, context) -> {
+            final int ETHEREAL_FUEL_TICKS = context.baseSmeltTime() / 2; // usually 100 ticks
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SPOROCARP, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PUSTULE, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_STAIRS, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SLAB, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE_GATE, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_DOOR, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_TRAPDOOR, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_BUTTON, context.baseSmeltTime() / 4); // very low
+            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PRESSURE_PLATE, ETHEREAL_FUEL_TICKS);
+        });
 
         // Composting: mirror vanilla chances
         // - Moss Block: 65%
@@ -51,92 +67,7 @@ public class TemplateMod implements ModInitializer {
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_THREAD.asItem(), 0.65f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_CORE.asItem(), 0.65f);
 
-        // Log all recipes from this mod's namespace when the server starts
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            try {
-                var recipeManager = server.getRecipeManager();
-                int count = 0;
-                for (var entry : recipeManager.values()) {
-                    RegistryKey<Recipe<?>> key = entry.id();
-                    Identifier id = key.getValue();
-                    if (MOD_ID.equals(id.getNamespace())) {
-                        count++;
-                        LOGGER.info("Loaded recipe: {}", id);
-                    }
-                }
-                LOGGER.info("Total '{}' recipes loaded: {}", MOD_ID, count);
-
-                // Debug: verify ethereal_planks is inside #minecraft:planks (items) at runtime
-                var itemRegistry = server.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.ITEM);
-                var planksTag = net.minecraft.registry.tag.ItemTags.PLANKS;
-                var nonFlammable = net.minecraft.registry.tag.ItemTags.NON_FLAMMABLE_WOOD;
-
-                var etherealPlanksItem = com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS.asItem();
-                var etherealId = net.minecraft.registry.Registries.ITEM.getId(etherealPlanksItem);
-                LOGGER.info("Item ID for ethereal_planks: {}", etherealId);
-                var etherealPlanksEntry = itemRegistry.getEntry(etherealId);
-                if (etherealPlanksEntry.isPresent()) {
-                    boolean inPlanks = etherealPlanksEntry.get().isIn(planksTag);
-                    boolean inNonFlam = etherealPlanksEntry.get().isIn(nonFlammable);
-                    LOGGER.info("Tag check: in #minecraft:planks = {} | #minecraft:non_flammable_wood = {}",
-                        inPlanks, inNonFlam);
-                } else {
-                    LOGGER.warn("Tag check: could not resolve registry entry for theendupdate:ethereal_planks");
-                }
-            } catch (Throwable t) {
-                LOGGER.error("Error while logging recipes for namespace '{}'", MOD_ID, t);
-            }
-        });
-
-        // Debug commands to introspect recipes at runtime
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(literal("teu_list_recipes").executes(ctx -> {
-                var server = ctx.getSource().getServer();
-                var recipeManager = server.getRecipeManager();
-                int count = 0;
-                for (var entry : recipeManager.values()) {
-                    RegistryKey<Recipe<?>> key = entry.id();
-                    Identifier id = key.getValue();
-                    if (MOD_ID.equals(id.getNamespace())) {
-                        count++;
-                        final String idString = id.toString();
-                        ctx.getSource().sendFeedback(() -> Text.literal(idString), false);
-                    }
-                }
-                final int finalCount = count;
-                ctx.getSource().sendFeedback(() -> Text.literal("theendupdate recipe count: " + finalCount), false);
-                return 1;
-            }));
-
-            dispatcher.register(literal("teu_has_recipe").then(net.minecraft.server.command.CommandManager.argument("id", net.minecraft.command.argument.IdentifierArgumentType.identifier()).executes(ctx -> {
-                Identifier id = net.minecraft.command.argument.IdentifierArgumentType.getIdentifier(ctx, "id");
-                var server = ctx.getSource().getServer();
-                var recipeManager = server.getRecipeManager();
-                RegistryKey<Recipe<?>> key = RegistryKey.of(RegistryKeys.RECIPE, id);
-                var opt = recipeManager.get(key);
-                boolean present = opt.isPresent();
-                ctx.getSource().sendFeedback(() -> Text.literal("has " + id + ": " + present), false);
-                return present ? 1 : 0;
-            })));
-
-            // Dump the contents of #minecraft:planks (items)
-            dispatcher.register(literal("teu_dump_planks_tag").executes(ctx -> {
-                var server = ctx.getSource().getServer();
-                var itemRegistry2 = server.getRegistryManager().getOrThrow(RegistryKeys.ITEM);
-                var planksTag = net.minecraft.registry.tag.ItemTags.PLANKS;
-                int count2 = 0;
-                for (var entry : itemRegistry2.iterateEntries(planksTag)) {
-                    var key = entry.getKey();
-                    if (key.isPresent()) {
-                        count2++;
-                        ctx.getSource().sendFeedback(() -> Text.literal(key.get().getValue().toString()), false);
-                    }
-                }
-                final int finalCount2 = count2;
-                ctx.getSource().sendFeedback(() -> Text.literal("#minecraft:planks size: " + finalCount2), false);
-                return 1;
-            }));
-        });
+        // Remove dev-only logging and commands for release
 
         // Global hooks to ensure mold_crawl reacts even if vanilla neighbor updates are skipped by renderer state:
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
@@ -156,6 +87,10 @@ public class TemplateMod implements ModInitializer {
             }
         });
 
+        // (loot table event debug removed to avoid API signature differences; block-break diagnostics remain)
+
+        // Worldgen registration
+        com.theendupdate.registry.ModWorldgen.registerAll();
         
     }
 }

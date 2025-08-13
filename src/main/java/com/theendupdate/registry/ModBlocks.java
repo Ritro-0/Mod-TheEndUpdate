@@ -107,7 +107,7 @@ public final class ModBlocks {
         "ethereal_sporocarp",
         key -> new com.theendupdate.block.EtherealSporocarpBlock(
             AbstractBlock.Settings
-                .copy(Blocks.END_STONE)
+                .copy(Blocks.OAK_LOG)
                 .sounds(BlockSoundGroup.WOOD)
                 .strength(2.0F, 3.0F) // Log-like durability
                 .luminance(state -> 2) // Slight glow like End materials

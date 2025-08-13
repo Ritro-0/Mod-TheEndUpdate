@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    "theendupdate:ethereal_sporocarp",
+    "theendupdate:ethereal_pustule",
+    "theendupdate:ethereal_planks",
+    "theendupdate:ethereal_stairs",
+    "theendupdate:ethereal_slab",
+    "theendupdate:ethereal_fence",
+    "theendupdate:ethereal_fence_gate",
+    "theendupdate:ethereal_door",
+    "theendupdate:ethereal_trapdoor",
+    "theendupdate:ethereal_button",
+    "theendupdate:ethereal_pressure_plate"
+  ]
+}
+
+

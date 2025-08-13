@@ -82,7 +82,6 @@ public class TendrilSproutBlock extends PlantBlock implements Fertilizable {
                     if (age == 6) {
                         // Ready to become Tendril Thread
                         world.setBlockState(pos, ModBlocks.TENDRIL_THREAD.getDefaultState());
-                        com.theendupdate.TemplateMod.LOGGER.info("Tendril Sprout grew into Tendril Thread at " + pos);
                     } else {
                         world.setBlockState(pos, state.with(AGE, age + 1));
                     }
@@ -100,7 +99,6 @@ public class TendrilSproutBlock extends PlantBlock implements Fertilizable {
         if (heldItem.isOf(Items.SHEARS)) {
             if (!world.isClient) {
                 world.setBlockState(pos, state.with(STUNTED, true));
-                com.theendupdate.TemplateMod.LOGGER.info("Tendril Sprout growth stunted with shears at " + pos);
                 
                 // Damage the shears
                 heldItem.damage(1, player, player.getActiveHand());

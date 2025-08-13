@@ -18,11 +18,11 @@ public final class TendrilSporeTreeGenerator {
     private TendrilSporeTreeGenerator() {}
 
     public static void generateTree(ServerWorld world, BlockPos startPos, Random random) {
-        com.theendupdate.TemplateMod.LOGGER.info("Generating Tendril Spore tree at " + startPos);
+        
         
         // Check if there's enough space (basic 5x5x8 area check)
         if (!hasEnoughSpace(world, startPos)) {
-            com.theendupdate.TemplateMod.LOGGER.info("Not enough space for Tendril Spore tree at " + startPos);
+            
             // If not enough space, place the core back
             world.setBlockState(startPos, ModBlocks.TENDRIL_CORE.getDefaultState());
             return;
@@ -47,7 +47,7 @@ public final class TendrilSporeTreeGenerator {
             attemptMoldCrawlPlacements(world, logPos, world.random);
         }
         
-        com.theendupdate.TemplateMod.LOGGER.info("Tendril Spore tree generation completed at " + startPos);
+        
     }
 
     private static boolean hasEnoughSpace(ServerWorld world, BlockPos startPos) {

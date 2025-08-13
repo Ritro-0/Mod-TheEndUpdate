@@ -13,10 +13,10 @@ import net.minecraft.client.render.BlockRenderLayer; // This was the key!
 public class TemplateModClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
-        // The CORRECT way to register transparent blocks in Fabric 1.21.8!
+        // Register transparent blocks
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_SAP, BlockRenderLayer.CUTOUT);
-        // New tendril plants render as crossed planes (need CUTOUT)
+        // Tendril plants (crossed planes)
         BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_SPROUT, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_THREAD, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_CORE, BlockRenderLayer.CUTOUT);
@@ -27,7 +27,7 @@ public class TemplateModClient implements ClientModInitializer {
         // Wooden transparent parts
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_DOOR, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_TRAPDOOR, BlockRenderLayer.CUTOUT);
-        System.out.println("Void Bloom, Void Sap, and Tendril plants registered with CUTOUT render layer!");
+        // Client init complete
     }
 }
 

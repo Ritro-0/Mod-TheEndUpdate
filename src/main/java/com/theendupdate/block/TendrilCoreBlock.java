@@ -92,7 +92,7 @@ public class TendrilCoreBlock extends PlantBlock implements Fertilizable {
     // Remove scheduled ticks and initial scheduling; match vanilla plants
 
     private void generateTree(ServerWorld world, BlockPos pos, Random random) {
-        com.theendupdate.TemplateMod.LOGGER.info("Tendril Core growing into Tendril Spore tree at " + pos);
+        
         
         // Remove the core block first
         world.setBlockState(pos, Blocks.AIR.getDefaultState());
@@ -109,7 +109,6 @@ public class TendrilCoreBlock extends PlantBlock implements Fertilizable {
         if (heldItem.isOf(Items.SHEARS)) {
             if (!world.isClient) {
                 world.setBlockState(pos, state.with(STUNTED, true));
-                com.theendupdate.TemplateMod.LOGGER.info("Tendril Core growth stunted with shears at " + pos);
                 
                 // Damage the shears
                 heldItem.damage(1, player, player.getActiveHand());

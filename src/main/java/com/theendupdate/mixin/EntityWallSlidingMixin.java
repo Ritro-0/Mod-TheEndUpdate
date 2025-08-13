@@ -55,8 +55,6 @@ public abstract class EntityWallSlidingMixin {
         }
 
         if (isNearWallVoidSap) {
-            com.theendupdate.TemplateMod.LOGGER.info("EntityWallSlidingMixin: Applying void sap wall sliding to " + entity.getName().getString());
-            
             // Apply wall sliding at half the intensity of honey blocks
             // Honey blocks use ~0.4, so half intensity = 0.7 (less sticky than honey)
             Vec3d velocity = entity.getVelocity();

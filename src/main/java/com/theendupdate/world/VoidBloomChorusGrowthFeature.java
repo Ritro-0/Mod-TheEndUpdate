@@ -40,9 +40,6 @@ public final class VoidBloomChorusGrowthFeature {
                 // Create properly oriented void bloom state
                 var voidBloomBlock = (com.theendupdate.block.VoidBloomBlock) ModBlocks.VOID_BLOOM;
                 BlockState attachedState = voidBloomBlock.getAttachedState(attachmentDirection);
-                
-                com.theendupdate.TemplateMod.LOGGER.info("Placing Void Bloom at {} attached to chorus bud at {} (growth direction: {}, attachment face: {})", 
-                    target, chorusPos, dir, attachmentDirection);
                     
                 world.setBlockState(target, attachedState, 3);
                 return true;

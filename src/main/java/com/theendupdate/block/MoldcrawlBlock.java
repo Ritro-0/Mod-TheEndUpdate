@@ -21,6 +21,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.entity.player.PlayerEntity;
@@ -65,6 +66,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         return CODEC;
     }
 
+
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
         builder.add(FACING, AGE, TIP, STUNTED, TIP_VINES, NATURAL_CAP);
@@ -82,8 +84,8 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
             // Attempt chain-wide reattachment before breaking
             BlockState reattached = tryReattachChain(state, world, pos);
             if (reattached == null) {
-                boolean drop = world.random.nextFloat() < 0.33f;
-                world.breakBlock(pos, drop);
+                // Mirror twisting vines: break this segment; neighbors will schedule and cascade
+                world.breakBlock(pos, true);
             }
             return;
         }
@@ -147,6 +149,14 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         Direction side = ctx.getSide();
         Direction facing = side.getAxis().isHorizontal() ? side : ctx.getHorizontalPlayerFacing();
+        // If the attachment surface is another moldcrawl with a mismatched facing, disallow placement
+        BlockPos supportPos = ctx.getBlockPos().offset(facing.getOpposite());
+        BlockState support = ctx.getWorld().getBlockState(supportPos);
+        if (support.getBlock() instanceof MoldcrawlBlock) {
+            if (support.getOrEmpty(FACING).map(f -> f != facing).orElse(true)) {
+                return null; // cancel placement
+            }
+        }
         // Draw a per-chain natural cap according to target weights:
         // Baseline caps at 1,2,3 are roughly equal with a slight nudge to 3 overall.
         // Then small tails for 4 (~3%) and 5 (~1%).
@@ -162,13 +172,17 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        // Require support from the back (opposite facing). Allow stacking on itself.
-        Direction back = state.get(FACING).getOpposite();
+        // Require support from the back (opposite facing). Allow chaining ONLY when the back segment has the same facing.
+        Direction facing = state.get(FACING);
+        Direction back = facing.getOpposite();
         BlockPos supportPos = pos.offset(back);
         BlockState support = world.getBlockState(supportPos);
-        if (support.isOf(this)) return true;
-        boolean solid = support.isSideSolidFullSquare(world, supportPos, back.getOpposite());
-        return solid;
+        if (support.isOf(this)) {
+            // Only valid if the back segment faces the same direction (true inline chain)
+            return support.getOrEmpty(FACING).map(f -> f == facing).orElse(false);
+        }
+        // Otherwise require a solid face towards us
+        return support.isSideSolidFullSquare(world, supportPos, facing);
     }
 
     // Interaction: allow right-click with bonemeal to pass through to Fertilizable handler
@@ -279,8 +293,11 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         // Do not replace with AIR here to avoid pre-empting loot drops on player breaks.
         // Attempt immediate reattachment (mutates world if successful).
         if (!this.canPlaceAt(state, world, pos)) {
-            tryReattachChain(state, world, pos);
-            // Even if reattach fails, defer actual breaking to scheduledTick to avoid racing with player drops.
+            BlockState reattached = tryReattachChain(state, world, pos);
+            if (reattached == null && world instanceof net.minecraft.server.world.ServerWorld sw) {
+                // Schedule vanilla-like cascade: break this segment next tick
+                sw.scheduleBlockTick(pos, this, 1);
+            }
         }
         // Schedule a survival check to handle horizontal reattachment/breaking reliably
         if (world instanceof net.minecraft.server.world.ServerWorld serverWorld) {
@@ -289,17 +306,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 
         // Recompute chain tip flags on ANY neighbor change to reflect new base-candidate conditions
         if (world instanceof net.minecraft.world.World w && !w.isClient) {
-            try {
-                com.theendupdate.TemplateMod.LOGGER.info(
-                    "MoldCrawl neighborUpdate ENTER: pos={} neighborPos={} dir={} thisFacing={} isClient={} stateTip={} stateTipVines={}",
-                    pos.toShortString(), neighborPos.toShortString(), direction, state.get(FACING), false,
-                    state.getOrEmpty(TIP).orElse(false), state.getOrEmpty(TIP_VINES).orElse(false)
-                );
-                com.theendupdate.TemplateMod.LOGGER.info(
-                    "MoldCrawl neighborUpdate neighborBlock={}",
-                    net.minecraft.registry.Registries.BLOCK.getId(neighborState.getBlock())
-                );
-            } catch (Throwable ignored) {}
+            
             // Fast-path: if the forward neighbor of this block changed, immediately recompute this block's tip/vines flags
             try {
                 Direction f = state.get(FACING);
@@ -364,16 +371,22 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
             updateChainTipFlags(world, pos);
             return;
         }
-        com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick unsupported at {} facing {}", pos.toShortString(), state.get(FACING));
+        
         BlockState reattached = tryReattachChain(state, world, pos);
         if (reattached != null) {
-            com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick reattached at {} new facing {}", pos.toShortString(), reattached.get(FACING));
             return;
         }
-        // No reattachment possible; break with chance like vines (loot table's random_chance doesn't run here)
-        boolean drop = world.random.nextFloat() < 0.33f;
-        world.breakBlock(pos, drop);
+        // No reattachment possible; mirror twisting vines: break this segment; neighbors cascade
+        world.breakBlock(pos, true);
+        // Explicitly schedule the forward neighbor to ensure cascade in horizontal chains
+        Direction f = state.get(FACING);
+        BlockPos forwardPos = pos.offset(f);
+        if (world.getBlockState(forwardPos).isOf(this)) {
+            world.scheduleBlockTick(forwardPos, this, 1);
+        }
     }
+
+    // removed bulk chain breaker: we now cascade per-segment like twisting vines
 
     // Intentionally no low-level neighborUpdate override; we handle visuals via getStateForNeighborUpdate
 
@@ -396,8 +409,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         BlockState forward = world.getBlockState(forwardPos);
         boolean forwardSupportBackFace = forward.isSideSolidFullSquare(world, forwardPos, back);
         boolean forwardSupportFacingFace = forward.isSideSolidFullSquare(world, forwardPos, facing);
-        com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl chain base {} tip {} forward {} supportBackFace={} supportFacingFace={} (back={}, facing={})",
-            base.toShortString(), tip.toShortString(), forwardPos.toShortString(), forwardSupportBackFace, forwardSupportFacingFace, back, facing);
+        
         boolean forwardSupport = forwardSupportBackFace || forwardSupportFacingFace;
         if (!forwardSupport) {
             return null;
@@ -418,7 +430,6 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
                 .with(STUNTED, false)
                 .with(TIP_VINES, tipVines);
             ((net.minecraft.world.World)world).setBlockState(current, newState, Block.NOTIFY_ALL);
-            com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl flip set {} -> facing {} tip={} age={}", current.toShortString(), newFacing, isNewTip, age);
             if (current.equals(tip)) break;
             current = current.offset(facing);
         }
@@ -442,12 +453,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         while (world.getBlockState(tip.offset(facing)).isOf(this)) {
             tip = tip.offset(facing);
         }
-        try {
-            com.theendupdate.TemplateMod.LOGGER.info(
-                "MoldCrawl updateChainTipFlags: base={} tip={} facing={}",
-                base.toShortString(), tip.toShortString(), facing
-            );
-        } catch (Throwable ignored) {}
+        
         // Walk the chain, set TIP/TIP_VINES
         BlockPos cur = base;
         while (true) {
@@ -462,25 +468,12 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
                 boolean forwardHasFluid = !forwardState.getFluidState().isEmpty();
                 boolean forwardIsAir = forwardState.isAir();
                 tipVines = forwardIsAir || forwardHasFluid;
-                try {
-                    com.theendupdate.TemplateMod.LOGGER.info(
-                        "MoldCrawl tip-eval2: tip={} forward={} air={} fluid={} -> TIP_VINES={}",
-                        cur.toShortString(),
-                        net.minecraft.registry.Registries.BLOCK.getId(forwardState.getBlock()),
-                        forwardIsAir, forwardHasFluid, tipVines
-                    );
-                } catch (Throwable ignored) {}
+                
             }
             BlockState ns = st.with(TIP, isTip).with(TIP_VINES, tipVines);
-            if (!ns.equals(st)) {
-                ((net.minecraft.world.World)world).setBlockState(cur, ns, Block.NOTIFY_ALL);
-                try {
-                    com.theendupdate.TemplateMod.LOGGER.info(
-                        "MoldCrawl flag-set: pos={} TIP={} TIP_VINES={} facing={}",
-                        cur.toShortString(), ns.getOrEmpty(TIP).orElse(false), ns.getOrEmpty(TIP_VINES).orElse(false), ns.get(FACING)
-                    );
-                } catch (Throwable ignored) {}
-            }
+                if (!ns.equals(st)) {
+                    ((net.minecraft.world.World)world).setBlockState(cur, ns, Block.NOTIFY_ALL);
+                }
             if (cur.equals(tip)) break;
             cur = cur.offset(facing);
         }
@@ -497,25 +490,13 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     // Low-level neighborUpdate overrides differ across mappings in 1.21.x; rely on getStateForNeighborUpdate instead.
     // Add mapping-safe neighborUpdate variants to ensure we see immediate updates across environments.
     public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos neighborPos, boolean moved) {
-        try {
-            com.theendupdate.TemplateMod.LOGGER.info(
-                "MoldCrawl neighborUpdate(low) A: pos={} neighborPos={} source={} moved={}",
-                pos.toShortString(), neighborPos.toShortString(),
-                net.minecraft.registry.Registries.BLOCK.getId(sourceBlock), moved
-            );
-        } catch (Throwable ignored) {}
+        
         handleNeighborChange(world, pos, state, neighborPos);
     }
 
     // Older/alternate signature seen across mappings
     public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos neighborPos) {
-        try {
-            com.theendupdate.TemplateMod.LOGGER.info(
-                "MoldCrawl neighborUpdate(low) B: pos={} neighborPos={} source={}",
-                pos.toShortString(), neighborPos.toShortString(),
-                net.minecraft.registry.Registries.BLOCK.getId(sourceBlock)
-            );
-        } catch (Throwable ignored) {}
+        
         handleNeighborChange(world, pos, state, neighborPos);
     }
 
@@ -541,23 +522,8 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         if (!updatedTip.equals(tipStateNow)) {
             world.setBlockState(tipPos, updatedTip, Block.NOTIFY_ALL);
             world.updateNeighbors(tipPos, this);
-            try {
-                com.theendupdate.TemplateMod.LOGGER.info(
-                    "MoldCrawl neighborUpdate(low) tip update: base={} tipPos={} forward={} air={} fluid={} -> TIP_VINES={}",
-                    base.toShortString(), tipPos.toShortString(),
-                    net.minecraft.registry.Registries.BLOCK.getId(forwardState.getBlock()),
-                    forwardIsAir, forwardHasFluid, newTipVines
-                );
-            } catch (Throwable ignored) {}
         } else {
-            try {
-                com.theendupdate.TemplateMod.LOGGER.info(
-                    "MoldCrawl neighborUpdate(low) no-change: base={} tipPos={} forward={} air={} fluid={} currentTipVines={}",
-                    base.toShortString(), tipPos.toShortString(),
-                    net.minecraft.registry.Registries.BLOCK.getId(forwardState.getBlock()),
-                    forwardIsAir, forwardHasFluid, tipStateNow.getOrEmpty(TIP_VINES).orElse(false)
-                );
-            } catch (Throwable ignored) {}
+            
         }
         // Also run chain-wide flags for consistency
         updateChainTipFlags(world, pos);
@@ -570,21 +536,10 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
             BlockPos neighbor = changedPos.offset(d);
             BlockState st = world.getBlockState(neighbor);
             if (st.getBlock() instanceof MoldcrawlBlock mold) {
-                try {
-                    com.theendupdate.TemplateMod.LOGGER.info(
-                        "MoldCrawl external change near={} found mold at={} facing={}",
-                        changedPos.toShortString(), neighbor.toShortString(), st.get(FACING)
-                    );
-                } catch (Throwable ignored) {}
+                
                 mold.handleNeighborChange(world, neighbor, st, changedPos);
                 if (world instanceof net.minecraft.server.world.ServerWorld sw) {
                     sw.scheduleBlockTick(neighbor, mold, 1);
-                    try {
-                        com.theendupdate.TemplateMod.LOGGER.info(
-                            "MoldCrawl scheduledTick queued at {} after external change",
-                            neighbor.toShortString()
-                        );
-                    } catch (Throwable ignored) {}
                 }
             }
         }

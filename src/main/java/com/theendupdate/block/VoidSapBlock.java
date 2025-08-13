@@ -50,13 +50,13 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
             .with(WEST, false)
             .with(UP, false)
             .with(DOWN, false));
-        com.theendupdate.TemplateMod.LOGGER.info("VoidSapBlock initialized!"); // Added for debugging
+        
     }
     
     @Override
     protected void onBlockAdded(BlockState state, net.minecraft.world.World world, BlockPos pos, BlockState oldState, boolean notify) {
         super.onBlockAdded(state, world, pos, oldState, notify);
-        com.theendupdate.TemplateMod.LOGGER.info("VoidSap onBlockAdded called at: " + pos.toShortString() + ", isClient: " + world.isClient);
+        
         // No longer need scheduled ticks - using EntityWallSlidingMixin for wall sliding
     }
 
@@ -158,13 +158,13 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
 
     @Override
     public void grow(ServerWorld world, net.minecraft.util.math.random.Random random, BlockPos pos, BlockState state) {
-        com.theendupdate.TemplateMod.LOGGER.info("VoidSap spreading with bonemeal");
+        
         trySpread(state, world, pos, random);
     }
 
     // CORRECT BLOCK INTERACTION OVERRIDE - for right-click
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        com.theendupdate.TemplateMod.LOGGER.info("VoidSap onUse called!");
+        
         ItemStack itemStack = player.getStackInHand(hand);
         
         // Add void sap to empty faces when right-clicking with void sap
@@ -196,7 +196,7 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
     @Override
     public float getVelocityMultiplier() {
         // Honey blocks use 0.4, so half strength = 0.7
-        com.theendupdate.TemplateMod.LOGGER.info("VoidSap getVelocityMultiplier called, returning 0.7");
+        
         return 0.7F;
     }
 
@@ -204,7 +204,7 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
     @Override
     public float getJumpVelocityMultiplier() {
         // Honey blocks use 0.5, so half strength = 0.75
-        com.theendupdate.TemplateMod.LOGGER.info("VoidSap getJumpVelocityMultiplier called, returning 0.75");
+        
         return 0.75F;
     }
 

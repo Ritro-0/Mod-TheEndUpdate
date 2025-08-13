@@ -3,7 +3,31 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [ { "type": "minecraft:item", "name": "theendupdate:end_mire" } ],
+      "entries": [
+        {
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "name": "theendupdate:end_mire",
+              "conditions": [
+                {
+                  "condition": "minecraft:match_tool",
+                  "predicate": {
+                    "enchantments": [
+                      { "enchantment": "minecraft:silk_touch", "levels": { "min": 1 } }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "minecraft:end_stone"
+            }
+          ]
+        }
+      ],
       "conditions": [ { "condition": "minecraft:survives_explosion" } ]
     }
   ]

@@ -1,0 +1,10 @@
+{
+  "feature": "theendupdate:mirelands_tree_cluster",
+  "placement": [
+    { "type": "minecraft:rarity_filter", "chance": 1 },
+    { "type": "minecraft:in_square" },
+    { "type": "minecraft:biome" }
+  ]
+}
+
+
