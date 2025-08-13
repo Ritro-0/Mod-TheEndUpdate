@@ -12,9 +12,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.Box;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 
@@ -100,7 +98,6 @@ public class EndMireBlock extends Block implements Fertilizable {
             }
             ((ServerWorld) world).emitGameEvent(player, net.minecraft.world.event.GameEvent.BLOCK_DESTROY, pos);
         }
-
-        super.afterBreak(world, player, pos, state, blockEntity, tool);
+        // Intentionally do not call super.afterBreak to prevent default loot table drops (avoids double-drops)
     }
 }
