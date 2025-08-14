@@ -6,11 +6,13 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.PlantBlock;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.block.TallPlantBlock;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
+import net.minecraft.registry.tag.BlockTags;
 
 /**
  * Simple small plant that behaves like warped roots: decorative, no growth.
@@ -41,6 +43,22 @@ public class MoldSporeBlock extends PlantBlock {
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         return OUTLINE_SHAPE;
     }
+
+	@Override
+	public BlockState getPlacementState(net.minecraft.item.ItemPlacementContext context) {
+		// If targeting a flower or tall plant, do not replace it
+		BlockState existing = context.getWorld().getBlockState(context.getBlockPos());
+		if (existing.isIn(BlockTags.FLOWERS) || existing.getBlock() instanceof TallPlantBlock) {
+			return null;
+		}
+		return super.getPlacementState(context);
+	}
+
+	@Override
+	public boolean canReplace(BlockState state, net.minecraft.item.ItemPlacementContext context) {
+		// Prevent replacement of this plant by other placements; force adjacency attempts
+		return false;
+	}
 }
 
 

@@ -18,6 +18,22 @@ public final class ModItems {
         )
     );
 
+    // Metals and materials
+    public static final Item VOIDSTAR_SHARD = registerItem(
+        "voidstar_shard",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item VOIDSTAR_NUGGET = registerItem(
+        "voidstar_nugget",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item VOIDSTAR_INGOT = registerItem(
+        "voidstar_ingot",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
     private static Item registerItem(String name, java.util.function.Function<RegistryKey<Item>, Item> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Item> key = RegistryKey.of(Registries.ITEM.getKey(), id);

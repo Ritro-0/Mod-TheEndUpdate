@@ -11,6 +11,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
+import net.minecraft.registry.tag.BlockTags;
 
 public class MoldSporeSproutBlock extends TallPlantBlock {
     public static final MapCodec<MoldSporeSproutBlock> CODEC = createCodec(MoldSporeSproutBlock::new);
@@ -35,6 +36,22 @@ public class MoldSporeSproutBlock extends TallPlantBlock {
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         return OUTLINE_SHAPE;
     }
+
+	@Override
+	public BlockState getPlacementState(net.minecraft.item.ItemPlacementContext context) {
+		// Avoid replacing flowers/tall plants; return null so placement system tries to offset
+		BlockState existing = context.getWorld().getBlockState(context.getBlockPos());
+		if (existing.isIn(BlockTags.FLOWERS) || existing.getBlock() instanceof TallPlantBlock) {
+			return null;
+		}
+		return super.getPlacementState(context);
+	}
+
+	@Override
+	public boolean canReplace(BlockState state, net.minecraft.item.ItemPlacementContext context) {
+		// Do not allow other items to replace this plant directly
+		return false;
+	}
 }
 
 

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": { "#": "theendupdate:voidstar_ingot" },
+  "result": { "id": "theendupdate:voidstar_block", "count": 1 }
+}
+
+

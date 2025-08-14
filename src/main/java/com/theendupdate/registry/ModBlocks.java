@@ -254,6 +254,46 @@ public final class ModBlocks {
         )
     );
 
+    // Crystals and metals
+    public static final Block STELLARITH_CRYSTAL = registerBlock(
+        "stellarith_crystal",
+        key -> new com.theendupdate.block.StellarithCrystalBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.AMETHYST_BLOCK)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block VOIDSTAR_BLOCK = registerBlock(
+        "voidstar_block",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.IRON_BLOCK)
+                .strength(50.0F, 6.0F) // Match Netherite hardness; keep iron-like blast resistance
+                .registryKey(key)
+        )
+    );
+
+    public static final Block ASTRAL_REMNANT = registerBlock(
+        "astral_remnant",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.AMETHYST_BLOCK)
+                .strength(1.9F, 2.0F) // ~25% harder than amethyst, slightly more resistant
+                .registryKey(key)
+        )
+    );
+
+    // Beacon-friendly transparent block
+    public static final Block QUANTUM_GATEWAY = registerBlock(
+        "quantum_gateway",
+        key -> new com.theendupdate.block.QuantumGatewayBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.GLASS) // Non-opaque like glass so beacon beams pass through
+                .registryKey(key)
+        )
+    );
+
     private static Block registerBlock(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
@@ -264,7 +304,14 @@ public final class ModBlocks {
         // Register the block item so it appears in inventory and can be placed
         RegistryKey<Item> itemKey = RegistryKey.of(Registries.ITEM.getKey(), id);
         Item.Settings itemSettings = new Item.Settings().registryKey(itemKey);
-        Registry.register(Registries.ITEM, id, new BlockItem(block, itemSettings));
+        BlockItem item;
+        // Use adjacent-placing behavior for our delicate plants so they don't replace flowers/plants
+        if (name.equals("mold_spore") || name.equals("mold_spore_tuft") || name.equals("mold_spore_sprout") || name.equals("tendril_sprout") || name.equals("tendril_thread") || name.equals("tendril_core") || name.equals("void_bloom")) {
+            item = new com.theendupdate.item.AdjacentPlantBlockItem(block, itemSettings);
+        } else {
+            item = new BlockItem(block, itemSettings);
+        }
+        Registry.register(Registries.ITEM, id, item);
         // Add to a creative tab so it's visible in creative inventory
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
         return block;

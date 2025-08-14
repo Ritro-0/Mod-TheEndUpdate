@@ -1,19 +1,13 @@
 package com.theendupdate;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import static net.minecraft.server.command.CommandManager.literal;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
+// removed unused lifecycle/command imports
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.util.ActionResult;
 import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
 import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
+// debug-related imports removed
 // (no server tick hooks used currently)
 
 import org.slf4j.Logger;

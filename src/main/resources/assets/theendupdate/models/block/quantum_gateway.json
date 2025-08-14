@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "theendupdate:block/quantum_gateway_top",
+    "bottom": "theendupdate:block/quantum_gateway_bottom",
+    "side": "theendupdate:block/quantum_gateway_side"
+  }
+}
+
+

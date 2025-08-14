@@ -3,9 +3,10 @@
 	"package": "com.theendupdate.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"TheEndUpdateClientMixin"
+		"TheEndUpdateClientMixin",
+		"BeaconBlockEntityRendererMixin"
 	],
 	"injectors": {
-		"defaultRequire": 1
+		"defaultRequire": 0
 	}
 }

@@ -43,7 +43,19 @@
   "block.theendupdate.mold_spore_tuft": "Mold Spore Tuft",
   "item.theendupdate.mold_spore_tuft": "Mold Spore Tuft",
   "block.theendupdate.mold_spore_sprout": "Mold Spore Sprout",
-  "item.theendupdate.mold_spore_sprout": "Mold Spore Sprout"
+  "item.theendupdate.mold_spore_sprout": "Mold Spore Sprout",
+
+  "block.theendupdate.stellarith_crystal": "Stellarith Crystal",
+  "item.theendupdate.stellarith_crystal": "Stellarith Crystal",
+  "block.theendupdate.voidstar_block": "Voidstar Block",
+  "item.theendupdate.voidstar_block": "Voidstar Block",
+  "block.theendupdate.quantum_gateway": "Quantum Gateway",
+  "item.theendupdate.quantum_gateway": "Quantum Gateway",
+  "item.theendupdate.voidstar_shard": "Voidstar Shard",
+  "item.theendupdate.voidstar_nugget": "Voidstar Nugget",
+  "item.theendupdate.voidstar_ingot": "Voidstar Ingot",
+  "block.theendupdate.astral_remnant": "Astral Remnant",
+  "item.theendupdate.astral_remnant": "Astral Remnant"
 }
 
 

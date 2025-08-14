@@ -27,6 +27,8 @@ public class TemplateModClient implements ClientModInitializer {
         // Wooden transparent parts
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_DOOR, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_TRAPDOOR, BlockRenderLayer.CUTOUT);
+        // Quantum gateway uses glass-like rendering; translucent looks better for alpha
+        BlockRenderLayerMap.putBlock(ModBlocks.QUANTUM_GATEWAY, BlockRenderLayer.TRANSLUCENT);
         // Client init complete
     }
 }

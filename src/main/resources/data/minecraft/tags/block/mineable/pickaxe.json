@@ -1,6 +1,9 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:end_mire"
+    "theendupdate:end_mire",
+    "theendupdate:stellarith_crystal",
+    "theendupdate:voidstar_block",
+    "theendupdate:astral_remnant"
   ]
 }
