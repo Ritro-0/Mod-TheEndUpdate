@@ -1,9 +1,11 @@
 package com.theendupdate.registry;
 
 import com.theendupdate.TemplateMod;
+import com.theendupdate.item.BoundRecoveryCompassItem;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
@@ -32,6 +34,20 @@ public final class ModItems {
     public static final Item VOIDSTAR_INGOT = registerItem(
         "voidstar_ingot",
         key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item BOUND_RECOVERY_COMPASS = registerItem(
+        "bound_recovery_compass",
+        key -> new BoundRecoveryCompassItem(new Item.Settings().registryKey(key))
+    );
+    
+    // Spawn eggs
+    public static final Item ETHEREAL_ORB_SPAWN_EGG = registerItem(
+        "ethereal_orb_spawn_egg",
+        key -> new SpawnEggItem(
+            com.theendupdate.registry.ModEntities.ETHEREAL_ORB,
+            new Item.Settings().registryKey(key)
+        )
     );
 
     private static Item registerItem(String name, java.util.function.Function<RegistryKey<Item>, Item> factory) {

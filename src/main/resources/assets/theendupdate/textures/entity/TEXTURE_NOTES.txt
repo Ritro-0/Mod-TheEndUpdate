@@ -1,0 +1,21 @@
+ETHEREAL ORB ENTITY TEXTURE REQUIREMENTS:
+
+The ethereal orb entity needs a texture file at:
+src/main/resources/assets/theendupdate/textures/entity/ethereal_orb.png
+
+Texture specifications:
+- Size: 64x32 pixels (standard entity texture dimensions)
+- The texture should map to the model parts as follows:
+  - Core orb (main sphere): UV 0,0 - 8x8 faces
+  - Outer ring: UV 32,0 - 12x12 top/bottom, 12x2 sides
+  - Small orbs: UV 0,16 - 3x3 faces each
+
+Suggested appearance:
+- Semi-transparent purple/pink gradient
+- Glowing effect (lighter colors in center)
+- Ethereal, mystical appearance fitting The End dimension
+- Consider adding subtle particle-like details
+
+The spawn egg will automatically use the colors defined in ModItems.java:
+- Primary: #9966CC (light purple)
+- Secondary: #FFE5FF (very light pink)

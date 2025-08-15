@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(BeaconBlockEntityRenderer.class)
 public abstract class BeaconBlockEntityRendererMixin {
-	private static int THEENDUPDATE$DEBUG_TICK = 0;
+    
     private static int theendupdate$packColor(float r, float g, float b, float a) {
         int ri = (int)(r * 255.0f) & 0xFF;
         int gi = (int)(g * 255.0f) & 0xFF;
@@ -161,9 +161,7 @@ public abstract class BeaconBlockEntityRendererMixin {
 		BlockPos above = beacon.getPos().up();
 		BlockState stateAbove = world.getBlockState(above);
 		if (!stateAbove.isOf(Blocks.AIR) && stateAbove.getBlock() instanceof QuantumGatewayBlock) {
-			if ((THEENDUPDATE$DEBUG_TICK++ % 40) == 0) {
-				System.out.println("[theendupdate] Quantum gateway above beacon detected; applying bent overlay");
-			}
+            
 		// Throttle (keep light) but don't cull vertically; overlay path kept lightweight
 		if ((world.getTime() & 1L) != 0L) return;
 
@@ -182,18 +180,17 @@ public abstract class BeaconBlockEntityRendererMixin {
                 float r = tint[0];
                 float g = tint[1];
                 float b = tint[2];
-                float a = 1.0f;
-                float half = 0.3f;
-                float height = 1.0f;
+        float a = 1.0f;
+        float half = 0.3f;
+        
+        float height = 1.0f;
 				matrices.push();
 				matrices.translate(0.5f, 0.0f, 0.5f);
 				for (int y = start; y < max; y += stride) {
 					float phase = (y * freqSpace) + (float)(time * freqTime);
 					float offsetX = (float)(Math.sin(phase) * amp + Math.signum(Math.sin(phase * sharp)) * amp * 0.12f);
 					float offsetZ = (float)(Math.cos(phase * 1.07f) * amp + Math.signum(Math.cos(phase * sharp * 0.93f)) * amp * 0.12f);
-					if ((THEENDUPDATE$DEBUG_TICK % 40) == 0) {
-						System.out.println("[theendupdate] segment y="+y+" offsetX="+offsetX+" offsetZ="+offsetZ);
-					}
+                    
 					matrices.push();
 					matrices.translate(offsetX, (float)y, offsetZ);
                     MatrixStack.Entry entry = matrices.peek();
@@ -236,17 +233,19 @@ public abstract class BeaconBlockEntityRendererMixin {
 		float r = tint[0];
 		float g = tint[1];
 		float b = tint[2];
-		float a = 1.0f;
-		float half = 0.3f;
-		float height = 1.0f;
+        float a = 1.0f;
+        float half = 0.3f;
+        
+        float height = 1.0f;
 
 		// Render full height to sky: from beacon Y to world top Y
 		int beaconY = beacon.getPos().getY();
 		int topY = world.getDimension().height();
 		int totalSegments = Math.max(0, topY - beaconY);
+		int yStart = 2; // start above the beacon's inner blue cube
 		matrices.push();
 		matrices.translate(0.5f, 0.0f, 0.5f);
-		for (int y = 0; y < totalSegments; y++) {
+        for (int y = yStart; y < totalSegments; y++) {
 			float phase = (y * freqSpace) + (float)(time * freqTime);
 			float offsetX = (float)(Math.sin(phase) * amp + Math.signum(Math.sin(phase * sharp)) * amp * 0.12f);
 			float offsetZ = (float)(Math.cos(phase * 1.07f) * amp + Math.signum(Math.cos(phase * sharp * 0.93f)) * amp * 0.12f);
@@ -260,6 +259,8 @@ public abstract class BeaconBlockEntityRendererMixin {
             theendupdate$emitXFace(consumer, entry, -half, -half, +half, 0.0f, height, r, g, b, a, light, overlay, -1.0f);
             theendupdate$emitXFace(consumer, entry, +half, -half, +half, 0.0f, height, r, g, b, a, light, overlay, 1.0f);
 			matrices.pop();
+
+            
 		}
 		matrices.pop();
 	}

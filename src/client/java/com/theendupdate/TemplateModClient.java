@@ -3,16 +3,31 @@ package com.theendupdate;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.Environment;
 import net.fabricmc.api.EnvType;
+
+import com.theendupdate.entity.model.EtherealOrbEntityModel;
+import com.theendupdate.entity.renderer.EtherealOrbEntityRenderer;
 import com.theendupdate.registry.ModBlocks;
+import com.theendupdate.registry.ModEntities;
 
 // The correct imports for Fabric 1.21.8
 import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.render.BlockRenderLayer; // This was the key!
+import net.minecraft.client.render.entity.model.EntityModelLayer;
+import net.minecraft.util.Identifier;
 
 @Environment(EnvType.CLIENT)  
 public class TemplateModClient implements ClientModInitializer {
+    public static final EntityModelLayer MODEL_ETHEREAL_ORB_LAYER = new EntityModelLayer(Identifier.of(TemplateMod.MOD_ID, "ethereal_orb"), "main");
+
     @Override
-    public void onInitializeClient() {
+    public void onInitializeClient() 
+    {
+        // TODO: Add entity renderer when implementing custom renderer for 1.21.8
+        // EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, EtherealOrbEntityRenderer::new);
+        // EntityModelLayerRegistry.registerModelLayer(EtherealOrbEntityModel.ETHEREAL_ORB_LAYER, EtherealOrbEntityModel::getTexturedModelData);
+        
         // Register transparent blocks
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_SAP, BlockRenderLayer.CUTOUT);
@@ -29,8 +44,14 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_TRAPDOOR, BlockRenderLayer.CUTOUT);
         // Quantum gateway uses glass-like rendering; translucent looks better for alpha
         BlockRenderLayerMap.putBlock(ModBlocks.QUANTUM_GATEWAY, BlockRenderLayer.TRANSLUCENT);
+        // Entity Initialization
+        EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
+        EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
         // Client init complete
+        TemplateMod.LOGGER.info("The End Update client initialized successfully!");
+
     }
+    
 }
 
 

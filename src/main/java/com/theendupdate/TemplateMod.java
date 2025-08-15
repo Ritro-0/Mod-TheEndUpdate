@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.util.ActionResult;
 import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
 import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 // debug-related imports removed
 // (no server tick hooks used currently)
 
@@ -25,6 +26,13 @@ public class TemplateMod implements ModInitializer {
         // Initialize mod content
         com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModItems.registerModItems();
+        com.theendupdate.registry.ModEntities.registerModEntities();
+        
+        // Register entity attributes
+        FabricDefaultAttributeRegistry.register(
+            com.theendupdate.registry.ModEntities.ETHEREAL_ORB, 
+            com.theendupdate.entity.EtherealOrbEntity.createEtherealOrbAttributes()
+        );
         // Fuels: make ethereal wood a poor fuel source (~half normal wood burn time)
         FuelRegistryEvents.BUILD.register((builder, context) -> {
             final int ETHEREAL_FUEL_TICKS = context.baseSmeltTime() / 2; // usually 100 ticks
