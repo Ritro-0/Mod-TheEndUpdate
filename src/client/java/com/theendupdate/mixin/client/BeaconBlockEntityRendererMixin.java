@@ -3,6 +3,11 @@ package com.theendupdate.mixin.client;
 import com.theendupdate.block.QuantumGatewayBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.StainedGlassBlock;
+import net.minecraft.block.StainedGlassPaneBlock;
+import net.minecraft.util.DyeColor;
+import net.minecraft.block.Block;
+import net.minecraft.block.TintedGlassBlock;
 import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -176,7 +181,7 @@ public abstract class BeaconBlockEntityRendererMixin {
 				int stride = 2;
 				int start = (int)(world.getTime() % stride);
                 VertexConsumer consumer = vertices.getBuffer(RenderLayer.getBeaconBeam(BeaconBlockEntityRenderer.BEAM_TEXTURE, false));
-                float[] tint = QuantumGatewayBlock.BEAM_TINT;
+                float[] tint = theendupdate$getRedirectedTint(world, beacon.getPos());
                 float r = tint[0];
                 float g = tint[1];
                 float b = tint[2];
@@ -229,7 +234,7 @@ public abstract class BeaconBlockEntityRendererMixin {
 		float freqTime = 1.0f;
 
 		VertexConsumer consumer = vertices.getBuffer(RenderLayer.getBeaconBeam(BeaconBlockEntityRenderer.BEAM_TEXTURE, false));
-		float[] tint = QuantumGatewayBlock.BEAM_TINT;
+		float[] tint = theendupdate$getRedirectedTint(world, beacon.getPos());
 		float r = tint[0];
 		float g = tint[1];
 		float b = tint[2];
@@ -263,6 +268,77 @@ public abstract class BeaconBlockEntityRendererMixin {
             
 		}
 		matrices.pop();
+	}
+
+	private static float[] theendupdate$getRedirectedTint(World world, BlockPos beaconPos) {
+		BlockPos gatewayPos = beaconPos.up();
+		BlockState gatewayState = world.getBlockState(gatewayPos);
+		if (!(gatewayState.getBlock() instanceof QuantumGatewayBlock)) {
+			return QuantumGatewayBlock.BEAM_TINT;
+		}
+
+		int bottomY = world.getBottomY();
+		int topYExclusive = bottomY + world.getHeight();
+		float rSum = 0.0f;
+		float gSum = 0.0f;
+		float bSum = 0.0f;
+		int count = 0;
+
+		BlockPos.Mutable scan = new BlockPos.Mutable(gatewayPos.getX(), gatewayPos.getY() + 1, gatewayPos.getZ());
+		while (scan.getY() < topYExclusive) {
+			BlockState state = world.getBlockState(scan);
+			Block block = state.getBlock();
+			// Stop if an opaque or otherwise blocking block is encountered
+			if (block instanceof TintedGlassBlock) {
+				break;
+			}
+			if (block instanceof StainedGlassBlock sgb) {
+				float[] c = theendupdate$fromDyeColor(sgb.getColor());
+				rSum += c[0];
+				gSum += c[1];
+				bSum += c[2];
+				count++;
+			} else if (block instanceof StainedGlassPaneBlock sgbp) {
+				float[] c = theendupdate$fromDyeColor(sgbp.getColor());
+				rSum += c[0];
+				gSum += c[1];
+				bSum += c[2];
+				count++;
+			} else if (state.isOf(Blocks.AIR) || state.isOf(Blocks.GLASS) || state.isOf(Blocks.GLASS_PANE)) {
+				// pass-through, no color contribution
+			} else {
+				// Non-pass-through block found; stop scanning
+				break;
+			}
+			scan.set(scan.getX(), scan.getY() + 1, scan.getZ());
+		}
+
+		if (count > 0) {
+			return new float[]{rSum / count, gSum / count, bSum / count};
+		}
+		return QuantumGatewayBlock.BEAM_TINT;
+	}
+
+	private static float[] theendupdate$fromDyeColor(DyeColor dye) {
+		switch (dye) {
+			case WHITE: return new float[]{249/255f, 255/255f, 254/255f};
+			case ORANGE: return new float[]{249/255f, 128/255f, 29/255f};
+			case MAGENTA: return new float[]{199/255f, 78/255f, 189/255f};
+			case LIGHT_BLUE: return new float[]{58/255f, 179/255f, 218/255f};
+			case YELLOW: return new float[]{254/255f, 216/255f, 61/255f};
+			case LIME: return new float[]{128/255f, 199/255f, 31/255f};
+			case PINK: return new float[]{243/255f, 139/255f, 170/255f};
+			case GRAY: return new float[]{71/255f, 79/255f, 82/255f};
+			case LIGHT_GRAY: return new float[]{157/255f, 157/255f, 151/255f};
+			case CYAN: return new float[]{22/255f, 156/255f, 156/255f};
+			case PURPLE: return new float[]{137/255f, 50/255f, 184/255f};
+			case BLUE: return new float[]{60/255f, 68/255f, 170/255f};
+			case BROWN: return new float[]{131/255f, 84/255f, 50/255f};
+			case GREEN: return new float[]{94/255f, 124/255f, 22/255f};
+			case RED: return new float[]{176/255f, 46/255f, 38/255f};
+			case BLACK: return new float[]{29/255f, 29/255f, 33/255f};
+			default: return QuantumGatewayBlock.BEAM_TINT;
+		}
 	}
 }
 
