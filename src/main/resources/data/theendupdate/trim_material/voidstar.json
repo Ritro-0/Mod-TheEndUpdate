@@ -1,0 +1,10 @@
+{
+  "asset_name": "voidstar",
+  "description": {
+    "color": "#4B0082",
+    "translate": "trim_material.theendupdate.voidstar"
+  },
+  "ingredient": "theendupdate:voidstar_ingot",
+  "item_model_index": 0.85
+}
+

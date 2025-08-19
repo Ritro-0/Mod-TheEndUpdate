@@ -3,6 +3,14 @@ package com.theendupdate;
 import net.fabricmc.api.ModInitializer;
 // removed unused lifecycle/command imports
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.recipe.RecipeType;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.tag.TagKey;
+import net.minecraft.util.Identifier;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.util.ActionResult;
 import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
@@ -25,6 +33,8 @@ public class TemplateMod implements ModInitializer {
     public void onInitialize() {
         // Initialize mod content
         com.theendupdate.registry.ModBlocks.registerModBlocks();
+        com.theendupdate.registry.ModBlockEntities.register();
+        com.theendupdate.registry.ModScreenHandlers.register();
         com.theendupdate.registry.ModItems.registerModItems();
         com.theendupdate.registry.ModEntities.registerModEntities();
         
@@ -93,6 +103,8 @@ public class TemplateMod implements ModInitializer {
 
         // Worldgen registration
         com.theendupdate.registry.ModWorldgen.registerAll();
+        
+        // No debug startup logging in release builds
         
     }
 }

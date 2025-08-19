@@ -10,7 +10,9 @@
 		"ChorusPlantBlockStateMixin",
 		"ChorusFlowerEndStoneCompatMixin",
 		"ChorusPlantEndStoneCompatMixin",
-		"EntityWallSlidingMixin"
+		"EntityWallSlidingMixin",
+		"RecoveryCompassUseMixin",
+		"SmithingForceTrimMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

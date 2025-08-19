@@ -1,7 +1,6 @@
 package com.theendupdate.registry;
 
 import com.theendupdate.TemplateMod;
-import com.theendupdate.item.BoundRecoveryCompassItem;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
@@ -36,10 +35,7 @@ public final class ModItems {
         key -> new Item(new Item.Settings().registryKey(key))
     );
 
-    public static final Item BOUND_RECOVERY_COMPASS = registerItem(
-        "bound_recovery_compass",
-        key -> new BoundRecoveryCompassItem(new Item.Settings().registryKey(key))
-    );
+    // Removed custom bound recovery compass; vanilla recovery compass will be used
     
     // Spawn eggs
     public static final Item ETHEREAL_ORB_SPAWN_EGG = registerItem(

@@ -16,6 +16,8 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.render.BlockRenderLayer; // This was the key!
 import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.screen.ingame.HandledScreens;
+// predicate registration removed; compass logic handled via mixins
 
 @Environment(EnvType.CLIENT)  
 public class TemplateModClient implements ClientModInitializer {
@@ -47,6 +49,9 @@ public class TemplateModClient implements ClientModInitializer {
         // Entity Initialization
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
+        // Register custom screen for Quantum Gateway
+        HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
+
         // Client init complete
         TemplateMod.LOGGER.info("The End Update client initialized successfully!");
 

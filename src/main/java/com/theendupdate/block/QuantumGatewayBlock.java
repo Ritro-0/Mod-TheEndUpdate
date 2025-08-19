@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -14,6 +15,8 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+
+// no extra imports
 
 public class QuantumGatewayBlock extends BlockWithEntity {
     public QuantumGatewayBlock(Settings settings) {
@@ -38,7 +41,7 @@ public class QuantumGatewayBlock extends BlockWithEntity {
     @Override
     public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable net.minecraft.entity.LivingEntity placer, ItemStack itemStack) {
         super.onPlaced(world, pos, state, placer, itemStack);
-        
+        // BlockEntity is constructed by createBlockEntity
     }
 
     // Mapping-safe: omit @Override and use broader signature
@@ -52,24 +55,11 @@ public class QuantumGatewayBlock extends BlockWithEntity {
     // Mapping-safe variant with Hand parameter
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) return ActionResult.SUCCESS;
-        // MVP: show inventory in a later pass; for now, only bind on valid inputs
-
-        ItemStack held = player.getStackInHand(hand);
-        boolean changed = false;
-
-        if (!held.isEmpty() && held.isOf(Items.RECOVERY_COMPASS)) {
-            // Bind compass to this gateway if player has a diamond block
-            if (player.getInventory().contains(new ItemStack(Items.DIAMOND_BLOCK))) {
-                // consume 1 diamond block
-                player.getInventory().remove(item -> item.isOf(Items.DIAMOND_BLOCK), 1, player.getInventory());
-                net.minecraft.nbt.NbtCompound tag = new net.minecraft.nbt.NbtCompound();
-                tag.putString("bound_gateway", pos.getX()+","+pos.getY()+","+pos.getZ());
-                tag.putString("bound_dimension", world.getRegistryKey().getValue().toString());
-                held.set(net.minecraft.component.DataComponentTypes.CUSTOM_DATA, net.minecraft.component.type.NbtComponent.of(tag));
-                return ActionResult.CONSUME;
-            }
+        BlockEntity be = world.getBlockEntity(pos);
+        if (be instanceof QuantumGatewayBlockEntity gateway) {
+            player.openHandledScreen(gateway);
+            return ActionResult.CONSUME;
         }
-
         return ActionResult.PASS;
     }
 
@@ -80,7 +70,20 @@ public class QuantumGatewayBlock extends BlockWithEntity {
 
     @Nullable
     @Override
-    public net.minecraft.block.entity.BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return null; }
+    public net.minecraft.block.entity.BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return new QuantumGatewayBlockEntity(pos, state); }
+
+    private static void tryCraft(QuantumGatewayBlockEntity gateway) {
+        ItemStack compass = gateway.inventory.getStack(0);
+        ItemStack diamond = gateway.inventory.getStack(1);
+        ItemStack output = gateway.inventory.getStack(2);
+        if (!compass.isEmpty() && compass.isOf(Items.RECOVERY_COMPASS)
+                && !diamond.isEmpty() && diamond.isOf(Items.DIAMOND_BLOCK)
+                && output.isEmpty()) {
+            compass.decrement(1);
+            diamond.decrement(1);
+            gateway.inventory.setStack(2, new ItemStack(Items.RECOVERY_COMPASS));
+        }
+    }
 }
 
 

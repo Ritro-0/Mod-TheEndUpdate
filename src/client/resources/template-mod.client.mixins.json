@@ -4,7 +4,13 @@
 	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"TheEndUpdateClientMixin",
-		"BeaconBlockEntityRendererMixin"
+		"BeaconBlockEntityRendererMixin",
+		"RecoveryCompassRedirectMixin",
+		"DrawContextMixin",
+		"InGameHudMixin",
+		"ItemRendererMixin",
+		"HeldItemRendererMixin",
+		"PlayerEntityGetDeathPosMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0
