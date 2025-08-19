@@ -7,10 +7,9 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
-import net.minecraft.entity.LivingEntity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
@@ -111,7 +110,7 @@ public abstract class ItemRendererMixin {
 		else if (name.contains("boots") || name.contains("feet")) p = "boots";
 		else return;
 		Identifier spriteId = Identifier.of("minecraft", "trims/items/" + p + "_trim_voidstar");
-		SpriteAtlasTexture atlas = MinecraftClient.getInstance().getBakedModelManager().getAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+		SpriteAtlasTexture atlas = MinecraftClient.getInstance().getBakedModelManager().getAtlas(TexturedRenderLayers.ARMOR_TRIMS_ATLAS_TEXTURE);
 		Sprite sprite = atlas.getSprite(spriteId);
 		TemplateMod.LOGGER.info("[VoidstarItemOverlay] slot={} sprite={} present={}", p, spriteId, (sprite != null && sprite.getContents() != null));
 	}
@@ -125,9 +124,17 @@ public abstract class ItemRendererMixin {
 		}
 		var matKey = trim.material().getKey();
 		var patKey = trim.pattern().getKey();
-		TemplateMod.LOGGER.info("[VoidstarItemOverlay] TRIM present material={} pattern={} expecting trim_type=0.71337",
+		Float trimType = null;
+		try {
+			// TRIM_TYPE component stores the item_model_index for model override predicate
+			Object comp = stack.getClass().getMethod("get", Class.forName("net.minecraft.component.DataComponentType"))
+				.invoke(stack, Class.forName("net.minecraft.component.DataComponentTypes").getField("TRIM_TYPE").get(null));
+			if (comp instanceof Number n) trimType = n.floatValue();
+		} catch (Throwable ignored) { }
+		TemplateMod.LOGGER.info("[VoidstarItemOverlay] TRIM present material={} pattern={} trim_type={} (expect 0.1)",
 			matKey.map(k->k.getValue()).orElse(Identifier.of("minecraft","empty")),
-			patKey.map(k->k.getValue()).orElse(Identifier.of("minecraft","empty")));
+			patKey.map(k->k.getValue()).orElse(Identifier.of("minecraft","empty")),
+			trimType == null ? "null" : String.format("%.3f", trimType));
 	}
 }
 

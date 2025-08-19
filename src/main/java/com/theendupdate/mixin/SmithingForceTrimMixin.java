@@ -91,6 +91,31 @@ public abstract class SmithingForceTrimMixin {
 				ItemStack result = base.copy();
 				result.setCount(1);
 				result.set(DataComponentTypes.TRIM, new ArmorTrim(material, pattern));
+				// Attempt to also set TRIM_TYPE (item model index) so item model overrides trigger reliably
+				try {
+					float modelIndex = -1f;
+					try {
+						ArmorTrimMaterial matVal = material.value();
+						var m = matVal.getClass().getMethod("itemModelIndex");
+						Object idx = m.invoke(matVal);
+						if (idx instanceof Number n) {
+							modelIndex = n.floatValue();
+						}
+					} catch (Throwable ignored) { }
+					// Fallback for 1.21.8: use known value from data/theendupdate/trim_material/voidstar.json
+					if (modelIndex < 0f) {
+						modelIndex = 0.1f;
+					}
+					try {
+						Class<?> dct = Class.forName("net.minecraft.component.DataComponentTypes");
+						Object trimType = dct.getField("TRIM_TYPE").get(null);
+						var set = ItemStack.class.getMethod("set", Class.forName("net.minecraft.component.DataComponentType"), Object.class);
+						set.invoke(result, trimType, Float.valueOf(modelIndex));
+						TemplateMod.LOGGER.info("[SmithingForce] Set TRIM_TYPE component to {}", modelIndex);
+					} catch (Throwable tt) {
+						TemplateMod.LOGGER.info("[SmithingForce] Unable to set TRIM_TYPE via reflection: {}", tt.toString());
+					}
+				} catch (Throwable ignore) { }
 				self.getSlot(3).setStack(result);
 				TemplateMod.LOGGER.info("[SmithingForce] Applied TRIM result pattern={} material=theendupdate:voidstar for base={} ", patternId, Registries.ITEM.getId(base.getItem()));
 			});

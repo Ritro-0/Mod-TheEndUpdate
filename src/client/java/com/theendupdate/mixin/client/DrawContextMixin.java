@@ -5,6 +5,7 @@ import com.theendupdate.TemplateMod;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.item.equipment.trim.ArmorTrim;
 import net.minecraft.item.equipment.trim.ArmorTrimMaterial;
 import net.minecraft.registry.Registries;
@@ -101,7 +102,7 @@ public abstract class DrawContextMixin {
 		else if (name.contains("boots") || name.contains("feet")) p = "boots";
 		else return;
 		Identifier spriteId = Identifier.of("minecraft", "trims/items/" + p + "_trim_voidstar");
-		SpriteAtlasTexture atlas = MinecraftClient.getInstance().getBakedModelManager().getAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+		SpriteAtlasTexture atlas = MinecraftClient.getInstance().getBakedModelManager().getAtlas(TexturedRenderLayers.ARMOR_TRIMS_ATLAS_TEXTURE);
 		Sprite sprite = atlas.getSprite(spriteId);
 		TemplateMod.LOGGER.info("[VoidstarItemOverlay] sprite {} present? {}", spriteId, (sprite != null && sprite.getContents() != null));
 	}

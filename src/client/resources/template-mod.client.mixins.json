@@ -5,7 +5,8 @@
 	"client": [
 		"TheEndUpdateClientMixin",
 		"BeaconBlockEntityRendererMixin",
-		"DrawContextMixin"
+		"DrawContextMixin",
+		"ItemRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0
