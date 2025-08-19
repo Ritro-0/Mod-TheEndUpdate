@@ -3,19 +3,12 @@ package com.theendupdate;
 import net.fabricmc.api.ModInitializer;
 // removed unused lifecycle/command imports
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
+// unused imports removed
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.util.ActionResult;
 import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
 import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+// entity attribute registry called from ModEntities
 // debug-related imports removed
 // (no server tick hooks used currently)
 
@@ -38,11 +31,7 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModItems.registerModItems();
         com.theendupdate.registry.ModEntities.registerModEntities();
         
-        // Register entity attributes
-        FabricDefaultAttributeRegistry.register(
-            com.theendupdate.registry.ModEntities.ETHEREAL_ORB, 
-            com.theendupdate.entity.EtherealOrbEntity.createEtherealOrbAttributes()
-        );
+        // Entity attributes are registered inside ModEntities.registerModEntities()
         // Fuels: make ethereal wood a poor fuel source (~half normal wood burn time)
         FuelRegistryEvents.BUILD.register((builder, context) -> {
             final int ETHEREAL_FUEL_TICKS = context.baseSmeltTime() / 2; // usually 100 ticks

@@ -14,6 +14,8 @@ import net.minecraft.block.DoorBlock;
 import net.minecraft.block.TrapdoorBlock;
 import net.minecraft.block.FenceGateBlock;
 import net.minecraft.block.WoodType;
+import net.minecraft.block.PlantBlock;
+import net.minecraft.block.TallPlantBlock;
 
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -54,7 +56,7 @@ public final class ModBlocks {
         )
     );
 
-    public static final Block VOID_SAP = registerBlockWithoutItem(
+    public static final Block VOID_SAP = registerBlock(
         "void_sap",
         key -> new com.theendupdate.block.VoidSapBlock(
             AbstractBlock.Settings
@@ -305,25 +307,17 @@ public final class ModBlocks {
         RegistryKey<Item> itemKey = RegistryKey.of(Registries.ITEM.getKey(), id);
         Item.Settings itemSettings = new Item.Settings().registryKey(itemKey);
         BlockItem item;
-        // Use adjacent-placing behavior for our delicate plants so they don't replace flowers/plants
-        if (name.equals("mold_spore") || name.equals("mold_spore_tuft") || name.equals("mold_spore_sprout") || name.equals("tendril_sprout") || name.equals("tendril_thread") || name.equals("tendril_core") || name.equals("void_bloom")) {
-            item = new com.theendupdate.item.AdjacentPlantBlockItem(block, itemSettings);
-        } else {
-            item = new BlockItem(block, itemSettings);
-        }
+        boolean isPlantLike = (block instanceof PlantBlock) || (block instanceof TallPlantBlock);
+        // Use adjacent-placing behavior for delicate plants so they don't replace flowers/plants
+        item = isPlantLike ? new com.theendupdate.item.AdjacentPlantBlockItem(block, itemSettings)
+                           : new BlockItem(block, itemSettings);
         Registry.register(Registries.ITEM, id, item);
         // Add to a creative tab so it's visible in creative inventory
-        ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
-        return block;
-    }
-
-    private static Block registerBlockWithoutItem(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
-        Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
-        RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
-        // Construct with registry key to satisfy settings that need an id during construction
-        Block block = factory.apply(key);
-        // Register the block only (item will be registered separately)
-        Registry.register(Registries.BLOCK, id, block);
+        if (isPlantLike) {
+            ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
+        } else {
+            ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
+        }
         return block;
     }
 

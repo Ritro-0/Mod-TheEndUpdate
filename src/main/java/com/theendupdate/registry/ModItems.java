@@ -11,14 +11,6 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.Identifier;
 
 public final class ModItems {
-    public static final Item VOID_SAP = registerItem(
-        "void_sap",
-        key -> new net.minecraft.item.BlockItem(
-            ModBlocks.VOID_SAP,
-            new Item.Settings().registryKey(key)
-        )
-    );
-
     // Metals and materials
     public static final Item VOIDSTAR_SHARD = registerItem(
         "voidstar_shard",
@@ -43,16 +35,24 @@ public final class ModItems {
         key -> new SpawnEggItem(
             com.theendupdate.registry.ModEntities.ETHEREAL_ORB,
             new Item.Settings().registryKey(key)
-        )
+        ),
+        net.minecraft.item.ItemGroups.SPAWN_EGGS
     );
 
-    private static Item registerItem(String name, java.util.function.Function<RegistryKey<Item>, Item> factory) {
+    @SafeVarargs
+    private static Item registerItem(String name, java.util.function.Function<RegistryKey<Item>, Item> factory, net.minecraft.registry.RegistryKey<net.minecraft.item.ItemGroup>... groups) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Item> key = RegistryKey.of(Registries.ITEM.getKey(), id);
         Item item = factory.apply(key);
         Registry.register(Registries.ITEM, id, item);
-        // Add to creative tab
-        ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS).register(entries -> entries.add(item));
+        // Add to creative tabs: default to INGREDIENTS if none provided
+        if (groups == null || groups.length == 0) {
+            ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS).register(entries -> entries.add(item));
+        } else {
+            for (net.minecraft.registry.RegistryKey<net.minecraft.item.ItemGroup> group : groups) {
+                ItemGroupEvents.modifyEntriesEvent(group).register(entries -> entries.add(item));
+            }
+        }
         return item;
     }
 

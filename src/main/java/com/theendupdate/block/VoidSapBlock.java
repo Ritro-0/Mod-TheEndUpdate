@@ -21,6 +21,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import com.theendupdate.registry.ModBlocks;
 
 public class VoidSapBlock extends Block implements net.minecraft.block.Fertilizable {
     public static final MapCodec<VoidSapBlock> CODEC = createCodec(VoidSapBlock::new);
@@ -106,7 +107,7 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
     @Override
     public boolean canReplace(BlockState state, net.minecraft.item.ItemPlacementContext context) {
         // Allow replacement if we're placing on a face that doesn't already have void sap
-        if (context.getStack().getItem() == com.theendupdate.registry.ModItems.VOID_SAP) {
+        if (context.getStack().getItem() == ModBlocks.VOID_SAP.asItem()) {
             Direction side = context.getSide().getOpposite();
             BooleanProperty property = getPropertyForDirection(side);
             return !state.get(property); // Can replace if this face is empty
@@ -168,7 +169,7 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
         ItemStack itemStack = player.getStackInHand(hand);
         
         // Add void sap to empty faces when right-clicking with void sap
-        if (itemStack.getItem() == com.theendupdate.registry.ModItems.VOID_SAP) {
+        if (itemStack.getItem() == ModBlocks.VOID_SAP.asItem()) {
             Direction clickedFace = hit.getSide().getOpposite();
             BooleanProperty property = getPropertyForDirection(clickedFace);
             
