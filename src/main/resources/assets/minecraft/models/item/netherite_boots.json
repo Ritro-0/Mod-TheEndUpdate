@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": { "layer0": "minecraft:item/netherite_boots" },
+  "overrides": [ { "predicate": { "trim_type": 0.1 }, "model": "minecraft:item/netherite_boots_trim" } ]
+}
+
+

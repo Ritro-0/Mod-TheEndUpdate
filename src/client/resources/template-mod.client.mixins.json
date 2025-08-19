@@ -5,12 +5,7 @@
 	"client": [
 		"TheEndUpdateClientMixin",
 		"BeaconBlockEntityRendererMixin",
-		"RecoveryCompassRedirectMixin",
-		"DrawContextMixin",
-		"InGameHudMixin",
-		"ItemRendererMixin",
-		"HeldItemRendererMixin",
-		"PlayerEntityGetDeathPosMixin"
+		"DrawContextMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

@@ -17,6 +17,14 @@ import net.minecraft.client.render.BlockRenderLayer; // This was the key!
 import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.util.Identifier;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
+// predicate registration not needed since models use built-in trim_type predicate
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.equipment.trim.ArmorTrim;
+import net.minecraft.item.equipment.trim.ArmorTrimMaterial;
+import net.minecraft.registry.entry.RegistryEntry;
 // predicate registration removed; compass logic handled via mixins
 
 @Environment(EnvType.CLIENT)  
@@ -55,7 +63,11 @@ public class TemplateModClient implements ClientModInitializer {
         // Client init complete
         TemplateMod.LOGGER.info("The End Update client initialized successfully!");
 
+        // Item models override using built-in trim_type; no explicit predicate registration required
+
     }
+
+    // no-op
     
 }
 

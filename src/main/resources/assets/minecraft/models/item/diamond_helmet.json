@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/diamond_helmet"
+  },
+  "overrides": [
+    { "predicate": { "trim_type": 0.1 }, "model": "minecraft:item/diamond_helmet_trim" }
+  ]
+}
+
+

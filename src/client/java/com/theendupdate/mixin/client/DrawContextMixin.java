@@ -3,6 +3,13 @@ package com.theendupdate.mixin.client;
 import com.theendupdate.client.GatewayCompassContext;
 import com.theendupdate.TemplateMod;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.item.equipment.trim.ArmorTrim;
+import net.minecraft.item.equipment.trim.ArmorTrimMaterial;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.util.Identifier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawContext;
@@ -29,6 +36,7 @@ public abstract class DrawContextMixin {
 		// Draw cooldown overlay for tagged gateway compass in GUI/hotbar
 		DrawContext self = (DrawContext)(Object)this;
 		theendupdate$drawPerStackCooldownOverlay(self, stack, x, y);
+		theendupdate$drawVoidstarTrimOverlay(self, stack, x, y);
 		if (GatewayCompassContext.isTaggedGatewayCompass(stack)) {
 			TemplateMod.LOGGER.info("[CooldownOverlay] drawItem tail at {},{} stackCount={} hasGcd={}", x, y, stack.getCount(), stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, null) != null);
 		}
@@ -47,6 +55,7 @@ public abstract class DrawContextMixin {
 	private void theendupdate$clearStackTailSeed(ItemStack stack, int x, int y, int seed, CallbackInfo ci) {
 		DrawContext self = (DrawContext)(Object)this;
 		theendupdate$drawPerStackCooldownOverlay(self, stack, x, y);
+		theendupdate$drawVoidstarTrimOverlay(self, stack, x, y);
 		if (GatewayCompassContext.isTaggedGatewayCompass(stack)) {
 			TemplateMod.LOGGER.info("[CooldownOverlay] drawItem(seed) tail at {},{} seed={} stackCount={} hasGcd={}", x, y, seed, stack.getCount(), stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, null) != null);
 		}
@@ -74,6 +83,27 @@ public abstract class DrawContextMixin {
 		int color = alpha | 0x00FFFFFF;
 		context.fill(x, overlayTop, x + 16, y + 16, color);
 		TemplateMod.LOGGER.info("[CooldownOverlay] remain={} f={} drawRect=({},{})->({},{}), color=0x{}", remain, String.format("%.2f", f), x, overlayTop, x+16, y+16, Integer.toHexString(color));
+	}
+
+	private static void theendupdate$drawVoidstarTrimOverlay(DrawContext context, ItemStack stack, int x, int y) {
+		if (stack == null || stack.isEmpty()) return;
+		ArmorTrim armorTrim = stack.get(DataComponentTypes.TRIM);
+		if (armorTrim == null) return;
+		RegistryEntry<ArmorTrimMaterial> mat = armorTrim.material();
+		Identifier matId = mat.getKey().map(k -> k.getValue()).orElse(Identifier.of("minecraft","empty"));
+		if (!matId.equals(Identifier.of("theendupdate","voidstar"))) return;
+		Identifier baseId = Registries.ITEM.getId(stack.getItem());
+		String p;
+		String name = baseId.getPath();
+		if (name.contains("helmet") || name.contains("skull") || name.contains("head")) p = "helmet";
+		else if (name.contains("chestplate") || name.contains("chest")) p = "chestplate";
+		else if (name.contains("leggings") || name.contains("legs")) p = "leggings";
+		else if (name.contains("boots") || name.contains("feet")) p = "boots";
+		else return;
+		Identifier spriteId = Identifier.of("minecraft", "trims/items/" + p + "_trim_voidstar");
+		SpriteAtlasTexture atlas = MinecraftClient.getInstance().getBakedModelManager().getAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+		Sprite sprite = atlas.getSprite(spriteId);
+		TemplateMod.LOGGER.info("[VoidstarItemOverlay] sprite {} present? {}", spriteId, (sprite != null && sprite.getContents() != null));
 	}
 }
 
