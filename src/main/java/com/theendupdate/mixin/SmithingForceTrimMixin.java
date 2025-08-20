@@ -44,20 +44,19 @@ public abstract class SmithingForceTrimMixin {
 			boolean templateOk = template.isIn(TAG_TRIM_TEMPLATES);
 			Identifier addId = Registries.ITEM.getId(addition.getItem());
 			boolean isVoidstarAddition = addId.equals(Identifier.of("theendupdate", "voidstar_ingot"));
-			TemplateMod.LOGGER.info("[SmithingForce] precheck baseTrimmable={} templateOk={} addition={}", baseTrimmable, templateOk, addId);
+			// Removed debug logging
 			if (!baseTrimmable || !templateOk || !isVoidstarAddition) {
 				return;
 			}
 
 			ItemStack out = self.getSlot(3).getStack();
 			if (!out.isEmpty() && out.get(DataComponentTypes.TRIM) != null) {
-				TemplateMod.LOGGER.info("[SmithingForce] Result already has TRIM; skipping");
+				// Removed debug logging
 				return;
 			}
 
 			ScreenHandlerContext ctx = resolveContext(self);
 			if (ctx == null) {
-				TemplateMod.LOGGER.info("[SmithingForce] Unable to resolve ScreenHandlerContext; cannot apply forced trim");
 				return;
 			}
 
@@ -69,19 +68,16 @@ public abstract class SmithingForceTrimMixin {
 				String path = templateId.getPath();
 				int cut = path.indexOf("_armor_trim_smithing_template");
 				if (cut <= 0) {
-					TemplateMod.LOGGER.info("[SmithingForce] Could not derive pattern id from template {}", templateId);
 					return;
 				}
 				Identifier patternId = Identifier.of(templateId.getNamespace(), path.substring(0, cut));
 				var optPattern = patterns.getEntry(patternId);
 				if (optPattern.isEmpty()) {
-					TemplateMod.LOGGER.info("[SmithingForce] Pattern {} not found in TRIM_PATTERN registry", patternId);
 					return;
 				}
 
 				var optMaterial = materials.getEntry(Identifier.of("theendupdate", "voidstar"));
 				if (optMaterial.isEmpty()) {
-					TemplateMod.LOGGER.info("[SmithingForce] Trim material theendupdate:voidstar not found in TRIM_MATERIAL registry");
 					return;
 				}
 
@@ -98,15 +94,14 @@ public abstract class SmithingForceTrimMixin {
 					Object trimType = dct.getField("TRIM_TYPE").get(null);
 					var set = ItemStack.class.getMethod("set", Class.forName("net.minecraft.component.DataComponentType"), Object.class);
 					set.invoke(result, trimType, Float.valueOf(modelIndex));
-					TemplateMod.LOGGER.info("[SmithingForce] Set TRIM_TYPE component to {}", modelIndex);
+					// Removed debug logging
 				} catch (Throwable tt) {
 					TemplateMod.LOGGER.info("[SmithingForce] Unable to set TRIM_TYPE reflectively: {}", tt.toString());
 				}
 				self.getSlot(3).setStack(result);
-				TemplateMod.LOGGER.info("[SmithingForce] Applied TRIM result pattern={} material=theendupdate:voidstar for base={} ", patternId, Registries.ITEM.getId(base.getItem()));
+				// Removed debug logging
 			});
 		} catch (Throwable t) {
-			TemplateMod.LOGGER.warn("[SmithingForce] Error attempting to force-apply trim", t);
 		}
 	}
 

@@ -195,8 +195,6 @@ class SeekCrystalsGoal extends Goal {
 
         // Already satisfied (within 12 blocks)
         if (isNearCrystal(comfortRadius)) {
-            TemplateMod.LOGGER.info("[EtherealOrb][seek] {} SKIP reason=already-near radius={}",
-                orb.getUuid(), comfortRadius);
             return false;
         }
 
@@ -204,7 +202,6 @@ class SeekCrystalsGoal extends Goal {
         BlockPos found = findNearbyCrystal();
         if (found == null) found = scanChunksForCrystal(6);
         if (found == null) {
-            TemplateMod.LOGGER.info("[EtherealOrb][seek] {} SKIP reason=no-crystal-found", orb.getUuid());
             return false;
         }
         this.targetCrystalPos = found;
@@ -221,7 +218,6 @@ class SeekCrystalsGoal extends Goal {
         this.currentPath = null;
         this.useDirectFlight = true;
         this.pursuitTimeout = 20 * 20; // 20s safety timeout
-        TemplateMod.LOGGER.info("[EtherealOrb][seek] {} START crystal={} dest={}", orb.getUuid(), this.targetCrystalPos, this.destinationPos);
         return true;
     }
 
@@ -236,7 +232,6 @@ class SeekCrystalsGoal extends Goal {
         // Stop only when we are within 3 blocks of a crystal
         if (isNearCrystal(TARGET_RADIUS)) return false;
         if (this.pursuitTimeout-- <= 0) {
-            TemplateMod.LOGGER.info("[EtherealOrb][seek] {} STOP reason=timeout", orb.getUuid());
             return false;
         }
         return true;
@@ -248,7 +243,6 @@ class SeekCrystalsGoal extends Goal {
         this.destinationPos = null;
         this.currentPath = null;
         this.useDirectFlight = false;
-        TemplateMod.LOGGER.info("[EtherealOrb][seek] {} STOP reason=finished/reset", orb.getUuid());
     }
 
     @Override
@@ -268,7 +262,6 @@ class SeekCrystalsGoal extends Goal {
             if (!orb.getWorld().isClient && orb.getWorld() instanceof ServerWorld server) {
                 if ((orb.age % 20) == 0) {
                     server.spawnParticles(ParticleTypes.END_ROD, tx, ty, tz, 6, 0.2, 0.2, 0.2, 0.01);
-                    TemplateMod.LOGGER.info("[EtherealOrb][seek] {} TICK dest={} dist={}", orb.getUuid(), this.destinationPos, String.format("%.2f", Math.sqrt(distSq)));
                 }
             }
         }

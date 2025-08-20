@@ -61,7 +61,7 @@ public class TemplateModClient implements ClientModInitializer {
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
 
         // Client init complete
-        TemplateMod.LOGGER.info("The End Update client initialized successfully!");
+        // cleaned debug log
 
         // Item models override using built-in trim_type; no explicit predicate registration required
 

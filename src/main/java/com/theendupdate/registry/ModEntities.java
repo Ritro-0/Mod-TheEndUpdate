@@ -29,7 +29,7 @@ public final class ModEntities {
     );
     
     public static void registerModEntities() {
-        TemplateMod.LOGGER.info("Registering ModEntities for " + TemplateMod.MOD_ID);
+        // cleaned debug log
         FabricDefaultAttributeRegistry.register(ETHEREAL_ORB, EtherealOrbEntity.createEtherealOrbAttributes());
     }
 }

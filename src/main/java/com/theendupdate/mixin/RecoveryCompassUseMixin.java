@@ -1,5 +1,6 @@
 package com.theendupdate.mixin;
 
+import net.minecraft.block.Blocks;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.player.PlayerEntity;
@@ -67,6 +68,15 @@ public abstract class RecoveryCompassUseMixin {
 
         BlockPos base = new BlockPos(gx, gy, gz);
         BlockPos.Mutable dest = base.up().mutableCopy();
+
+        // Require an active beacon under the gateway; otherwise consume and play sound, but do not teleport
+        if (!targetWorld.getBlockState(base.down()).isOf(Blocks.BEACON)) {
+            // Consume the used compass
+            stack.decrement(1);
+            // Play beacon power down sound at the gateway
+            targetWorld.playSound(null, base, SoundEvents.BLOCK_BEACON_DEACTIVATE, SoundCategory.BLOCKS, 1.0f, 1.0f);
+            return;
+        }
         // Find a safe spot up to 2 blocks above the gateway
         for (int i = 0; i < 3; i++) {
             if (targetWorld.isAir(dest) && targetWorld.isAir(dest.up())) break;

@@ -209,7 +209,6 @@ public abstract class BeaconBlockEntityRendererMixin {
 				}
 				matrices.pop();
 			} catch (Throwable err) {
-                System.out.println("[theendupdate] Exception in bent overlay loop: "+err);
 			}
 		}
 	}

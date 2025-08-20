@@ -3,17 +3,8 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [
-        { "type": "minecraft:item", "name": "theendupdate:ethereal_door" }
-      ],
-      "conditions": [
-        { "condition": "minecraft:survives_explosion" },
-        {
-          "condition": "minecraft:block_state_property",
-          "block": "theendupdate:ethereal_door",
-          "properties": { "half": "lower" }
-        }
-      ]
+      "entries": [ { "type": "minecraft:item", "name": "theendupdate:ethereal_door" } ],
+      "conditions": [ { "condition": "minecraft:block_state_property", "block": "theendupdate:ethereal_door", "properties": { "half": "lower" } } ]
     }
   ]
 }

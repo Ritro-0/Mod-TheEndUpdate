@@ -39,11 +39,12 @@ public class MoldSporeSproutBlock extends TallPlantBlock {
 
 	@Override
 	public BlockState getPlacementState(net.minecraft.item.ItemPlacementContext context) {
-		// Avoid replacing flowers/tall plants; return null so placement system tries to offset
+		// Avoid replacing flowers/tall plants
 		BlockState existing = context.getWorld().getBlockState(context.getBlockPos());
 		if (existing.isIn(BlockTags.FLOWERS) || existing.getBlock() instanceof TallPlantBlock) {
 			return null;
 		}
+		// Item-level logic handles adjacent-only placement. Do not add extra rejection here.
 		return super.getPlacementState(context);
 	}
 

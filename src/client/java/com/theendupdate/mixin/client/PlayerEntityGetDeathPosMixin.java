@@ -24,7 +24,6 @@ public abstract class PlayerEntityGetDeathPosMixin {
 
 	@Inject(method = "getLastDeathPos", at = @At("HEAD"), cancellable = true)
 	private void theendupdate$overrideDeathPosOnlyForTaggedStack(CallbackInfoReturnable<Optional<GlobalPos>> cir) {
-		// Only override during item rendering/predicate evaluation when a specific stack is being processed
 		ItemStack current = GatewayCompassContext.get();
 		if (!GatewayCompassContext.isTaggedGatewayCompass(current)) return;
 
@@ -42,7 +41,9 @@ public abstract class PlayerEntityGetDeathPosMixin {
 		int x = tag.getInt("gx").orElse(0);
 		int y = tag.getInt("gy").orElse(0);
 		int z = tag.getInt("gz").orElse(0);
-		cir.setReturnValue(Optional.of(GlobalPos.create(world.getRegistryKey(), new BlockPos(x, y, z))));
+		GlobalPos gp = GlobalPos.create(world.getRegistryKey(), new BlockPos(x, y, z));
+		cir.setReturnValue(Optional.of(gp));
+		cir.cancel();
 	}
 }
 

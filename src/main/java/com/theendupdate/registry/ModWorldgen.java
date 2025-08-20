@@ -46,6 +46,13 @@ public final class ModWorldgen {
         new com.theendupdate.world.feature.VoidBloomChorusAttachmentFeature(DefaultFeatureConfig.CODEC)
     );
 
+    // End crystal spikes: generate on island faces across all End biomes (outside main island radius)
+    public static final Feature<DefaultFeatureConfig> END_CRYSTAL_SPIKE = Registry.register(
+        Registries.FEATURE,
+        id("end_crystal_spike"),
+        new com.theendupdate.world.feature.EndCrystalSpikeFeature(DefaultFeatureConfig.CODEC)
+    );
+
     public static final RegistryKey<PlacedFeature> MIRELANDS_GROUND_COVER_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("mirelands_ground_cover"));
     public static final RegistryKey<PlacedFeature> MIRELANDS_VEGETATION_PLACED_KEY = RegistryKey.of(
@@ -55,6 +62,8 @@ public final class ModWorldgen {
 
     public static final RegistryKey<PlacedFeature> VOID_BLOOM_CHORUS_ATTACHMENT_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("void_bloom_chorus_attachment"));
+    public static final RegistryKey<PlacedFeature> END_CRYSTAL_SPIKE_PLACED_KEY = RegistryKey.of(
+        RegistryKeys.PLACED_FEATURE, id("end_crystal_spike"));
 
 	// Biome keys
 	public static final RegistryKey<Biome> MIRELANDS_HIGHLANDS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("mirelands_highlands"));
@@ -87,6 +96,13 @@ public final class ModWorldgen {
             BiomeSelectors.foundInTheEnd(),
             GenerationStep.Feature.VEGETAL_DECORATION,
             VOID_BLOOM_CHORUS_ATTACHMENT_PLACED_KEY
+        );
+
+        // Crystal spikes: add to surface structures to avoid clashing with flora; include all End biomes
+        BiomeModifications.addFeature(
+            BiomeSelectors.foundInTheEnd(),
+            GenerationStep.Feature.LOCAL_MODIFICATIONS,
+            END_CRYSTAL_SPIKE_PLACED_KEY
         );
 
         // End biome API: add our highlands and link its midlands/barrens

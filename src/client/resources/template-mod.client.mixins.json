@@ -6,7 +6,9 @@
 		"TheEndUpdateClientMixin",
 		"BeaconBlockEntityRendererMixin",
 		"DrawContextMixin",
-		"ItemRendererMixin"
+		"ItemRendererMixin",
+		"CompassPropertyContextMixin",
+		"PlayerEntityGetDeathPosMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

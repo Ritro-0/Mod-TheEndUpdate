@@ -163,6 +163,8 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
         trySpread(state, world, pos, random);
     }
 
+    
+
     // CORRECT BLOCK INTERACTION OVERRIDE - for right-click
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         

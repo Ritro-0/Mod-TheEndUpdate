@@ -40,11 +40,12 @@ public class MoldSporeTuftBlock extends PlantBlock {
 
 	@Override
 	public BlockState getPlacementState(net.minecraft.item.ItemPlacementContext context) {
-		// If targeting a flower or tall plant, do not replace it; let placement offset to adjacent
+		// If targeting a flower or tall plant, do not replace it
 		BlockState existing = context.getWorld().getBlockState(context.getBlockPos());
 		if (existing.isIn(BlockTags.FLOWERS) || existing.getBlock() instanceof TallPlantBlock) {
 			return null;
 		}
+		// Item-level logic handles adjacent-only placement. Do not add extra rejection here.
 		return super.getPlacementState(context);
 	}
 

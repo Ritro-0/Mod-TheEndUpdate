@@ -25,6 +25,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Environment(EnvType.CLIENT)
+@SuppressWarnings("target")
 @Mixin(ItemRenderer.class)
 public abstract class ItemRendererMixin {
 
@@ -45,6 +46,7 @@ public abstract class ItemRendererMixin {
 	}
 	@Inject(method = "renderInGui(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/item/ItemStack;IIZ)V", at = @At("TAIL"), require = 0)
 	private void theendupdate$clearContextRenderInGuiBool(DrawContext context, ItemStack stack, int x, int y, boolean renderOverlay, CallbackInfo ci) {
+		theendupdate$drawPerStackCooldownOverlay(context, stack, x, y);
 		GatewayCompassContext.clear();
 	}
 
@@ -56,9 +58,6 @@ public abstract class ItemRendererMixin {
 	@Inject(method = "renderInGuiWithOverrides(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/entity/player/PlayerEntity;Lnet/minecraft/item/ItemStack;III)V", at = @At("TAIL"))
 	private void theendupdate$clearContextRenderInGuiWithOverrides(DrawContext context, PlayerEntity player, ItemStack stack, int x, int y, int seed, CallbackInfo ci) {
 		theendupdate$drawPerStackCooldownOverlay(context, stack, x, y);
-		// Debug: log if voidstar sprite exists in atlas when TRIM is present
-		theendupdate$logVoidstarSpritePresence(stack);
-		theendupdate$logTrimPredicate(stack);
 		GatewayCompassContext.clear();
 	}
 
@@ -70,8 +69,6 @@ public abstract class ItemRendererMixin {
 	@Inject(method = "renderInGuiWithOverrides(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/entity/player/PlayerEntity;Lnet/minecraft/item/ItemStack;IIIZ)V", at = @At("TAIL"), require = 0)
 	private void theendupdate$clearContextRenderInGuiWithOverridesBool(DrawContext context, PlayerEntity player, ItemStack stack, int x, int y, int seed, boolean renderOverlay, CallbackInfo ci) {
 		theendupdate$drawPerStackCooldownOverlay(context, stack, x, y);
-		theendupdate$logVoidstarSpritePresence(stack);
-		theendupdate$logTrimPredicate(stack);
 		GatewayCompassContext.clear();
 	}
 
@@ -94,48 +91,7 @@ public abstract class ItemRendererMixin {
 		context.fill(x, overlayTop, x + 16, y + 16, alpha);
 	}
 
-	private void theendupdate$logVoidstarSpritePresence(ItemStack stack) {
-		if (stack == null || stack.isEmpty()) return;
-		ArmorTrim armorTrim = stack.get(DataComponentTypes.TRIM);
-		if (armorTrim == null) return;
-		RegistryEntry<ArmorTrimMaterial> mat = armorTrim.material();
-		Identifier matId = mat.getKey().map(k -> k.getValue()).orElse(Identifier.of("minecraft","empty"));
-		if (!matId.equals(Identifier.of("theendupdate","voidstar"))) return;
-		Identifier baseId = Registries.ITEM.getId(stack.getItem());
-		String p;
-		String name = baseId.getPath();
-		if (name.contains("helmet") || name.contains("skull") || name.contains("head")) p = "helmet";
-		else if (name.contains("chestplate") || name.contains("chest")) p = "chestplate";
-		else if (name.contains("leggings") || name.contains("legs")) p = "leggings";
-		else if (name.contains("boots") || name.contains("feet")) p = "boots";
-		else return;
-		Identifier spriteId = Identifier.of("minecraft", "trims/items/" + p + "_trim_voidstar");
-		SpriteAtlasTexture atlas = MinecraftClient.getInstance().getBakedModelManager().getAtlas(TexturedRenderLayers.ARMOR_TRIMS_ATLAS_TEXTURE);
-		Sprite sprite = atlas.getSprite(spriteId);
-		TemplateMod.LOGGER.info("[VoidstarItemOverlay] slot={} sprite={} present={}", p, spriteId, (sprite != null && sprite.getContents() != null));
-	}
 
-	private void theendupdate$logTrimPredicate(ItemStack stack) {
-		if (stack == null || stack.isEmpty()) return;
-		ArmorTrim trim = stack.get(DataComponentTypes.TRIM);
-		if (trim == null) {
-			TemplateMod.LOGGER.info("[VoidstarItemOverlay] TRIM absent on stack {}", Registries.ITEM.getId(stack.getItem()));
-			return;
-		}
-		var matKey = trim.material().getKey();
-		var patKey = trim.pattern().getKey();
-		Float trimType = null;
-		try {
-			// TRIM_TYPE component stores the item_model_index for model override predicate
-			Object comp = stack.getClass().getMethod("get", Class.forName("net.minecraft.component.DataComponentType"))
-				.invoke(stack, Class.forName("net.minecraft.component.DataComponentTypes").getField("TRIM_TYPE").get(null));
-			if (comp instanceof Number n) trimType = n.floatValue();
-		} catch (Throwable ignored) { }
-		TemplateMod.LOGGER.info("[VoidstarItemOverlay] TRIM present material={} pattern={} trim_type={} (expect 0.1)",
-			matKey.map(k->k.getValue()).orElse(Identifier.of("minecraft","empty")),
-			patKey.map(k->k.getValue()).orElse(Identifier.of("minecraft","empty")),
-			trimType == null ? "null" : String.format("%.3f", trimType));
-	}
 }
 
 

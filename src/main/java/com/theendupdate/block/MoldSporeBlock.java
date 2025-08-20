@@ -51,6 +51,7 @@ public class MoldSporeBlock extends PlantBlock {
 		if (existing.isIn(BlockTags.FLOWERS) || existing.getBlock() instanceof TallPlantBlock) {
 			return null;
 		}
+		// Item-level logic handles adjacent-only placement. Do not add extra rejection here.
 		return super.getPlacementState(context);
 	}
 

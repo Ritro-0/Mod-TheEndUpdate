@@ -26,7 +26,12 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.item.Items;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * Moldcrawl - a horizontal vine-like plant that extends sideways.
@@ -84,8 +89,12 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
             // Attempt chain-wide reattachment before breaking
             BlockState reattached = tryReattachChain(state, world, pos);
             if (reattached == null) {
-                // Mirror twisting vines: break this segment; neighbors will schedule and cascade
-                world.breakBlock(pos, true);
+                // Mirror twisting vines: break this segment; neighbors will schedule and cascade.
+                // For cascades and natural breaks, enforce 33% drop chance regardless of the root tool.
+                if (!world.isClient) {
+                    dropWithNaturalChance(world, pos);
+                    world.breakBlock(pos, false);
+                }
             }
             return;
         }
@@ -294,9 +303,13 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         // Attempt immediate reattachment (mutates world if successful).
         if (!this.canPlaceAt(state, world, pos)) {
             BlockState reattached = tryReattachChain(state, world, pos);
-            if (reattached == null && world instanceof net.minecraft.server.world.ServerWorld sw) {
-                // Schedule vanilla-like cascade: break this segment next tick
-                sw.scheduleBlockTick(pos, this, 1);
+            if (reattached == null) {
+                if (world instanceof net.minecraft.server.world.ServerWorld sw) {
+                    // Immediately drop with natural 33% chance and remove, so Silk Touch on root doesn't force 100% here
+                    dropWithNaturalChance(sw, pos);
+                    ((net.minecraft.world.World) world).breakBlock(pos, false);
+                }
+                // Return current world state (likely air) below
             }
         }
         // Schedule a survival check to handle horizontal reattachment/breaking reliably
@@ -376,14 +389,74 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         if (reattached != null) {
             return;
         }
-        // No reattachment possible; mirror twisting vines: break this segment; neighbors cascade
-        world.breakBlock(pos, true);
+        // No reattachment possible; mirror twisting vines: break this segment; neighbors cascade.
+        // Enforce 33% drop chance for cascades regardless of the root tool used.
+        if (!world.isClient) {
+            dropWithNaturalChance(world, pos);
+            world.breakBlock(pos, false);
+        }
         // Explicitly schedule the forward neighbor to ensure cascade in horizontal chains
         Direction f = state.get(FACING);
         BlockPos forwardPos = pos.offset(f);
         if (world.getBlockState(forwardPos).isOf(this)) {
             world.scheduleBlockTick(forwardPos, this, 1);
         }
+    }
+
+    private void dropWithNaturalChance(ServerWorld world, BlockPos pos) {
+        if (world.random.nextFloat() < 0.33F) {
+            Block.dropStack(world, pos, new ItemStack(this.asItem()));
+        }
+    }
+
+    @Override
+    public void afterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
+        if (!world.isClient) {
+            boolean hasSilkTouch = false;
+            try {
+                ItemEnchantmentsComponent ench = tool.get(DataComponentTypes.ENCHANTMENTS);
+                if (ench != null) {
+                    // Portable check across mappings
+                    hasSilkTouch = ench.toString().contains("minecraft:silk_touch");
+                }
+            } catch (Throwable ignored) {}
+
+            if (hasSilkTouch) {
+                Block.dropStack((ServerWorld) world, pos, new ItemStack(this.asItem()));
+            } else {
+                int fortuneLevel = getFortuneLevelFromTool(tool);
+                float chance = 0.33f;
+                if (fortuneLevel == 1) chance = 0.55f;
+                else if (fortuneLevel == 2) chance = 0.77f;
+                else if (fortuneLevel >= 3) chance = 1.0f;
+                if (((ServerWorld) world).random.nextFloat() < chance) {
+                    Block.dropStack((ServerWorld) world, pos, new ItemStack(this.asItem()));
+                }
+            }
+            ((ServerWorld) world).emitGameEvent(player, net.minecraft.world.event.GameEvent.BLOCK_DESTROY, pos);
+        }
+        // Do not call super.afterBreak to avoid default loot-table drops (prevents 100% drop by hand)
+    }
+
+    private static final Pattern FORTUNE_LEVEL_PATTERN = Pattern.compile("minecraft:fortune\\D*(\\d+)");
+
+    private int getFortuneLevelFromTool(ItemStack tool) {
+        int level = 0;
+        try {
+            ItemEnchantmentsComponent ench = tool.get(DataComponentTypes.ENCHANTMENTS);
+            if (ench != null) {
+                String asString = ench.toString();
+                Matcher matcher = FORTUNE_LEVEL_PATTERN.matcher(asString);
+                if (matcher.find()) {
+                    try {
+                        level = Integer.parseInt(matcher.group(1));
+                    } catch (NumberFormatException ignore) {}
+                }
+            }
+        } catch (Throwable ignored) {}
+        if (level < 0) level = 0;
+        if (level > 3) level = 3;
+        return level;
     }
 
     // removed bulk chain breaker: we now cascade per-segment like twisting vines
