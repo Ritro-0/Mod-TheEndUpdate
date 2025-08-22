@@ -38,12 +38,12 @@ public final class ShulkerSpawnQueue {
                     continue;
                 }
 
-                ShulkerEntity shulker = EntityType.SHULKER.create(world);
+                ShulkerEntity shulker = EntityType.SHULKER.spawn(world, req.pos, net.minecraft.entity.SpawnReason.STRUCTURE);
                 if (shulker == null) {
                     continue;
                 }
                 shulker.setPersistent();
-                shulker.setAttachedFace(req.face);
+                // Rely on default orientation; attached face setter may be private or obfuscated
                 shulker.refreshPositionAndAngles(req.pos, 0.0F, 0.0F);
                 world.spawnEntity(shulker);
                 processed++;

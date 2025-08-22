@@ -40,7 +40,9 @@
 		"RecoveryCompassUseMixin",
 		"SmithingForceTrimMixin",
 		"BrewingIngredientSlotMixin",
-		"BrewingStandBlockEntityTickMixin"
+		"BrewingStandBlockEntityTickMixin",
+		"MobEntityAccessor",
+		"SpiderEntityAvoidChrysanthemumMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

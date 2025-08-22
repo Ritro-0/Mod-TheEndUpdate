@@ -2,6 +2,7 @@ package com.theendupdate.registry;
 
 import com.theendupdate.TemplateMod;
 import com.theendupdate.world.feature.MirelandsGroundCoverFeature;
+import com.theendupdate.world.feature.BlueIceRiverFeature;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.biome.v1.TheEndBiomes;
@@ -62,6 +63,13 @@ public final class ModWorldgen {
         new com.theendupdate.world.feature.EnderChrysanthemumIslandsFeature(DefaultFeatureConfig.CODEC)
     );
 
+    // Blue ice rivers hanging from island edges
+    public static final Feature<DefaultFeatureConfig> BLUE_ICE_RIVER = Registry.register(
+        Registries.FEATURE,
+        id("blue_ice_river"),
+        new BlueIceRiverFeature(DefaultFeatureConfig.CODEC)
+    );
+
     public static final RegistryKey<PlacedFeature> MIRELANDS_GROUND_COVER_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("mirelands_ground_cover"));
     public static final RegistryKey<PlacedFeature> MIRELANDS_VEGETATION_PLACED_KEY = RegistryKey.of(
@@ -76,6 +84,9 @@ public final class ModWorldgen {
 
     public static final RegistryKey<PlacedFeature> ENDER_CHRYSANTHEMUM_ISLANDS_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("ender_chrysanthemum_islands"));
+
+    public static final RegistryKey<PlacedFeature> BLUE_ICE_RIVER_PLACED_KEY = RegistryKey.of(
+        RegistryKeys.PLACED_FEATURE, id("blue_ice_river"));
 
 	// Biome keys
 	public static final RegistryKey<Biome> MIRELANDS_HIGHLANDS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("mirelands_highlands"));
@@ -115,6 +126,13 @@ public final class ModWorldgen {
             BiomeSelectors.foundInTheEnd(),
             GenerationStep.Feature.VEGETAL_DECORATION,
             END_CRYSTAL_SPIKE_PLACED_KEY
+        );
+
+        // Blue ice rivers across all End biomes, including Mirelands
+        BiomeModifications.addFeature(
+            BiomeSelectors.foundInTheEnd(),
+            GenerationStep.Feature.LOCAL_MODIFICATIONS,
+            BLUE_ICE_RIVER_PLACED_KEY
         );
 
         // Ender chrysanthemums on Small End Islands only

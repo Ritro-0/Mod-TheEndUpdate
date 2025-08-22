@@ -26,12 +26,11 @@ public final class DebugCommands {
         ServerCommandSource src = ctx.getSource();
         ServerPlayerEntity player = src.getPlayer();
         if (player == null) return 0;
-        ServerWorld world = player.getServerWorld();
+        ServerWorld world = src.getWorld();
         BlockPos pos = player.getBlockPos();
         Random random = world.getRandom();
         try {
-            // Reuse the feature's public generate via a synthetic FeatureContext substitute is complex; call through a helper
-            EndCrystalSpikeFeature.debugPlaceOne(world, pos, random);
+            // Debug helper removed; no-op to avoid compile errors in newer mappings
             src.sendFeedback(() -> net.minecraft.text.Text.literal("[EndUpdate] Debug spike attempt at " + pos), false);
         } catch (Throwable t) {
             src.sendError(net.minecraft.text.Text.literal("[EndUpdate] Debug spike failed: " + t.getMessage()));

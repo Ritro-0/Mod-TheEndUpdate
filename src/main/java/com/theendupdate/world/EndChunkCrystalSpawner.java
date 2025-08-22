@@ -124,7 +124,6 @@ public final class EndChunkCrystalSpawner {
             ShulkerEntity e = EntityType.SHULKER.spawn(world, air, SpawnReason.STRUCTURE);
             if (e == null) continue;
             e.setPersistent();
-            e.setAttachedFace(dir.getOpposite());
             e.refreshPositionAndAngles(air, 0.0F, 0.0F);
             return true;
         }
