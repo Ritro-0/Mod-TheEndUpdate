@@ -2,22 +2,38 @@ package com.theendupdate.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.WorldView;
 import net.minecraft.block.Blocks;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.state.property.Properties;
+import net.minecraft.world.BlockView;
 public class VoidBloomBlock extends net.minecraft.block.PlantBlock {
     public static final MapCodec<VoidBloomBlock> CODEC = createCodec(VoidBloomBlock::new);
     // Track which direction the void bloom is attached to (the direction TO the chorus bud)
     public static final Property<Direction> ATTACHMENT_FACE = Properties.FACING;
+
+    // Dimensions: 12x15 px
+    private static final double WIDTH = 12.0 / 16.0;      // 0.75
+    private static final double HALF = WIDTH / 2.0;       // 0.375
+    private static final double HEIGHT = 15.0 / 16.0;     // 0.9375
+    private static final double MIN = 0.5 - HALF;         // 0.125
+    private static final double MAX = 0.5 + HALF;         // 0.875
+
+    private static final VoxelShape SHAPE_DOWN = VoxelShapes.cuboid(MIN, 0.0, MIN, MAX, HEIGHT, MAX);
+    private static final VoxelShape SHAPE_UP = VoxelShapes.cuboid(MIN, 1.0 - HEIGHT, MIN, MAX, 1.0, MAX);
+    private static final VoxelShape SHAPE_NORTH = VoxelShapes.cuboid(MIN, 0.5 - HALF, 0.0, MAX, 0.5 + HALF, HEIGHT);
+    private static final VoxelShape SHAPE_SOUTH = VoxelShapes.cuboid(MIN, 0.5 - HALF, 1.0 - HEIGHT, MAX, 0.5 + HALF, 1.0);
+    private static final VoxelShape SHAPE_WEST = VoxelShapes.cuboid(0.0, 0.5 - HALF, MIN, HEIGHT, 0.5 + HALF, MAX);
+    private static final VoxelShape SHAPE_EAST = VoxelShapes.cuboid(1.0 - HEIGHT, 0.5 - HALF, MIN, 1.0, 0.5 + HALF, MAX);
 
     public VoidBloomBlock(Settings settings) {
         super(settings);
@@ -38,6 +54,25 @@ public class VoidBloomBlock extends net.minecraft.block.PlantBlock {
     @Override
     public float getAmbientOcclusionLightLevel(BlockState state, net.minecraft.world.BlockView world, BlockPos pos) {
         return 1.0f; // Full brightness for transparent blocks
+    }
+
+    @Override
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        Direction face = state.get(ATTACHMENT_FACE);
+        return switch (face) {
+            case DOWN -> SHAPE_DOWN;
+            case UP -> SHAPE_UP;
+            case NORTH -> SHAPE_NORTH;
+            case SOUTH -> SHAPE_SOUTH;
+            case WEST -> SHAPE_WEST;
+            case EAST -> SHAPE_EAST;
+        };
+    }
+
+    @Override
+    public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        // No collision like vanilla flowers
+        return VoxelShapes.empty();
     }
 
     @Override

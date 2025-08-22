@@ -165,7 +165,9 @@ public abstract class BeaconBlockEntityRendererMixin {
 		if (vertices == null) return;
 		BlockPos above = beacon.getPos().up();
 		BlockState stateAbove = world.getBlockState(above);
-		if (!stateAbove.isOf(Blocks.AIR) && stateAbove.getBlock() instanceof QuantumGatewayBlock) {
+		if (!stateAbove.isOf(Blocks.AIR) && stateAbove.getBlock() instanceof QuantumGatewayBlock && !theendupdate$beaconHasNoBeam(beacon)) {
+			// If the gateway is powered by redstone, skip custom overlay to allow vanilla beam
+			if (world.isReceivingRedstonePower(above)) return;
             
 		// Throttle (keep light) but don't cull vertically; overlay path kept lightweight
 		if ((world.getTime() & 1L) != 0L) return;
@@ -221,7 +223,9 @@ public abstract class BeaconBlockEntityRendererMixin {
 		if (world == null || vertices == null) return;
 		BlockPos above = beacon.getPos().up();
 		BlockState stateAbove = world.getBlockState(above);
-		if (!(stateAbove.getBlock() instanceof QuantumGatewayBlock)) return;
+		if (!(stateAbove.getBlock() instanceof QuantumGatewayBlock) || theendupdate$beaconHasNoBeam(beacon)) return;
+		// If the gateway is powered by redstone, do not replace the vanilla beam
+		if (world.isReceivingRedstonePower(above)) return;
 
 		// Replace vanilla beam entirely
 		ci.cancel();
@@ -267,6 +271,15 @@ public abstract class BeaconBlockEntityRendererMixin {
             
 		}
 		matrices.pop();
+	}
+
+	private static boolean theendupdate$beaconHasNoBeam(BeaconBlockEntity beacon) {
+		try {
+			java.util.List<?> segments = beacon.getBeamSegments();
+			return segments == null || segments.isEmpty();
+		} catch (Throwable ignored) {
+			return true;
+		}
 	}
 
 	private static float[] theendupdate$getRedirectedTint(World world, BlockPos beaconPos) {

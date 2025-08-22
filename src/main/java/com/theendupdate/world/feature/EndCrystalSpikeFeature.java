@@ -7,6 +7,7 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
@@ -24,16 +25,22 @@ import net.minecraft.world.gen.feature.util.FeatureContext;
  */
 public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
     private static final int MAIN_ISLAND_EXCLUSION_RADIUS = 1100; // blocks
+    private static final boolean DEBUG_SHULKER_SPAWNS = false;
+    // Debug flag enables aggressive spawner injection in Astral base for validation
 
     public EndCrystalSpikeFeature(Codec<DefaultFeatureConfig> codec) {
         super(codec);
     }
+
+    // Debug helper removed
 
     @Override
     public boolean generate(FeatureContext<DefaultFeatureConfig> context) {
         StructureWorldAccess world = context.getWorld();
         Random random = context.getRandom();
         BlockPos origin = context.getOrigin();
+
+        // no-op debug
 
         // Exclude the dragon fight area (central island vicinity)
         int cx = origin.getX() + 8;
@@ -42,7 +49,7 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
             return false;
         }
 
-        // ~3.75% chance per chunk to attempt a spike (rarer than before)
+        // ~3.75% chance per chunk to attempt a spike (restore original rarity)
         if (random.nextFloat() > 0.0375f) {
             return false;
         }
@@ -54,10 +61,15 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
             Anchor anchor = findAnchor(world, origin, random);
             if (anchor == null) continue;
 
+            if (DEBUG_SHULKER_SPAWNS) {
+                System.out.println("[EndUpdate] Spike anchor at " + anchor.islandBlockPos + " facing " + anchor.outwardFace);
+            }
+
             int height = 12 + random.nextInt(11); // 12-22: noticeably longer spikes
             int baseRadius = (height >= 18 ? 3 : 2); // keep slim bases
 
-            if (placeSpike(world, anchor, height, baseRadius, random)) {
+            java.util.ArrayList<BlockPos> placedBlocks = new java.util.ArrayList<>();
+            if (placeSpike(world, anchor, height, baseRadius, random, placedBlocks)) {
                 placedAny = true;
             }
         }
@@ -151,7 +163,7 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
             || state.isOf(ModBlocks.MOLD_BLOCK);
     }
 
-    private static boolean placeSpike(StructureWorldAccess world, Anchor anchor, int height, int baseRadius, Random random) {
+    private static boolean placeSpike(StructureWorldAccess world, Anchor anchor, int height, int baseRadius, Random random, java.util.List<BlockPos> placedOut) {
         Vec3d n = Vec3d.of(anchor.outwardFace.getVector()).normalize();
 
         // Build an angled direction by tilting the face normal with a random vector in its tangent plane
@@ -185,6 +197,11 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
                 for (int dy = -r; dy <= r; dy++) {
                     for (int dz = -r; dz <= r; dz++) {
                         BlockPos bp = BlockPos.ofFloored(center.x + dx, center.y + dy, center.z + dz);
+                        // Clip to same chunk to avoid far-chunk writes that the engine rejects
+                        ChunkPos anchorChunk = new ChunkPos(anchor.islandBlockPos);
+                        if (new ChunkPos(bp).x != anchorChunk.x || new ChunkPos(bp).z != anchorChunk.z) {
+                            continue;
+                        }
 
                         // Distance from the spike axis (perpendicular component)
                         Vec3d cellCenter = new Vec3d(bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5);
@@ -197,11 +214,13 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
                         BlockState existing = world.getBlockState(bp);
                         if (!(existing.isAir() || existing.isReplaceable())) continue;
 
-                        BlockState placeState = (step < baseAstralDepth)
-                            ? ModBlocks.ASTRAL_REMNANT.getDefaultState()
-                            : ModBlocks.STELLARITH_CRYSTAL.getDefaultState();
-
-                        world.setBlockState(bp, placeState, Block.NOTIFY_LISTENERS);
+                        // First place the spike blocks normally; we'll inject spawners in a post-pass to avoid later overwrites
+                        if (step < baseAstralDepth) {
+                            world.setBlockState(bp, ModBlocks.ASTRAL_REMNANT.getDefaultState(), Block.NOTIFY_LISTENERS);
+                        } else {
+                            world.setBlockState(bp, ModBlocks.STELLARITH_CRYSTAL.getDefaultState(), Block.NOTIFY_LISTENERS);
+                        }
+                        if (placedOut != null) placedOut.add(bp.toImmutable());
                         placedAny = true;
                         placedInThisStep = true;
                     }
@@ -213,10 +232,12 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
                 BlockPos core = BlockPos.ofFloored(center);
                 BlockState existing = world.getBlockState(core);
                 if (existing.isAir() || existing.isReplaceable()) {
-                    BlockState placeStateStep = (step < baseAstralDepth)
-                        ? ModBlocks.ASTRAL_REMNANT.getDefaultState()
-                        : ModBlocks.STELLARITH_CRYSTAL.getDefaultState();
-                    world.setBlockState(core, placeStateStep, Block.NOTIFY_LISTENERS);
+                    if (step < baseAstralDepth) {
+                        world.setBlockState(core, ModBlocks.ASTRAL_REMNANT.getDefaultState(), Block.NOTIFY_LISTENERS);
+                    } else {
+                        world.setBlockState(core, ModBlocks.STELLARITH_CRYSTAL.getDefaultState(), Block.NOTIFY_LISTENERS);
+                    }
+                    if (placedOut != null) placedOut.add(core.toImmutable());
                     placedAny = true;
                 }
             }
@@ -228,9 +249,109 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
             if (random.nextFloat() < 0.7f) {
                 hugIslandFaceWithAstral(world, anchor, random);
             }
+            // Inject spawners after all placements so nothing overwrites them
+            injectTestSpawnersWithinAstralBase(world, placedOut, random);
         }
 
         return placedAny;
+    }
+
+    // All shulker entity spawning code removed in favor of spawner placement
+
+    private static void injectTestSpawnersWithinAstralBase(StructureWorldAccess world, java.util.List<BlockPos> placed, Random random) {
+        if (placed == null || placed.isEmpty()) return;
+        // Replace a subset of Astral base blocks with spawners only if fully enclosed and at 1.6% rate
+        for (BlockPos pos : placed) {
+            BlockState s = world.getBlockState(pos);
+            if (!s.isOf(ModBlocks.ASTRAL_REMNANT)) continue;
+            if (!isFullyEnclosedBySolid(world, pos)) continue;
+            if (random.nextFloat() >= 0.016f) continue;
+            world.setBlockState(pos, Blocks.SPAWNER.getDefaultState(), Block.NOTIFY_ALL);
+            configureSpawnerToShulker(world, pos);
+        }
+    }
+
+    private static void configureSpawnerToShulker(StructureWorldAccess world, BlockPos pos) {
+        try {
+            BlockEntity be = world.getBlockEntity(pos);
+            if (be == null) return;
+            Object logic = null;
+            try {
+                java.lang.reflect.Method m = be.getClass().getMethod("getSpawner");
+                logic = m.invoke(be);
+            } catch (Throwable ignored) {}
+            if (logic == null) {
+                try {
+                    java.lang.reflect.Method m2 = be.getClass().getMethod("getLogic");
+                    logic = m2.invoke(be);
+                } catch (Throwable ignored) {}
+            }
+            if (logic == null) { return; }
+            // 1) Prefer known method names
+            java.lang.reflect.Method chosen = null;
+            for (java.lang.reflect.Method m : logic.getClass().getMethods()) {
+                String n = m.getName();
+                if (!(n.equals("setEntityId") || n.equals("setEntityType") || n.toLowerCase(java.util.Locale.ROOT).contains("entity"))) continue;
+                Class<?>[] pts = m.getParameterTypes();
+                if (pts.length == 0) continue;
+                // Require at least one EntityType-compatible parameter
+                boolean hasEntityType = false;
+                for (Class<?> pt : pts) {
+                    if (pt.isAssignableFrom(net.minecraft.entity.EntityType.class) || pt.getName().endsWith("EntityType")) {
+                        hasEntityType = true; break;
+                    }
+                }
+                if (!hasEntityType) continue;
+                chosen = m; break;
+            }
+
+            if (chosen == null) {
+                // 2) Fallback: any method whose first parameter is EntityType
+                for (java.lang.reflect.Method m : logic.getClass().getMethods()) {
+                    Class<?>[] pts = m.getParameterTypes();
+                    if (pts.length >= 1 && (pts[0].isAssignableFrom(net.minecraft.entity.EntityType.class) || pts[0].getName().endsWith("EntityType"))) {
+                        chosen = m; break;
+                    }
+                }
+            }
+
+            if (chosen == null) { return; }
+
+            // Build arguments dynamically for best-effort compatibility across mappings
+            Class<?>[] pts = chosen.getParameterTypes();
+            Object[] args = new Object[pts.length];
+            for (int i = 0; i < pts.length; i++) {
+                Class<?> pt = pts[i];
+                if (pt.isAssignableFrom(net.minecraft.entity.EntityType.class) || pt.getName().endsWith("EntityType")) {
+                    args[i] = net.minecraft.entity.EntityType.SHULKER;
+                } else if (pt.getName().equals("net.minecraft.util.math.random.Random")) {
+                    args[i] = world.getRandom();
+                } else if (pt == java.util.Random.class) {
+                    args[i] = new java.util.Random(world.getRandom().nextLong());
+                } else if (pt.getName().equals("net.minecraft.util.math.BlockPos") || pt.getName().endsWith("BlockPos")) {
+                    args[i] = pos;
+                } else if (pt.getName().equals("net.minecraft.server.world.ServerWorld") || pt.getName().equals("net.minecraft.world.World")) {
+                    // Feature world is a StructureWorldAccess; no direct ServerWorld available here
+                    args[i] = null;
+                } else {
+                    args[i] = null;
+                }
+            }
+
+            try { chosen.invoke(logic, args); } catch (Throwable ignored) { return; }
+            try { world.getBlockEntity(pos).markDirty(); } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
+    }
+
+    // no NBT fallback to avoid mapping churn; rely on reflective Spawner logic methods instead
+
+    private static boolean isFullyEnclosedBySolid(StructureWorldAccess world, BlockPos pos) {
+        for (Direction d : Direction.values()) {
+            BlockPos n = pos.offset(d);
+            BlockState s = world.getBlockState(n);
+            if (s.isAir() || !s.isFullCube(world, n)) return false;
+        }
+        return true;
     }
 
     private static void thickenBase(StructureWorldAccess world, Anchor anchor, Random random) {

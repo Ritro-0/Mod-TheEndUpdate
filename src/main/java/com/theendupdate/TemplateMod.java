@@ -24,6 +24,7 @@ public class TemplateMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        LOGGER.info("[EndUpdate] onInitialize() starting");
         // Initialize mod content
         com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModBlockEntities.register();
@@ -55,6 +56,7 @@ public class TemplateMod implements ModInitializer {
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_BLOCK.asItem(), 0.65f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_CRAWL.asItem(), 0.50f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.VOID_BLOOM.asItem(), 0.30f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ENDER_CHRYSANTHEMUM.asItem(), 0.30f);
         // Mold plants composting (match vanilla equivalents):
         // - Nether Sprouts ~30%
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_SPORE.asItem(), 0.30f);
@@ -68,7 +70,7 @@ public class TemplateMod implements ModInitializer {
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_THREAD.asItem(), 0.65f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_CORE.asItem(), 0.65f);
 
-        // Remove dev-only logging and commands for release
+        // Brewing handled via registry data (potion_mixing) JSON
 
         // Global hooks to ensure mold_crawl reacts even if vanilla neighbor updates are skipped by renderer state:
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
@@ -88,12 +90,9 @@ public class TemplateMod implements ModInitializer {
             }
         });
 
-        // (loot table event debug removed to avoid API signature differences; block-break diagnostics remain)
-
         // Worldgen registration
         com.theendupdate.registry.ModWorldgen.registerAll();
-        
-        // No debug startup logging in release builds
+        LOGGER.info("[EndUpdate] onInitialize() completed");
         
     }
 }

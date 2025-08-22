@@ -14,6 +14,34 @@
 		"RecoveryCompassUseMixin",
 		"SmithingForceTrimMixin"
 	],
+	"mixins": [
+		"TheEndUpdateMixin",
+		"ChorusFlowerBlockMixin",
+		"ChorusFlowerBlockBreakMixin",
+		"ChorusPlantBlockMixin",
+		"ChorusPlantBlockStateMixin",
+		"ChorusFlowerEndStoneCompatMixin",
+		"ChorusPlantEndStoneCompatMixin",
+		"EntityWallSlidingMixin",
+		"RecoveryCompassUseMixin",
+		"SmithingForceTrimMixin",
+		"BrewingIngredientSlotMixin",
+		"BrewingStandBlockEntityMixin"
+	],
+	"mixins": [
+		"TheEndUpdateMixin",
+		"ChorusFlowerBlockMixin",
+		"ChorusFlowerBlockBreakMixin",
+		"ChorusPlantBlockMixin",
+		"ChorusPlantBlockStateMixin",
+		"ChorusFlowerEndStoneCompatMixin",
+		"ChorusPlantEndStoneCompatMixin",
+		"EntityWallSlidingMixin",
+		"RecoveryCompassUseMixin",
+		"SmithingForceTrimMixin",
+		"BrewingIngredientSlotMixin",
+		"BrewingStandBlockEntityTickMixin"
+	],
 	"injectors": {
 		"defaultRequire": 1
 	},

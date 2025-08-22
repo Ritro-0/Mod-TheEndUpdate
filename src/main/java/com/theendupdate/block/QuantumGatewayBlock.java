@@ -14,6 +14,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.util.ItemScatterer;
 import org.jetbrains.annotations.Nullable;
 
 // no extra imports
@@ -46,7 +47,22 @@ public class QuantumGatewayBlock extends BlockWithEntity {
 
     // Mapping-safe: omit @Override and use broader signature
     public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        
+        if (!state.isOf(newState.getBlock())) {
+            BlockEntity be = world.getBlockEntity(pos);
+            if (be instanceof QuantumGatewayBlockEntity gateway && !world.isClient) {
+                // Drop only the two input slots (0 and 1). Do not drop the output (2).
+                for (int i = 0; i < 2; i++) {
+                    ItemStack stack = gateway.inventory.getStack(i);
+                    if (!stack.isEmpty()) {
+                        ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), stack);
+                        gateway.inventory.setStack(i, ItemStack.EMPTY);
+                    }
+                }
+                gateway.inventory.markDirty();
+                world.updateComparators(pos, this);
+            }
+        }
+        // Intentionally do not call super here; see ServerWorld overload below
     }
 
     // 1.21.8 variant used by superclass; keep it to be safe

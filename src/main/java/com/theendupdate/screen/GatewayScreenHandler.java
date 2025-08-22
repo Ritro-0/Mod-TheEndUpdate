@@ -13,6 +13,8 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.text.Text;
+import net.minecraft.util.ItemScatterer;
+import net.minecraft.block.entity.BeaconBlockEntity;
 
 public class GatewayScreenHandler extends ScreenHandler {
     private final Inventory inventory;
@@ -35,7 +37,7 @@ public class GatewayScreenHandler extends ScreenHandler {
         this.addSlot(new Slot(inventory, 0, 27, 47) {
             @Override
             public boolean canInsert(ItemStack stack) {
-                return GatewayScreenHandler.this.isBeaconBelow() && stack.isOf(Items.RECOVERY_COMPASS);
+                return GatewayScreenHandler.this.isBeaconActiveBelow() && stack.isOf(Items.RECOVERY_COMPASS);
             }
 
             @Override
@@ -47,7 +49,7 @@ public class GatewayScreenHandler extends ScreenHandler {
         this.addSlot(new Slot(inventory, 1, 76, 47) {
             @Override
             public boolean canInsert(ItemStack stack) {
-                return GatewayScreenHandler.this.isBeaconBelow() && stack.isOf(Items.DIAMOND_BLOCK);
+                return GatewayScreenHandler.this.isBeaconActiveBelow() && stack.isOf(Items.DIAMOND_BLOCK);
             }
 
             @Override
@@ -62,7 +64,7 @@ public class GatewayScreenHandler extends ScreenHandler {
 
             @Override
             public boolean canTakeItems(PlayerEntity player) {
-                return GatewayScreenHandler.this.isBeaconBelow();
+                return GatewayScreenHandler.this.isBeaconActiveBelow();
             }
 
             @Override
@@ -105,6 +107,22 @@ public class GatewayScreenHandler extends ScreenHandler {
     public boolean canUse(PlayerEntity player) { return true; }
 
     @Override
+    public void onClosed(PlayerEntity player) {
+        super.onClosed(player);
+        if (!isServer) return;
+        this.context.run((world, pos) -> {
+            for (int i = 0; i < 2; i++) {
+                ItemStack stack = this.inventory.getStack(i);
+                if (!stack.isEmpty()) {
+                    ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), stack);
+                    this.inventory.setStack(i, ItemStack.EMPTY);
+                }
+            }
+            this.inventory.markDirty();
+        });
+    }
+
+    @Override
     public ItemStack quickMove(PlayerEntity player, int fromIndex) {
         ItemStack empty = ItemStack.EMPTY;
         Slot fromSlot = this.slots.get(fromIndex);
@@ -119,7 +137,7 @@ public class GatewayScreenHandler extends ScreenHandler {
 
         // Output slot → player inventory
         if (fromIndex == 2) {
-            if (!this.isBeaconBelow()) return empty;
+            if (!this.isBeaconActiveBelow()) return empty;
             if (!this.insertItem(fromStack, playerInvStart, hotbarEnd, true)) return empty;
             fromSlot.onQuickTransfer(fromStack, original);
             // Pass the original stack (pre-transfer count) so inputs are consumed correctly
@@ -153,11 +171,14 @@ public class GatewayScreenHandler extends ScreenHandler {
     @Override
     public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
         // Disallow interacting with the output when not above a beacon
-        if (slotIndex == 2 && !this.isBeaconBelow()) {
+        if (slotIndex == 2 && !this.isBeaconActiveBelow()) {
             return;
         }
         // Custom: left-click on output takes exactly one item; right-click/shift-click use vanilla behavior
         if (slotIndex == 2 && actionType == SlotActionType.PICKUP && button == 0) {
+            if (!this.isBeaconActiveBelow()) {
+                return;
+            }
             ItemStack result = this.inventory.getStack(2);
             if (result.isEmpty()) {
                 return;
@@ -218,7 +239,7 @@ public class GatewayScreenHandler extends ScreenHandler {
             return;
         }
         // If not on a beacon, do not provide any output
-        if (!this.isBeaconBelow()) {
+        if (!this.isBeaconActiveBelow()) {
             inventory.setStack(2, ItemStack.EMPTY);
             inventory.markDirty();
             this.sendContentUpdates();
@@ -260,10 +281,24 @@ public class GatewayScreenHandler extends ScreenHandler {
         this.sendContentUpdates();
     }
 
-    private boolean isBeaconBelow() {
+    private boolean isBeaconActiveBelow() {
         final boolean[] result = new boolean[] { false };
         this.context.run((world, pos) -> {
-            result[0] = world.getBlockState(pos.down()).isOf(Blocks.BEACON);
+            if (!world.getBlockState(pos.down()).isOf(Blocks.BEACON)) {
+                result[0] = false;
+                return;
+            }
+            net.minecraft.block.entity.BlockEntity be = world.getBlockEntity(pos.down());
+            if (be instanceof BeaconBlockEntity beacon) {
+                try {
+                    java.util.List<?> segments = beacon.getBeamSegments();
+                    result[0] = segments != null && !segments.isEmpty();
+                } catch (Throwable ignored) {
+                    result[0] = false;
+                }
+            } else {
+                result[0] = false;
+            }
         });
         return result[0];
     }

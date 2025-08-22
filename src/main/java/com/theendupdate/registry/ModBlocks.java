@@ -56,6 +56,17 @@ public final class ModBlocks {
         )
     );
 
+    public static final Block ENDER_CHRYSANTHEMUM = registerBlock(
+        "ender_chrysanthemum",
+        key -> new com.theendupdate.block.EnderChrysanthemumBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.POPPY)
+                .offset(AbstractBlock.OffsetType.NONE)
+                .nonOpaque()
+                .registryKey(key)
+        )
+    );
+
     public static final Block VOID_SAP = registerBlock(
         "void_sap",
         key -> new com.theendupdate.block.VoidSapBlock(

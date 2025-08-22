@@ -11,10 +11,12 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.PlacedFeature;
+// import removed: not using explicit structure injection due to unavailable API
 
 /**
  * Registers End biome distribution and ground cover features for Mirelands.
@@ -53,6 +55,13 @@ public final class ModWorldgen {
         new com.theendupdate.world.feature.EndCrystalSpikeFeature(DefaultFeatureConfig.CODEC)
     );
 
+    // Ender chrysanthemum attachment on small end islands
+    public static final Feature<DefaultFeatureConfig> ENDER_CHRYSANTHEMUM_ISLANDS = Registry.register(
+        Registries.FEATURE,
+        id("ender_chrysanthemum_islands"),
+        new com.theendupdate.world.feature.EnderChrysanthemumIslandsFeature(DefaultFeatureConfig.CODEC)
+    );
+
     public static final RegistryKey<PlacedFeature> MIRELANDS_GROUND_COVER_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("mirelands_ground_cover"));
     public static final RegistryKey<PlacedFeature> MIRELANDS_VEGETATION_PLACED_KEY = RegistryKey.of(
@@ -64,6 +73,9 @@ public final class ModWorldgen {
         RegistryKeys.PLACED_FEATURE, id("void_bloom_chorus_attachment"));
     public static final RegistryKey<PlacedFeature> END_CRYSTAL_SPIKE_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("end_crystal_spike"));
+
+    public static final RegistryKey<PlacedFeature> ENDER_CHRYSANTHEMUM_ISLANDS_PLACED_KEY = RegistryKey.of(
+        RegistryKeys.PLACED_FEATURE, id("ender_chrysanthemum_islands"));
 
 	// Biome keys
 	public static final RegistryKey<Biome> MIRELANDS_HIGHLANDS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("mirelands_highlands"));
@@ -98,17 +110,31 @@ public final class ModWorldgen {
             VOID_BLOOM_CHORUS_ATTACHMENT_PLACED_KEY
         );
 
-        // Crystal spikes: add to surface structures to avoid clashing with flora; include all End biomes
+        // Crystal spikes: include all End biomes (debug-wide coverage)
         BiomeModifications.addFeature(
             BiomeSelectors.foundInTheEnd(),
-            GenerationStep.Feature.LOCAL_MODIFICATIONS,
+            GenerationStep.Feature.VEGETAL_DECORATION,
             END_CRYSTAL_SPIKE_PLACED_KEY
         );
 
+        // Ender chrysanthemums on Small End Islands only
+        BiomeModifications.addFeature(
+            BiomeSelectors.includeByKey(BiomeKeys.SMALL_END_ISLANDS),
+            GenerationStep.Feature.VEGETAL_DECORATION,
+            ENDER_CHRYSANTHEMUM_ISLANDS_PLACED_KEY
+        );
+
+        // End Cities are enabled for our biomes via data tags under minecraft:has_structure/end_city
+
         // End biome API: add our highlands and link its midlands/barrens
-		TheEndBiomes.addHighlandsBiome(MIRELANDS_HIGHLANDS_KEY, 5);
+		TheEndBiomes.addHighlandsBiome(MIRELANDS_HIGHLANDS_KEY, 2);
 		TheEndBiomes.addMidlandsBiome(MIRELANDS_HIGHLANDS_KEY, MIRELANDS_MIDLANDS_KEY, 1);
 		TheEndBiomes.addBarrensBiome(MIRELANDS_HIGHLANDS_KEY, MIRELANDS_BARRENS_KEY, 1);
+
+        // Debug logs via both slf4j and log4j
+        com.theendupdate.TemplateMod.LOGGER.info("[EndUpdate] ModWorldgen.registerAll completed: spikes+mire registered");
+        org.apache.logging.log4j.LogManager.getLogger(com.theendupdate.TemplateMod.MOD_ID).info("[EndUpdate] ModWorldgen.registerAll completed: spikes+mire registered");
+        System.out.println("[EndUpdate] ModWorldgen.registerAll completed: spikes+mire registered");
 
         // Registration complete
 	}

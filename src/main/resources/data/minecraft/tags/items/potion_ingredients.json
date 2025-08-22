@@ -1,8 +1,7 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:mold_block",
-    "theendupdate:void_bloom",
+    "#theendupdate:brewing_reagents",
     "theendupdate:ender_chrysanthemum"
   ]
 }
