@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SSS",
+    "S S",
+    "SSS"
+  ],
+  "key": {
+    "S": [
+      { "tag": "minecraft:wooden_slabs" },
+      { "item": "theendupdate:ethereal_slab" }
+    ]
+  },
+  "result": { "id": "minecraft:composter" }
+}
+
+

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PSP",
+    "P P",
+    "PSP"
+  ],
+  "key": {
+    "P": { "tag": "minecraft:planks" },
+    "S": [
+      { "tag": "minecraft:wooden_slabs" },
+      { "item": "theendupdate:ethereal_slab" }
+    ]
+  },
+  "result": { "id": "minecraft:barrel" }
+}
+
+
