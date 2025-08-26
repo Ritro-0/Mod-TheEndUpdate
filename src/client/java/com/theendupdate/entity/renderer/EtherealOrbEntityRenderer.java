@@ -40,7 +40,6 @@ public class EtherealOrbEntityRenderer extends LivingEntityRenderer<EtherealOrbE
     public void updateRenderState(EtherealOrbEntity entity, EtherealOrbRenderState state, float tickDelta) {
         super.updateRenderState(entity, state, tickDelta);
         state.moveAnimationState.copyFrom(entity.moveAnimationState);
-        state.hasCustomName = entity.hasCustomName();
     }
     
 

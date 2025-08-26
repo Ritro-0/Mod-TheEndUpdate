@@ -17,5 +17,4 @@ import net.minecraft.util.math.MathHelper;
 public class EtherealOrbRenderState extends LivingEntityRenderState {
     public final AnimationState moveAnimationState = new AnimationState();
     public final AnimationState finishmovementAnimationState = new AnimationState();
-    public boolean hasCustomName;
 }

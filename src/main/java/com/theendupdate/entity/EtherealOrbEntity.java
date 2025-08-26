@@ -86,21 +86,6 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     }
 
     @Override
-    public boolean isCustomNameVisible() {
-        return this.hasCustomName();
-    }
-
-    @Override
-    public net.minecraft.text.Text getDisplayName() {
-        return this.hasCustomName() ? super.getDisplayName() : net.minecraft.text.Text.empty();
-    }
-
-    @Override
-    public net.minecraft.text.Text getName() {
-        return this.hasCustomName() ? super.getName() : net.minecraft.text.Text.empty();
-    }
-
-    @Override
     protected EntityNavigation createNavigation(World world) {
         BirdNavigation navigation = new BirdNavigation(this, world);
         navigation.setCanSwim(false);
@@ -124,29 +109,10 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 }
             }
         }
-        // Only show nametag if actually custom-named (vanilla behavior)
-        boolean shouldShowName = this.hasCustomName();
-        if (this.isCustomNameVisible() != shouldShowName) {
-            this.setCustomNameVisible(shouldShowName);
-        }
         // If touching ground or colliding downward, gently lift to avoid floor damage/stuck
         if ((this.isOnGround() || this.verticalCollision) && this.getVelocity().y <= 0.0) {
             this.setVelocity(this.getVelocity().x, 0.25, this.getVelocity().z);
             this.setPosition(this.getX(), this.getY() + 0.05, this.getZ());
-        }
-    }
-
-    @Override
-    public boolean shouldRenderName() {
-        return this.hasCustomName();
-    }
-
-    @Override
-    public void setCustomName(Text name) {
-        if (name == null || name.getString().isBlank()) {
-            super.setCustomName(null);
-        } else {
-            super.setCustomName(name);
         }
     }
 
