@@ -9,10 +9,8 @@ import net.minecraft.entity.ai.pathing.BirdNavigation;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.passive.PassiveEntity;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 import net.minecraft.util.math.MathHelper;
@@ -23,8 +21,12 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.entity.ai.pathing.Path;
-import com.theendupdate.TemplateMod;
-import net.minecraft.particle.ParticleTypes;
+import net.minecraft.text.Text;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageTypes;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.world.RaycastContext;
 
 /**
  * EtherealOrbEntity - A floating, glowing orb creature that inhabits The End
@@ -35,47 +37,67 @@ import net.minecraft.particle.ParticleTypes;
  * - Passive behavior, but flees when hurt
  * - Can pass through certain blocks
  */
-public class EtherealOrbEntity extends AnimalEntity implements Flutterer {
-    public EtherealOrbEntity(EntityType<? extends AnimalEntity> entityType, World world) {
+public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
+    public EtherealOrbEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
-        this.moveControl = new FlightMoveControl(this, 15, true);
+        this.moveControl = new FlightMoveControl(this, 30, true); // Doubled from 15 to 30
         this.setNoGravity(true);
     }
+    
     public final AnimationState moveAnimationState = new AnimationState();
     public final AnimationState finishmovementAnimationState = new AnimationState();
+    
     @Override
     public boolean isInAir() {
         return !this.isOnGround() && !this.isTouchingWater();
     }
+    
+    // Be invulnerable to fall and in-wall damage
     @Override
-    public boolean isBreedingItem(ItemStack stack) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isBreedingItem'");
+    public boolean isInvulnerableTo(ServerWorld world, DamageSource source) {
+        if (source.isOf(DamageTypes.FALL) || source.isOf(DamageTypes.IN_WALL)) return true;
+        return super.isInvulnerableTo(world, source);
     }
+    
     @Override
-    public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createChild'");
+    public boolean handleFallDamage(double fallDistance, float damageMultiplier, DamageSource damageSource) {
+        return false;
     }
-public static DefaultAttributeContainer.Builder createEtherealOrbAttributes() {
-    return AnimalEntity.createMobAttributes()
-    .add(EntityAttributes.MAX_HEALTH, 3.5)
-    .add(EntityAttributes.MOVEMENT_SPEED, 0.2)
-    .add(EntityAttributes.FLYING_SPEED, 0.35)
-    .add(EntityAttributes.FOLLOW_RANGE, 10.0)
-    .add(EntityAttributes.ATTACK_DAMAGE, 3.0)
-    .add(EntityAttributes.ATTACK_SPEED, 1.0)
-    .add(EntityAttributes.ARMOR, 0.0)
-    .add(EntityAttributes.ARMOR_TOUGHNESS, 0.0)
-    .add(EntityAttributes.KNOCKBACK_RESISTANCE, 0.0);
-}
+    
+    public static DefaultAttributeContainer.Builder createEtherealOrbAttributes() {
+        return PathAwareEntity.createMobAttributes()
+            .add(EntityAttributes.MAX_HEALTH, 3.5)
+            .add(EntityAttributes.MOVEMENT_SPEED, 0.4) // Doubled from 0.2
+            .add(EntityAttributes.FLYING_SPEED, 0.7) // Doubled from 0.35
+            .add(EntityAttributes.FOLLOW_RANGE, 10.0)
+            .add(EntityAttributes.ATTACK_DAMAGE, 3.0)
+            .add(EntityAttributes.ATTACK_SPEED, 1.0)
+            .add(EntityAttributes.ARMOR, 0.0)
+            .add(EntityAttributes.ARMOR_TOUGHNESS, 0.0)
+            .add(EntityAttributes.KNOCKBACK_RESISTANCE, 0.0);
+    }
+    
     @Override
     protected void initGoals() {
         this.goalSelector.add(0, new SwimGoal(this));
-        this.goalSelector.add(1, new SeekCrystalsGoal(this, 1800, 12)); // ~90s, 12-block comfort radius
-        this.goalSelector.add(2, new RandomFlyGoal(this, 1.0));
-        this.goalSelector.add(3, new LookAtEntityGoal(this, PlayerEntity.class, 8.0F));
-        this.goalSelector.add(4, new LookAroundGoal(this));
+        this.goalSelector.add(1, new MaintainHomeGoal(this));
+        this.goalSelector.add(2, new LookAtEntityGoal(this, PlayerEntity.class, 8.0F));
+        this.goalSelector.add(3, new LookAroundGoal(this));
+    }
+
+    @Override
+    public boolean isCustomNameVisible() {
+        return this.hasCustomName();
+    }
+
+    @Override
+    public net.minecraft.text.Text getDisplayName() {
+        return this.hasCustomName() ? super.getDisplayName() : net.minecraft.text.Text.empty();
+    }
+
+    @Override
+    public net.minecraft.text.Text getName() {
+        return this.hasCustomName() ? super.getName() : net.minecraft.text.Text.empty();
     }
 
     @Override
@@ -84,239 +106,229 @@ public static DefaultAttributeContainer.Builder createEtherealOrbAttributes() {
         navigation.setCanSwim(false);
         return navigation;
     }
+    
     @Override
-    public void tick()
-    {
+    public void tick() {
         super.tick();
         this.updateAnimations();
-
+        // Ensure we never accumulate fall distance and never show a name
+        this.fallDistance = 0.0F;
+        // On initial ticks after spawn, scrub any default or blank custom name applied by spawn flow
+        if (this.age < 5) {
+            net.minecraft.text.Text cn = this.getCustomName();
+            if (cn != null) {
+                String cs = cn.getString();
+                if (cs.isBlank() || "Ethereal Orb".equals(cs)) {
+                    this.setCustomName(null);
+                    this.setCustomNameVisible(false);
+                }
+            }
+        }
+        // Only show nametag if actually custom-named (vanilla behavior)
+        boolean shouldShowName = this.hasCustomName();
+        if (this.isCustomNameVisible() != shouldShowName) {
+            this.setCustomNameVisible(shouldShowName);
+        }
+        // If touching ground or colliding downward, gently lift to avoid floor damage/stuck
+        if ((this.isOnGround() || this.verticalCollision) && this.getVelocity().y <= 0.0) {
+            this.setVelocity(this.getVelocity().x, 0.25, this.getVelocity().z);
+            this.setPosition(this.getX(), this.getY() + 0.05, this.getZ());
+        }
     }
 
-    private void updateAnimations()
-    {
-        if (isGoingForward())
-        {
+    @Override
+    public boolean shouldRenderName() {
+        return this.hasCustomName();
+    }
+
+    @Override
+    public void setCustomName(Text name) {
+        if (name == null || name.getString().isBlank()) {
+            super.setCustomName(null);
+        } else {
+            super.setCustomName(name);
+        }
+    }
+
+    private void updateAnimations() {
+        if (isGoingForward()) {
             this.finishmovementAnimationState.stop();
             this.moveAnimationState.startIfNotRunning(this.age);
-        }
-        else
-        {
+        } else {
             this.moveAnimationState.stop();
             this.finishmovementAnimationState.startIfNotRunning(this.age);
         }
-
     }
 
-        private boolean isGoingForward()
-        {
-            return this.getVelocity().z > 0; 
-}
-
-/**
- * Simple goal to make the orb wander in the air around its current position.
- */
-class RandomFlyGoal extends Goal {
-    private final EtherealOrbEntity orb;
-    private final double speed;
-    private double targetX;
-    private double targetY;
-    private double targetZ;
-
-    RandomFlyGoal(EtherealOrbEntity orb, double speed) {
-        this.orb = orb;
-        this.speed = speed;
-        this.setControls(EnumSet.of(Goal.Control.MOVE));
+    private boolean isGoingForward() {
+        return this.getVelocity().z > 0; 
     }
 
-    @Override
-    public boolean canStart() {
-        if (orb.getTarget() != null) return false;
-        if (orb.getNavigation().isFollowingPath()) return false;
-        // Pick a new target sometimes
-        if (orb.getRandom().nextInt(20) != 0) return false;
+    /**
+     * Maintain a persistent crystal "home"; if none found, wander and continuously scan.
+     */
+    class MaintainHomeGoal extends Goal {
+        private static final int HOME_RADIUS = 8;
+        private static final int SCAN_CHUNKS = 6;
+        private static final int REPATH_TICKS = 10;
+        private static final int HOME_MAX_DISTANCE = 128;
 
-        Vec3d pos = orb.getPos();
-        double range = 6.0;
-        double dx = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
-        double dy = (orb.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
-        double dz = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
+        private final EtherealOrbEntity orb;
+        private BlockPos homeCrystalPos;
+        private Vec3d intermediateWaypoint;
+        private Vec3d lastPosition;
+        private int stuckCounter;
+        private int repathCooldown;
 
-        targetX = pos.x + dx;
-        // Keep within a reasonable vertical band above the bottom of the world
-        targetY = MathHelper.clamp(pos.y + dy, orb.getWorld().getBottomY() + 5, orb.getWorld().getBottomY() + 100);
-        targetZ = pos.z + dz;
-        return true;
-    }
-
-    @Override
-    public void start() {
-        orb.getNavigation().startMovingTo(targetX, targetY, targetZ, speed);
-    }
-
-    @Override
-    public boolean shouldContinue() {
-        return orb.getNavigation().isFollowingPath();
-    }
-}
-
-/**
- * Periodically seeks Astral Remnant or Stellarith Crystal blocks. If none within
- * comfortRadius, scans up to ~6 nearby chunks and flies toward a spot within comfortRadius
- * of the found crystal.
- */
-class SeekCrystalsGoal extends Goal {
-    private final EtherealOrbEntity orb;
-    private final int cooldownTicks;
-    private final int comfortRadius;
-    private static final int TARGET_RADIUS = 3; // pursue until within 3 blocks
-    private int cooldown;
-
-    private BlockPos targetCrystalPos;
-    private BlockPos destinationPos;
-    private Path currentPath;
-    private boolean useDirectFlight;
-    private int pursuitTimeout;
-
-    SeekCrystalsGoal(EtherealOrbEntity orb, int cooldownTicks, int comfortRadius) {
-        this.orb = orb;
-        this.cooldownTicks = cooldownTicks;
-        this.comfortRadius = comfortRadius;
-        // Short initial cooldown for quick testing; subsequent runs use cooldownTicks
-        this.cooldown = orb.getRandom().nextInt(60); // ~3s initial window
-        this.setControls(EnumSet.of(Goal.Control.MOVE));
-    }
-
-    @Override
-    public boolean canStart() {
-        if (orb.getWorld().isClient) return false;
-        if (orb.getTarget() != null) return false;
-        if (cooldown > 0) { cooldown--; return false; }
-        cooldown = cooldownTicks;
-
-        // Already satisfied (within 12 blocks)
-        if (isNearCrystal(comfortRadius)) {
-            return false;
+        MaintainHomeGoal(EtherealOrbEntity orb) {
+            this.orb = orb;
+            this.setControls(EnumSet.of(Goal.Control.MOVE));
         }
 
-        // Locate a crystal
-        BlockPos found = findNearbyCrystal();
-        if (found == null) found = scanChunksForCrystal(6);
-        if (found == null) {
-            return false;
+        @Override
+        public boolean canStart() {
+            return !orb.getWorld().isClient && orb.getTarget() == null;
         }
-        this.targetCrystalPos = found;
 
-        // Compute a destination within ~3 blocks of the crystal, along the approach line
-        Vec3d from = orb.getPos();
-        Vec3d toCrystal = Vec3d.ofCenter(found);
-        Vec3d dir = toCrystal.subtract(from);
-        double dist = Math.max(dir.length(), 0.001);
-        Vec3d dest = toCrystal.add(dir.normalize().multiply(-Math.max(TARGET_RADIUS - 0.5, 1.5)));
-        this.destinationPos = BlockPos.ofFloored(dest);
-
-        // Always use direct flight (no walking/path nodes)
-        this.currentPath = null;
-        this.useDirectFlight = true;
-        this.pursuitTimeout = 20 * 20; // 20s safety timeout
-        return true;
-    }
-
-    @Override
-    public void start() {
-        // Ensure walking/pathing doesn't engage
-        orb.getNavigation().stop();
-    }
-
-    @Override
-    public boolean shouldContinue() {
-        // Stop only when we are within 3 blocks of a crystal
-        if (isNearCrystal(TARGET_RADIUS)) return false;
-        if (this.pursuitTimeout-- <= 0) {
-            return false;
+        @Override
+        public boolean shouldContinue() {
+            return true; // runs continuously
         }
-        return true;
-    }
 
-    @Override
-    public void stop() {
-        this.targetCrystalPos = null;
-        this.destinationPos = null;
-        this.currentPath = null;
-        this.useDirectFlight = false;
-    }
+        @Override
+        public void start() {
+            this.lastPosition = orb.getPos();
+            this.stuckCounter = 0;
+            this.repathCooldown = 0;
+        }
 
-    @Override
-    public void tick() {
-        if (this.destinationPos == null) return;
-        if (useDirectFlight) {
-            double tx = destinationPos.getX() + 0.5;
-            double ty = destinationPos.getY() + 0.5;
-            double tz = destinationPos.getZ() + 0.5;
-            double dx = tx - orb.getX();
-            double dy = ty - orb.getY();
-            double dz = tz - orb.getZ();
-            double distSq = dx * dx + dy * dy + dz * dz;
-            double speed = distSq > 64 ? 1.25 : 0.9;
-            orb.getMoveControl().moveTo(tx, ty, tz, speed);
-            orb.getLookControl().lookAt(tx, ty, tz);
-            if (!orb.getWorld().isClient && orb.getWorld() instanceof ServerWorld server) {
-                if ((orb.age % 20) == 0) {
-                    server.spawnParticles(ParticleTypes.END_ROD, tx, ty, tz, 6, 0.2, 0.2, 0.2, 0.01);
+        @Override
+        public void tick() {
+            if (repathCooldown > 0) repathCooldown--;
+
+            // Validate or acquire home
+            if (homeCrystalPos == null || !isTargetBlock(homeCrystalPos)) {
+                BlockPos found = findNearbyCrystal();
+                if (found == null) found = scanChunksForCrystal(SCAN_CHUNKS);
+                homeCrystalPos = found; // may be null
+            }
+
+            Vec3d desired;
+            if (homeCrystalPos != null) {
+                Vec3d home = Vec3d.ofCenter(homeCrystalPos);
+                double dist = orb.getPos().distanceTo(home);
+                // Detach if dragged too far from home
+                if (dist > HOME_MAX_DISTANCE) {
+                    homeCrystalPos = null;
+                }
+                if (homeCrystalPos != null && dist > HOME_RADIUS) {
+                    // Fly back to within HOME_RADIUS of home
+                    Vec3d dir = home.subtract(orb.getPos()).normalize();
+                    Vec3d target = home.add(dir.multiply(-Math.max(1.5, 0.5)));
+                    desired = target;
+                } else {
+                    // Idle around home: pick a small offset ring target every few ticks
+                    if (repathCooldown == 0 || intermediateWaypoint == null || orb.getPos().squaredDistanceTo(intermediateWaypoint) < 1.0) {
+                        double angle = (orb.age % 360) * 0.0174533;
+                        double radius = 3.0 + (orb.getRandom().nextDouble() * 2.0);
+                        double x = home.x + Math.cos(angle) * radius;
+                        double y = home.y + 0.5 + (orb.getRandom().nextDouble() * 1.5 - 0.75);
+                        double z = home.z + Math.sin(angle) * radius;
+                        intermediateWaypoint = new Vec3d(x, y, z);
+                        repathCooldown = REPATH_TICKS;
+                    }
+                    desired = intermediateWaypoint;
+                }
+            } else {
+                // No home; wander and keep scanning
+                if (repathCooldown == 0 || intermediateWaypoint == null || orb.getPos().squaredDistanceTo(intermediateWaypoint) < 1.0) {
+                    Vec3d pos = orb.getPos();
+                    double range = 6.0;
+                    double dx = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
+                    double dy = (orb.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
+                    double dz = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
+                    intermediateWaypoint = new Vec3d(
+                        pos.x + dx,
+                        MathHelper.clamp(pos.y + dy, orb.getWorld().getBottomY() + 5, orb.getWorld().getBottomY() + 100),
+                        pos.z + dz
+                    );
+                    repathCooldown = REPATH_TICKS;
+                }
+                desired = intermediateWaypoint;
+            }
+
+            // Movement + avoidance
+            Vec3d cur = orb.getPos();
+            double d2 = cur.squaredDistanceTo(desired);
+            double speed = d2 > 64 ? 3.75 : 2.7;
+
+            HitResult hit = orb.getWorld().raycast(new RaycastContext(
+                cur, desired, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, orb));
+            if (hit.getType() == HitResult.Type.BLOCK) {
+                BlockHitResult bhr = (BlockHitResult) hit;
+                BlockPos hp = bhr.getBlockPos();
+                desired = new Vec3d(desired.x, Math.max(desired.y, hp.getY() + 2.5), desired.z);
+            }
+
+            // Stuck detection
+            if (lastPosition != null) {
+                double move = cur.squaredDistanceTo(lastPosition);
+                if (move < 0.01) {
+                    stuckCounter++;
+                    if (stuckCounter > 10) {
+                        desired = new Vec3d(desired.x, Math.max(desired.y + 4.0, cur.y + 6.0), desired.z);
+                        stuckCounter = 0;
+                    }
+                } else {
+                    stuckCounter = 0;
                 }
             }
+            lastPosition = cur;
+
+            orb.getMoveControl().moveTo(desired.x, desired.y, desired.z, speed);
+            orb.getLookControl().lookAt(desired.x, desired.y, desired.z);
         }
-    }
 
-    private boolean isTargetBlock(BlockPos pos) {
-        var state = orb.getWorld().getBlockState(pos);
-        return state.isOf(ModBlocks.ASTRAL_REMNANT) || state.isOf(ModBlocks.STELLARITH_CRYSTAL);
-    }
-
-    private boolean isNearCrystal(int radius) {
-        BlockPos origin = orb.getBlockPos();
-        int r = radius;
-        for (BlockPos p : BlockPos.iterateOutwards(origin, r, r, r)) {
-            if (origin.getSquaredDistance(p) > (long) r * r) continue;
-            if (isTargetBlock(p)) return true;
+        private boolean isTargetBlock(BlockPos pos) {
+            var state = orb.getWorld().getBlockState(pos);
+            return state.isOf(ModBlocks.ASTRAL_REMNANT) || state.isOf(ModBlocks.STELLARITH_CRYSTAL);
         }
-        return false;
-    }
 
-    private BlockPos findNearbyCrystal() {
-        BlockPos origin = orb.getBlockPos();
-        int r = Math.min(24, comfortRadius * 2);
-        for (BlockPos p : BlockPos.iterateOutwards(origin, r, r, r)) {
-            if (isTargetBlock(p)) return p.toImmutable();
+        private BlockPos findNearbyCrystal() {
+            BlockPos origin = orb.getBlockPos();
+            int r = 32;
+            for (BlockPos p : BlockPos.iterateOutwards(origin, r, r, r)) {
+                if (isTargetBlock(p)) return p.toImmutable();
+            }
+            return null;
         }
-        return null;
-    }
 
-    private BlockPos scanChunksForCrystal(int maxChunks) {
-        ChunkPos center = orb.getChunkPos();
-        int[][] offsets = new int[][] { {0,0}, {1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {-1,-1}, {1,-1}, {-1,1} };
-        int visited = 0;
-        for (int i = 0; i < offsets.length && visited < maxChunks; i++) {
-            int cx = center.x + offsets[i][0];
-            int cz = center.z + offsets[i][1];
-            if (!orb.getWorld().isChunkLoaded(cx, cz)) continue;
-            visited++;
-            Chunk chunk = orb.getWorld().getChunk(cx, cz);
-            int minX = chunk.getPos().getStartX();
-            int minZ = chunk.getPos().getStartZ();
-            int maxX = minX + 15;
-            int maxZ = minZ + 15;
-            int bottomY = orb.getWorld().getBottomY();
-            int topY = bottomY + 128;
-            for (int x = minX; x <= maxX; x += 2) {
-                for (int z = minZ; z <= maxZ; z += 2) {
-                    for (int y = bottomY; y < topY; y += 2) {
-                        BlockPos p = new BlockPos(x, y, z);
-                        if (isTargetBlock(p)) return p;
+        private BlockPos scanChunksForCrystal(int maxChunks) {
+            ChunkPos center = orb.getChunkPos();
+            int[][] offsets = new int[][] { {0,0}, {1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {-1,-1}, {1,-1}, {-1,1} };
+            int visited = 0;
+            for (int i = 0; i < offsets.length && visited < maxChunks; i++) {
+                int cx = center.x + offsets[i][0];
+                int cz = center.z + offsets[i][1];
+                if (!orb.getWorld().isChunkLoaded(cx, cz)) continue;
+                visited++;
+                Chunk chunk = orb.getWorld().getChunk(cx, cz);
+                int minX = chunk.getPos().getStartX();
+                int minZ = chunk.getPos().getStartZ();
+                int maxX = minX + 15;
+                int maxZ = minZ + 15;
+                int bottomY = orb.getWorld().getBottomY();
+                int topY = bottomY + 128;
+                for (int x = minX; x <= maxX; x += 2) {
+                    for (int z = minZ; z <= maxZ; z += 2) {
+                        for (int y = bottomY; y < topY; y += 2) {
+                            BlockPos p = new BlockPos(x, y, z);
+                            if (isTargetBlock(p)) return p;
+                        }
                     }
                 }
             }
+            return null;
         }
-        return null;
     }
-}
 }

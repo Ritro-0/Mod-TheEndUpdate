@@ -22,7 +22,7 @@ public final class ModEntities {
     public static final EntityType<EtherealOrbEntity> ETHEREAL_ORB = Registry.register(
         Registries.ENTITY_TYPE,
         ETHEREAL_ORB_ID,
-        EntityType.Builder.create(EtherealOrbEntity::new, SpawnGroup.CREATURE)
+        EntityType.Builder.create(EtherealOrbEntity::new, SpawnGroup.AMBIENT)
             .dimensions(0.8f, 0.8f) // Small orb-like size
             .eyeHeight(0.4f)
             .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, ETHEREAL_ORB_ID))

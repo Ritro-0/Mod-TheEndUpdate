@@ -7,6 +7,7 @@ import com.theendupdate.entity.model.EtherealOrbEntityModel;
 import com.theendupdate.entity.state.EtherealOrbRenderState;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
+import net.minecraft.client.render.entity.state.LivingEntityRenderState;
 import net.minecraft.util.Identifier;
 
 
@@ -39,6 +40,7 @@ public class EtherealOrbEntityRenderer extends LivingEntityRenderer<EtherealOrbE
     public void updateRenderState(EtherealOrbEntity entity, EtherealOrbRenderState state, float tickDelta) {
         super.updateRenderState(entity, state, tickDelta);
         state.moveAnimationState.copyFrom(entity.moveAnimationState);
+        state.hasCustomName = entity.hasCustomName();
     }
     
 
@@ -48,4 +50,5 @@ public class EtherealOrbEntityRenderer extends LivingEntityRenderer<EtherealOrbE
         return TEXTURE;
     }
 
+    // Nameplate visibility is handled on the entity side by hasCustomName()
 }
