@@ -35,7 +35,9 @@
   "block.theendupdate.stellarith_crystal": "Stellarith Crystal",
   "block.theendupdate.voidstar_block": "Voidstar Block",
   "block.theendupdate.astral_remnant": "Astral Remnant",
-  "block.theendupdate.quantum_gateway": "Quantum Gateway"
+  "block.theendupdate.quantum_gateway": "Quantum Gateway",
+  "block.theendupdate.spectral_block": "Spectral Block",
+  "item.theendupdate.spectral_block": "Spectral Block"
   ,
   "item.theendupdate.end_mire": "End Mire",
   "item.theendupdate.mold_block": "Mold Block",

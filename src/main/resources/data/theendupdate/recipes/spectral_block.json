@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "##",
+    "##"
+  ],
+  "key": {
+    "#": "theendupdate:spectral_cluster"
+  },
+  "result": { "id": "theendupdate:spectral_block", "count": 1 }
+}
+
+

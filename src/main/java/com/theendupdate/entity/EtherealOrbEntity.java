@@ -58,6 +58,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     private static final TrackedData<Boolean> CHARGED = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> BABY = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> BREED_READY = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Integer> GROWING_AGE = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> BREEDING = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final int BREED_COOLDOWN_TICKS = 3 * 60 * 20; // 3 minutes
     public final AnimationState rotateAnimationState = new AnimationState();
@@ -119,6 +120,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         builder.add(CHARGED, Boolean.FALSE);
         builder.add(BABY, Boolean.FALSE);
         builder.add(BREED_READY, Boolean.FALSE);
+        builder.add(GROWING_AGE, 0);
         builder.add(BREEDING, Boolean.FALSE);
     }
 
@@ -180,6 +182,11 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         // No custom suffocation logic; rely on vanilla in-wall checks only
         if (!this.getWorld().isClient) {
+            // Restore growth counter from tracked data after reload
+            int trackedAge = this.dataTracker.get(GROWING_AGE);
+            if (this.growingAgeTicks == 0 && this.dataTracker.get(BABY) && trackedAge < 0) {
+                this.growingAgeTicks = trackedAge;
+            }
             if (this.breedCooldownTicks > 0) {
                 this.breedCooldownTicks--;
             }
@@ -197,6 +204,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             // Growth ticking for babies and speed/base adjustments
             if (this.growingAgeTicks < 0) {
                 this.growingAgeTicks++;
+                this.dataTracker.set(GROWING_AGE, this.growingAgeTicks);
                 // Ensure client knows we are a baby
                 if (!this.dataTracker.get(BABY)) this.dataTracker.set(BABY, Boolean.TRUE);
                 if (this.growingAgeTicks == 0) {
@@ -423,6 +431,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         baby.refreshPositionAndAngles(ox, oy, oz, this.getYaw(), this.getPitch());
         baby.setBabyTicks(-BABY_GROW_TICKS);
         baby.dataTracker.set(BABY, Boolean.TRUE);
+        baby.dataTracker.set(GROWING_AGE, -BABY_GROW_TICKS);
         world.spawnEntity(baby);
         world.spawnParticles(ParticleTypes.END_ROD, ox, oy + 0.4, oz, 10, 0.2, 0.2, 0.2, 0.0);
         this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.0f);

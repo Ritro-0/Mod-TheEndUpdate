@@ -297,6 +297,19 @@ public final class ModBlocks {
         )
     );
 
+    // Spectral Block - brightest block with extended effective radius
+    public static final Block SPECTRAL_BLOCK = registerBlock(
+        "spectral_block",
+        key -> new com.theendupdate.block.SpectralBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.SEA_LANTERN)
+                .luminance(state -> 15)
+                .strength(1.5F, 6.0F)
+                .sounds(BlockSoundGroup.GLASS)
+                .registryKey(key)
+        )
+    );
+
     // Beacon-friendly transparent block
     public static final Block QUANTUM_GATEWAY = registerBlock(
         "quantum_gateway",
