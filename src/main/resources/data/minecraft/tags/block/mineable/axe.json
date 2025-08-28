@@ -11,7 +11,18 @@
     "theendupdate:ethereal_door",
     "theendupdate:ethereal_trapdoor",
     "theendupdate:ethereal_button",
-    "theendupdate:ethereal_pressure_plate"
+    "theendupdate:ethereal_pressure_plate",
+    "theendupdate:shadow_cryptomycota",
+    "theendupdate:umbracarp",
+    "theendupdate:shadow_planks",
+    "theendupdate:shadow_stairs",
+    "theendupdate:shadow_slab",
+    "theendupdate:shadow_fence",
+    "theendupdate:shadow_fence_gate",
+    "theendupdate:shadow_door",
+    "theendupdate:shadow_trapdoor",
+    "theendupdate:shadow_button",
+    "theendupdate:shadow_pressure_plate"
   ]
 }
 

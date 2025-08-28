@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SS",
+    "SS"
+  ],
+  "key": {
+    "S": "theendupdate:shadow_cryptomycota"
+  },
+  "result": { "id": "theendupdate:umbracarp", "count": 3 }
+}
+
+

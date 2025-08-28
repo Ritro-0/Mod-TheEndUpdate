@@ -1,7 +1,8 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:ethereal_pressure_plate"
+    "theendupdate:ethereal_pressure_plate",
+    "theendupdate:shadow_pressure_plate"
   ]
 }
 

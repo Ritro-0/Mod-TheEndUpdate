@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "PPP"
+  ],
+  "key": {
+    "P": "theendupdate:shadow_planks"
+  },
+  "result": { "id": "theendupdate:shadow_trapdoor", "count": 2 }
+}
+
+

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [ { "type": "minecraft:item", "name": "theendupdate:shadow_pressure_plate" } ]
+    }
+  ]
+}
+
+

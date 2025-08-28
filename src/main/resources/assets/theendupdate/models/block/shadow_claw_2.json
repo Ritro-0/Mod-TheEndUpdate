@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cross",
+  "textures": {
+    "cross": "theendupdate:block/shadow_claw_2",
+    "particle": "theendupdate:block/shadow_claw_2"
+  }
+}
+
+

@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": ["theendupdate:shadow_cryptomycota"],
+  "result": { "id": "theendupdate:shadow_planks", "count": 4 }
+}
+
+

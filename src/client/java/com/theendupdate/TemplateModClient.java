@@ -52,9 +52,12 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.MOLD_SPORE, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.MOLD_SPORE_TUFT, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.MOLD_SPORE_SPROUT, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_CLAW, BlockRenderLayer.CUTOUT);
         // Wooden transparent parts
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_DOOR, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_TRAPDOOR, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_DOOR, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_TRAPDOOR, BlockRenderLayer.CUTOUT);
         // Quantum gateway uses glass-like rendering; translucent looks better for alpha
         BlockRenderLayerMap.putBlock(ModBlocks.QUANTUM_GATEWAY, BlockRenderLayer.TRANSLUCENT);
         // Entity Initialization
@@ -62,6 +65,8 @@ public class TemplateModClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
         // Register custom screen for Quantum Gateway
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
+
+        // Visual-only top handled via model geometry extending into y+1 (no extra block used)
 
         // Client init complete
         // cleaned debug log

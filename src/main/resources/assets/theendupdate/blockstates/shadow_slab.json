@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "type=bottom": { "model": "theendupdate:block/shadow_slab" },
+    "type=top":    { "model": "theendupdate:block/shadow_slab_top" },
+    "type=double": { "model": "theendupdate:block/shadow_planks" }
+  }
+}
+
+

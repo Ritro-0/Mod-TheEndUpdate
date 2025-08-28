@@ -3,6 +3,12 @@ package com.theendupdate.block;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -36,6 +42,38 @@ public class SpectralBlock extends Block {
     // 1.21.8 superclass override variant
     public void onStateReplaced(BlockState state, net.minecraft.server.world.ServerWorld world, BlockPos pos, boolean moved) {
         super.onStateReplaced(state, world, pos, moved);
+    }
+
+    @Override
+    public void afterBreak(net.minecraft.world.World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
+        if (!world.isClient) {
+            boolean hasSilk = false;
+            int fortuneLevel = 0;
+            try {
+                ItemEnchantmentsComponent ench = tool.get(DataComponentTypes.ENCHANTMENTS);
+                if (ench != null) {
+                    String s = ench.toString();
+                    hasSilk = s.contains("minecraft:silk_touch");
+                    // crude but mapping-safe way to detect fortune level tokens like 'minecraft:fortune:1'
+                    // prefer exact formula: base (2..4) + random [0..fortune]
+                    for (int lvl = 5; lvl >= 1; lvl--) {
+                        if (s.contains("minecraft:fortune") && s.contains(":" + lvl + "]")) { fortuneLevel = lvl; break; }
+                    }
+                    if (fortuneLevel == 0 && s.contains("minecraft:fortune")) fortuneLevel = 1;
+                }
+            } catch (Throwable ignore) {}
+
+            if (hasSilk) {
+                Block.dropStack(world, pos, new ItemStack(this.asItem()));
+            } else {
+                int base = 2 + world.getRandom().nextInt(3); // 2..4
+                int bonus = fortuneLevel > 0 ? world.getRandom().nextInt(fortuneLevel + 1) : 0; // 0..fortune
+                int total = Math.max(1, base + bonus);
+                Block.dropStack(world, pos, new ItemStack(com.theendupdate.registry.ModItems.SPECTRAL_CLUSTER, total));
+            }
+            ((ServerWorld) world).emitGameEvent(player, net.minecraft.world.event.GameEvent.BLOCK_DESTROY, pos);
+        }
+        // Do not call super to avoid default loot table path
     }
 
     private void placeHalo(net.minecraft.server.world.ServerWorld world, BlockPos center) {

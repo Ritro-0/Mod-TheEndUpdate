@@ -36,6 +36,15 @@ public final class ModBlocks {
         )
     );
 
+    public static final Block END_MURK = registerBlock(
+        "end_murk",
+        key -> new com.theendupdate.block.EndMurkBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.END_STONE)
+                .registryKey(key)
+        )
+    );
+
     public static final Block MOLD_BLOCK = registerBlock(
         "mold_block",
         key -> new com.theendupdate.block.MoldBlock(
@@ -216,6 +225,117 @@ public final class ModBlocks {
         )
     );
 
+    // Shadow Cryptomycota wood set (clone of Ethereal set)
+    public static final Block SHADOW_CRYPTOMYCOTA = registerBlock(
+        "shadow_cryptomycota",
+        key -> new com.theendupdate.block.EtherealSporocarpBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_LOG)
+                .sounds(BlockSoundGroup.WOOD)
+                .strength(2.0F, 3.0F)
+                .luminance(state -> 2)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block UMBRACARP = registerBlock(
+        "umbracarp",
+        key -> new com.theendupdate.block.EtherealPustuleBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_WOOD)
+                .sounds(BlockSoundGroup.WOOD)
+                .strength(2.0F, 3.0F)
+                .luminance(state -> 2)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_PLANKS = registerBlock(
+        "shadow_planks",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_PLANKS)
+                .sounds(BlockSoundGroup.WOOD)
+                .luminance(state -> 2)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_STAIRS = registerBlock(
+        "shadow_stairs",
+        key -> new StairsBlock(
+            ModBlocks.SHADOW_PLANKS.getDefaultState(),
+            AbstractBlock.Settings.copy(Blocks.OAK_STAIRS).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_SLAB = registerBlock(
+        "shadow_slab",
+        key -> new SlabBlock(
+            AbstractBlock.Settings.copy(Blocks.OAK_SLAB).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_DOOR = registerBlock(
+        "shadow_door",
+        key -> new DoorBlock(
+            BlockSetType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_DOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_TRAPDOOR = registerBlock(
+        "shadow_trapdoor",
+        key -> new TrapdoorBlock(
+            BlockSetType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_TRAPDOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_FENCE = registerBlock(
+        "shadow_fence",
+        key -> new net.minecraft.block.FenceBlock(
+            AbstractBlock.Settings.copy(Blocks.OAK_FENCE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_FENCE_GATE = registerBlock(
+        "shadow_fence_gate",
+        key -> new FenceGateBlock(
+            WoodType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_FENCE_GATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_BUTTON = registerBlock(
+        "shadow_button",
+        key -> new ButtonBlock(
+            BlockSetType.OAK,
+            30,
+            AbstractBlock.Settings.copy(Blocks.OAK_BUTTON).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_PRESSURE_PLATE = registerBlock(
+        "shadow_pressure_plate",
+        key -> new PressurePlateBlock(
+            BlockSetType.OAK,
+            AbstractBlock.Settings.copy(Blocks.OAK_PRESSURE_PLATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    // Shadow Claw sapling
+    public static final Block SHADOW_CLAW = registerBlock(
+        "shadow_claw",
+        key -> new com.theendupdate.block.ShadowClawBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_SAPLING)
+                .nonOpaque()
+                .ticksRandomly()
+                .registryKey(key)
+        )
+    );
+
     public static final Block MOLD_CRAWL = registerBlock(
         "mold_crawl",
         key -> new com.theendupdate.block.MoldcrawlBlock(
@@ -302,10 +422,8 @@ public final class ModBlocks {
         "spectral_block",
         key -> new com.theendupdate.block.SpectralBlock(
             AbstractBlock.Settings
-                .copy(Blocks.SEA_LANTERN)
+                .copy(Blocks.GLOWSTONE)
                 .luminance(state -> 15)
-                .strength(1.5F, 6.0F)
-                .sounds(BlockSoundGroup.GLASS)
                 .registryKey(key)
         )
     );

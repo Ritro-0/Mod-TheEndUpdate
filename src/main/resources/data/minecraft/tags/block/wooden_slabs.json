@@ -1,7 +1,8 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:ethereal_slab"
+    "theendupdate:ethereal_slab",
+    "theendupdate:shadow_slab"
   ]
 }
 
