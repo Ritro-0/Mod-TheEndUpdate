@@ -53,7 +53,9 @@
         "lapis": "minecraft:trims/color_palettes/lapis",
         "amethyst": "minecraft:trims/color_palettes/amethyst",
         "resin": "minecraft:trims/color_palettes/resin",
-        "voidstar": "theendupdate:trims/color_palettes/voidstar"
+        "voidstar": "theendupdate:trims/color_palettes/voidstar",
+        "spectral": "theendupdate:trims/color_palettes/spectral",
+        "spectral_cluster": "theendupdate:trims/color_palettes/spectral_cluster"
       }
     },
     {
@@ -162,7 +164,9 @@
         "lapis": "minecraft:trims/color_palettes/lapis",
         "amethyst": "minecraft:trims/color_palettes/amethyst",
         "resin": "minecraft:trims/color_palettes/resin",
-        "voidstar": "theendupdate:trims/color_palettes/voidstar"
+        "voidstar": "theendupdate:trims/color_palettes/voidstar",
+        "spectral": "theendupdate:trims/color_palettes/spectral",
+        "spectral_cluster": "theendupdate:trims/color_palettes/spectral_cluster"
       }
     }
   ]

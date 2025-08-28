@@ -1,0 +1,17 @@
+{
+  "entity.ethereal_orb.idle": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_idle",
+      "theendupdate:entity/ethereal_orb/orb_idle2"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.idle"
+  },
+  "entity.ethereal_orb.death": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_death"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.death"
+  }
+}
+
+

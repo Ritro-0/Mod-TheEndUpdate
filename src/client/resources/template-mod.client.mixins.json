@@ -8,7 +8,8 @@
 		"DrawContextMixin",
 		"ItemRendererMixin",
 		"CompassPropertyContextMixin",
-		"PlayerEntityGetDeathPosMixin"
+		"PlayerEntityGetDeathPosMixin",
+		"EntityRendererHasLabelMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

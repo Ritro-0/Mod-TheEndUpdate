@@ -19,12 +19,14 @@ import net.minecraft.util.Identifier;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
 // predicate registration not needed since models use built-in trim_type predicate
 import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.item.equipment.trim.ArmorTrim;
-import net.minecraft.item.equipment.trim.ArmorTrimMaterial;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.Perspective;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.RegistryKey;
 // predicate registration removed; compass logic handled via mixins
 
 @Environment(EnvType.CLIENT)  
@@ -66,10 +68,132 @@ public class TemplateModClient implements ClientModInitializer {
 
         // Item models override using built-in trim_type; no explicit predicate registration required
 
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            try {
+                MinecraftClient mc = client;
+                if (mc == null || mc.world == null || mc.player == null) return;
+                if (mc.options.getPerspective() == Perspective.FIRST_PERSON) return; // hide in first-person only
+                if (mc.world.getTime() % 10 != 0) return; // match server cadence
+
+                var player = mc.player;
+                boolean hasHead = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.HEAD));
+                boolean hasChest = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.CHEST));
+                boolean hasLegs = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.LEGS));
+                boolean hasFeet = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.FEET));
+
+                int spectralPieces = 0;
+                if (hasHead) spectralPieces++;
+                if (hasChest) spectralPieces++;
+                if (hasLegs) spectralPieces++;
+                if (hasFeet) spectralPieces++;
+                if (spectralPieces <= 0) return;
+
+                float spawnChance = switch (spectralPieces) {
+                    case 1 -> 0.5f;
+                    case 2 -> 0.7f;
+                    case 3 -> 0.85f;
+                    default -> 1.0f;
+                };
+                if (mc.world.random.nextFloat() > spawnChance) return;
+
+                double yawRad = Math.toRadians(player.getYaw());
+                double fwdX = -Math.sin(yawRad);
+                double fwdZ =  Math.cos(yawRad);
+                double rightX =  Math.cos(yawRad);
+                double rightZ =  Math.sin(yawRad);
+                boolean phase = ((mc.world.getTime() / 20) % 2) == 0;
+
+                if (hasChest) {
+                    double baseY = player.getY() + 1.30;
+                    double fbMag = 0.85;
+                    double lrMag = 0.45;
+                    double yMag  = 0.28;
+                    double offX = (phase ? fwdX : -fwdX) * fbMag;
+                    double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
+                    boolean lateralLeft = mc.world.random.nextBoolean();
+                    double latScale = lrMag * mc.world.random.nextDouble();
+                    double latX = (lateralLeft ? -rightX : rightX) * latScale;
+                    double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
+                    double spreadFB = (mc.world.random.nextDouble() - 0.5) * 0.6;
+                    double sprX = fwdX * spreadFB;
+                    double sprZ = fwdZ * spreadFB;
+                    double x = player.getX() + offX + latX + sprX + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                    double z = player.getZ() + offZ + latZ + sprZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+                }
+
+                if (hasHead) {
+                    double baseY = player.getEyeY() + 0.00;
+                    double fbMag = 0.55;
+                    double lrMag = 0.30;
+                    double yMag  = 0.22;
+                    double offX = (phase ? fwdX : -fwdX) * fbMag;
+                    double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
+                    boolean lateralLeft = mc.world.random.nextBoolean();
+                    double latScale = lrMag * mc.world.random.nextDouble();
+                    double latX = (lateralLeft ? -rightX : rightX) * latScale;
+                    double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
+                    double spreadFB = (mc.world.random.nextDouble() - 0.5) * 0.5;
+                    double sprX = fwdX * spreadFB;
+                    double sprZ = fwdZ * spreadFB;
+                    double x = player.getX() + offX + latX + sprX + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                    double z = player.getZ() + offZ + latZ + sprZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+                }
+
+                if (hasLegs) {
+                    double baseY = player.getY() + 0.95;
+                    double lrMag = 0.55;
+                    double fbMag = 0.35;
+                    double yMag  = 0.18;
+                    double offX = (phase ? rightX : -rightX) * lrMag;
+                    double offZ = (phase ? rightZ : -rightZ) * lrMag;
+                    boolean forwardSide = mc.world.random.nextBoolean();
+                    double swayScale = fbMag * mc.world.random.nextDouble();
+                    double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
+                    double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
+                    double x = player.getX() + offX + swayX + (mc.world.random.nextDouble() - 0.5) * 0.16;
+                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                    double z = player.getZ() + offZ + swayZ + (mc.world.random.nextDouble() - 0.5) * 0.16;
+                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+                }
+
+                if (hasFeet) {
+                    double baseY = player.getY() + 0.25;
+                    double lrMag = 0.45;
+                    double fbMag = 0.28;
+                    double yMag  = 0.14;
+                    double offX = (phase ? rightX : -rightX) * lrMag;
+                    double offZ = (phase ? rightZ : -rightZ) * lrMag;
+                    boolean forwardSide = mc.world.random.nextBoolean();
+                    double swayScale = fbMag * mc.world.random.nextDouble();
+                    double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
+                    double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
+                    double x = player.getX() + offX + swayX + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                    double z = player.getZ() + offZ + swayZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+                }
+            } catch (Throwable ignored) {}
+        });
+
     }
 
-    // no-op
-    
+    private static boolean theendupdate$isSpectralTrimClient(ItemStack armor) {
+        try {
+            if (armor == null || armor.isEmpty()) return false;
+            ArmorTrim trim = armor.get(DataComponentTypes.TRIM);
+            if (trim == null) return false;
+            Identifier matId = trim.material().getKey().map(RegistryKey::getValue).orElse(null);
+            if (matId == null) return false;
+            String path = matId.getPath();
+            return "spectral".equals(path) || "spectral_cluster".equals(path);
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
 }
 
 

@@ -5,6 +5,8 @@
   "item.theendupdate.voidstar_shard": "Voidstar Shard",
   "item.theendupdate.voidstar_nugget": "Voidstar Nugget",
   "item.theendupdate.voidstar_ingot": "Voidstar Ingot",
+  "item.theendupdate.spectral_debris": "Spectral Debris",
+  "item.theendupdate.spectral_cluster": "Spectral Cluster",
   
 
   "block.theendupdate.end_mire": "End Mire",
@@ -62,5 +64,7 @@
   "item.theendupdate.voidstar_block": "Voidstar Block",
   "item.theendupdate.astral_remnant": "Astral Remnant",
   "item.theendupdate.quantum_gateway": "Quantum Gateway",
-  "trim_material.theendupdate.voidstar": "Voidstar Material"
+  "trim_material.theendupdate.voidstar": "Voidstar Material",
+  "trim_material.theendupdate.spectral": "Spectral Material",
+  "trim_material.theendupdate.spectral_cluster": "Spectral Cluster Material"
 }

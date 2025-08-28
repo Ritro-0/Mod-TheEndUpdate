@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": { "#": "theendupdate:spectral_debris" },
+  "result": { "id": "theendupdate:spectral_cluster", "count": 1 }
+}
+
+

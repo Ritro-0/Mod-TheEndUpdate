@@ -1,7 +1,9 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:voidstar_ingot"
+    "theendupdate:voidstar_ingot",
+    "theendupdate:spectral_debris",
+    "theendupdate:spectral_cluster"
   ]
 }
 

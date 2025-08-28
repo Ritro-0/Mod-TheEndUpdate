@@ -3,6 +3,9 @@ package com.theendupdate.entity;
 import net.minecraft.entity.AnimationState;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Flutterer;
+import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.ai.control.FlightMoveControl;
 import net.minecraft.entity.ai.pathing.BirdNavigation;
@@ -17,16 +20,30 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import java.util.EnumSet;
 import com.theendupdate.registry.ModBlocks;
+import com.theendupdate.registry.ModItems;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.entity.ai.pathing.Path;
-import net.minecraft.text.Text;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageTypes;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.world.RaycastContext;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.particle.ParticleTypes;
+// no NBT base overrides needed in 1.21 for simple tracked data persistence here
+import net.minecraft.item.Items;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.sound.SoundEvent;
+import java.util.Comparator;
+import java.util.List;
+import net.minecraft.util.math.Box;
+import com.theendupdate.registry.ModEntities;
+import net.minecraft.nbt.NbtCompound;
 
 /**
  * EtherealOrbEntity - A floating, glowing orb creature that inhabits The End
@@ -38,24 +55,43 @@ import net.minecraft.world.RaycastContext;
  * - Can pass through certain blocks
  */
 public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
+    private static final TrackedData<Boolean> CHARGED = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> BABY = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> BREED_READY = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> BREEDING = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final int BREED_COOLDOWN_TICKS = 3 * 60 * 20; // 3 minutes
+    public final AnimationState rotateAnimationState = new AnimationState();
+    public final AnimationState moveAnimationState = new AnimationState();
+    public final AnimationState finishmovementAnimationState = new AnimationState();
+    private boolean hasStartedMoving = false;
+    private int breedCooldownTicks = 0;
+
+    // Baby/growth system
+    private static final int BABY_GROW_TICKS = 24000; // 20 minutes like vanilla
+    private int growingAgeTicks = 0; // negative when baby, counts up to 0
+    // Baby speed is handled by adjusting base attribute values while baby
+
+    // Rotate animation → delayed baby spawn
+    private static final int ROTATE_ANIMATION_TICKS = 56; // ≈ 2.8s based on ANIMATION3 length (2.7916765f * 20)
+    private boolean pendingBabySpawn = false;
+    private int babySpawnAge = -1;
+
     public EtherealOrbEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
         this.moveControl = new FlightMoveControl(this, 30, true); // Doubled from 15 to 30
         this.setNoGravity(true);
+        this.setPersistent();
     }
-    
-    public final AnimationState moveAnimationState = new AnimationState();
-    public final AnimationState finishmovementAnimationState = new AnimationState();
     
     @Override
     public boolean isInAir() {
         return !this.isOnGround() && !this.isTouchingWater();
     }
     
-    // Be invulnerable to fall and in-wall damage
+    // Be invulnerable to fall, but NOT to in-wall damage
     @Override
     public boolean isInvulnerableTo(ServerWorld world, DamageSource source) {
-        if (source.isOf(DamageTypes.FALL) || source.isOf(DamageTypes.IN_WALL)) return true;
+        if (source.isOf(DamageTypes.FALL)) return true;
         return super.isInvulnerableTo(world, source);
     }
     
@@ -77,12 +113,34 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             .add(EntityAttributes.KNOCKBACK_RESISTANCE, 0.0);
     }
     
+    // Mapping-safe init for tracked data (1.21 uses builder-based init)
+    protected void initDataTracker(DataTracker.Builder builder) {
+        super.initDataTracker(builder);
+        builder.add(CHARGED, Boolean.FALSE);
+        builder.add(BABY, Boolean.FALSE);
+        builder.add(BREED_READY, Boolean.FALSE);
+        builder.add(BREEDING, Boolean.FALSE);
+    }
+
+    public boolean isCharged() {
+        return this.dataTracker.get(CHARGED);
+    }
+
+    public void setCharged(boolean value) {
+        this.dataTracker.set(CHARGED, value);
+        if (!this.getWorld().isClient) {
+            if (value) this.addCommandTag("theendupdate:charged");
+            else this.removeCommandTag("theendupdate:charged");
+        }
+    }
+    
     @Override
     protected void initGoals() {
         this.goalSelector.add(0, new SwimGoal(this));
-        this.goalSelector.add(1, new MaintainHomeGoal(this));
-        this.goalSelector.add(2, new LookAtEntityGoal(this, PlayerEntity.class, 8.0F));
-        this.goalSelector.add(3, new LookAroundGoal(this));
+        this.goalSelector.add(1, new FollowAdultGoal(this));
+        this.goalSelector.add(2, new MaintainHomeGoal(this));
+        this.goalSelector.add(3, new LookAtEntityGoal(this, PlayerEntity.class, 8.0F));
+        this.goalSelector.add(4, new LookAroundGoal(this));
     }
 
     @Override
@@ -96,33 +154,116 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     public void tick() {
         super.tick();
         this.updateAnimations();
-        // Ensure we never accumulate fall distance and never show a name
+        // Ensure we never accumulate fall distance
         this.fallDistance = 0.0F;
-        // On initial ticks after spawn, scrub any default or blank custom name applied by spawn flow
-        if (this.age < 5) {
-            net.minecraft.text.Text cn = this.getCustomName();
-            if (cn != null) {
-                String cs = cn.getString();
-                if (cs.isBlank() || "Ethereal Orb".equals(cs)) {
-                    this.setCustomName(null);
-                    this.setCustomNameVisible(false);
+        // Let vanilla collision resolution handle floor/wall/ceiling interactions with no manual nudging
+
+        // Server-side subtle particle hint when charged (moderate frequency)
+        if (!this.getWorld().isClient && this.isCharged()) {
+            // ~1 particle per second on average per orb
+            if (this.age % 10 == 0 && this.getRandom().nextFloat() < 0.5f) {
+                double x = this.getX() + (this.getRandom().nextDouble() - 0.5) * 0.15;
+                double y = this.getY() + 0.9;
+                double z = this.getZ() + (this.getRandom().nextDouble() - 0.5) * 0.15;
+                if (this.getWorld() instanceof ServerWorld sw) {
+                    sw.spawnParticles(ParticleTypes.END_ROD, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
                 }
             }
         }
-        // If touching ground or colliding downward, gently lift to avoid floor damage/stuck
-        if ((this.isOnGround() || this.verticalCollision) && this.getVelocity().y <= 0.0) {
-            this.setVelocity(this.getVelocity().x, 0.25, this.getVelocity().z);
-            this.setPosition(this.getX(), this.getY() + 0.05, this.getZ());
+
+        // Sync charged from scoreboard tags on server (persists across saves)
+        if (!this.getWorld().isClient) {
+            if (this.getCommandTags().contains("theendupdate:charged") && !this.isCharged()) {
+                this.setCharged(true);
+            }
+        }
+
+        // No custom suffocation logic; rely on vanilla in-wall checks only
+        if (!this.getWorld().isClient) {
+            if (this.breedCooldownTicks > 0) {
+                this.breedCooldownTicks--;
+            }
+            // Synchronize breed eligibility to clients to avoid false-positive hand swings
+            boolean eligible = !this.isBaby() && !this.pendingBabySpawn && this.breedCooldownTicks <= 0;
+            if (this.dataTracker.get(BREED_READY) != eligible) {
+                this.dataTracker.set(BREED_READY, eligible);
+            }
+            // Freeze movement during rotate animation for baby spawn
+            if (this.isRotatingForSpawn()) {
+                this.setVelocity(Vec3d.ZERO);
+                this.getNavigation().stop();
+            }
+
+            // Growth ticking for babies and speed/base adjustments
+            if (this.growingAgeTicks < 0) {
+                this.growingAgeTicks++;
+                // Ensure client knows we are a baby
+                if (!this.dataTracker.get(BABY)) this.dataTracker.set(BABY, Boolean.TRUE);
+                if (this.growingAgeTicks == 0) {
+                    this.onGrowUp();
+                }
+            }
+
+            // Adjust base speed attributes for babies for a slight boost
+            EntityAttributeInstance walk = this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED);
+            EntityAttributeInstance fly = this.getAttributeInstance(EntityAttributes.FLYING_SPEED);
+            if (walk != null && fly != null) {
+                if (this.isBaby()) {
+                    walk.setBaseValue(0.4 * 1.2); // +20%
+                    fly.setBaseValue(0.7 * 1.2);  // +20%
+                } else {
+                    walk.setBaseValue(0.4);
+                    fly.setBaseValue(0.7);
+                }
+            }
+
+            // Delayed baby spawn after rotate animation completes
+            if (this.pendingBabySpawn && this.age >= this.babySpawnAge) {
+                this.pendingBabySpawn = false;
+                this.rotateAnimationState.stop();
+                this.dataTracker.set(BREEDING, Boolean.FALSE);
+                if (this.getWorld() instanceof ServerWorld sw) {
+                    this.spawnBaby(sw);
+                    // Start breeding cooldown after successful spawn
+                    this.breedCooldownTicks = BREED_COOLDOWN_TICKS;
+                }
+            }
         }
     }
 
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return com.theendupdate.registry.ModSounds.ETHEREAL_ORB_IDLE;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return com.theendupdate.registry.ModSounds.ETHEREAL_ORB_DEATH;
+    }
+
     private void updateAnimations() {
+        // Ensure rotate animation runs while breeding flag is true (client-visible)
+        if (this.dataTracker.get(BREEDING)) {
+            this.rotateAnimationState.startIfNotRunning(this.age);
+        } else {
+            this.rotateAnimationState.stop();
+        }
+        if (this.isRotatingForSpawn()) {
+            this.moveAnimationState.stop();
+            this.finishmovementAnimationState.stop();
+            hasStartedMoving = false;
+            return;
+        }
         if (isGoingForward()) {
             this.finishmovementAnimationState.stop();
-            this.moveAnimationState.startIfNotRunning(this.age);
+            if (!hasStartedMoving) {
+                hasStartedMoving = true;
+                this.moveAnimationState.startIfNotRunning(this.age);
+            }
         } else {
             this.moveAnimationState.stop();
             this.finishmovementAnimationState.startIfNotRunning(this.age);
+            hasStartedMoving = false;
         }
     }
 
@@ -130,9 +271,232 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         return this.getVelocity().z > 0; 
     }
 
+    // Clamp a desired point along the segment to the last free position to avoid commanding
+    // movement into solid blocks. This does not teleport; it's only used for choosing waypoints.
+    private Vec3d clampTargetToFreeSpace(Vec3d from, Vec3d to) {
+        final int steps = 12;
+        Vec3d lastFree = from;
+        for (int i = 1; i <= steps; i++) {
+            double t = i / (double) steps;
+            Vec3d stepPos = from.lerp(to, t);
+            Vec3d delta = stepPos.subtract(this.getPos());
+            Box test = this.getBoundingBox().offset(delta);
+            if (this.getWorld().isSpaceEmpty(this, test)) {
+                lastFree = stepPos;
+            } else {
+                break;
+            }
+        }
+        return lastFree;
+    }
+
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
+        // Priority: brushing to harvest spectral debris (and remove glow)
+        ItemStack stack = player.getStackInHand(hand);
+        if (this.isCharged() && stack != null && stack.isOf(Items.BRUSH)) {
+            if (!this.getWorld().isClient) {
+                if (this.getWorld() instanceof ServerWorld sw) {
+                    this.dropStack(sw, new ItemStack(ModItems.SPECTRAL_DEBRIS));
+                }
+                this.setCharged(false);
+                // small server particle to indicate harvesting
+                if (this.getWorld() instanceof ServerWorld sw2) {
+                    sw2.spawnParticles(ParticleTypes.POOF, this.getX(), this.getY() + 0.9, this.getZ(), 3, 0.1, 0.1, 0.1, 0.0);
+                }
+                if (!player.getAbilities().creativeMode) {
+                    // Simulate minor brush wear
+                    stack.damage(1, player, hand);
+                }
+                // Play resin breaking-like sound
+                this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_HONEY_BLOCK_BREAK, SoundCategory.BLOCKS, 0.9f, 1.0f);
+            }
+            if (this.getWorld().isClient) return ActionResult.SUCCESS;
+            return ActionResult.CONSUME;
+        }
+        return this.theendupdate$handleFeed(player, hand);
+    }
+
+    private ActionResult theendupdate$handleFeed(PlayerEntity player, Hand hand) {
+        ItemStack stack = player.getStackInHand(hand);
+        // Feed voidstar block to initiate rotate animation and delayed baby spawn
+        if (stack != null && stack.isOf(com.theendupdate.registry.ModBlocks.VOIDSTAR_BLOCK.asItem())) {
+            // Must be adult, not already spawning, and not on cooldown
+            boolean canBreed = !this.isBaby() && !this.pendingBabySpawn && this.breedCooldownTicks <= 0;
+            if (!canBreed) return ActionResult.PASS;
+
+            if (!this.getWorld().isClient) {
+                // Server: allow breeding in both survival and creative; consume only in survival
+                boolean survivalConsume = !player.getAbilities().creativeMode && stack.getCount() > 0;
+                if (survivalConsume) {
+                    stack.decrement(1);
+                }
+                this.pendingBabySpawn = true;
+                this.babySpawnAge = this.age + ROTATE_ANIMATION_TICKS;
+                this.dataTracker.set(BREEDING, Boolean.TRUE);
+                // Subtle resonate sound
+                this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 0.9f);
+                return ActionResult.CONSUME;
+            } else {
+                // Client: play hand swing when orb is breed-ready and player holds the block
+                boolean willConsume = this.dataTracker.get(BREED_READY) && stack.getCount() > 0;
+                return willConsume ? ActionResult.SUCCESS : ActionResult.PASS;
+            }
+        }
+
+        // Accelerate baby growth with voidstar nuggets (10% of remaining time)
+        if (this.isBaby() && stack != null && stack.isOf(ModItems.VOIDSTAR_NUGGET)) {
+            if (!this.getWorld().isClient) {
+                // Server: allow effect in creative; consume only in survival
+                boolean survivalConsume = !player.getAbilities().creativeMode && stack.getCount() > 0;
+                if (survivalConsume || player.getAbilities().creativeMode) {
+                    int remaining = -this.growingAgeTicks;
+                    int reduce = Math.max(1, MathHelper.ceil(remaining * 0.10f));
+                    this.growingAgeTicks = Math.min(0, this.growingAgeTicks + reduce);
+                    if (survivalConsume) stack.decrement(1);
+                    this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.BLOCKS, 0.8f, 1.2f);
+                    return ActionResult.CONSUME;
+                }
+                return ActionResult.PASS;
+            } else {
+                // Client: swing when baby and player holds a nugget
+                boolean willConsume = this.isBaby() && stack.getCount() > 0;
+                return willConsume ? ActionResult.SUCCESS : ActionResult.PASS;
+            }
+        }
+
+        if (!this.isCharged() && stack != null && stack.isOf(ModItems.VOIDSTAR_NUGGET)) {
+            if (!this.getWorld().isClient) {
+                // Server: allow effect in creative; consume only in survival
+                boolean survivalConsume = !player.getAbilities().creativeMode && stack.getCount() > 0;
+                if (survivalConsume || player.getAbilities().creativeMode) {
+                    this.setCharged(true);
+                    if (survivalConsume) stack.decrement(1);
+                    // Play a single amethyst step-like sound
+                    this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.BLOCKS, 0.8f, 1.0f);
+                    return ActionResult.CONSUME;
+                }
+                return ActionResult.PASS;
+            } else {
+                // Client: swing when not charged and player holds a nugget
+                boolean willConsume = !this.isCharged() && stack.getCount() > 0;
+                return willConsume ? ActionResult.SUCCESS : ActionResult.PASS;
+            }
+        }
+        return ActionResult.PASS;
+    }
+
+    // No special drops on death; discourage killing (use empty loot table to avoid item drops)
+
+    @Override
+    public boolean isBaby() {
+        return this.dataTracker.get(BABY);
+    }
+
+    // NBT persistence handled via command tag sync in tick/setter for compatibility with current mappings
+
+    // Visual scale left default; baby speed differentiates behavior
+
+    private void setBabyTicks(int ticks) {
+        this.growingAgeTicks = ticks;
+    }
+
+    private void onGrowUp() {
+        // Remove any baby modifiers; goal system will naturally keep running
+        EntityAttributeInstance walk = this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED);
+        if (walk != null) walk.setBaseValue(0.4);
+        EntityAttributeInstance fly = this.getAttributeInstance(EntityAttributes.FLYING_SPEED);
+        if (fly != null) fly.setBaseValue(0.7);
+        this.dataTracker.set(BABY, Boolean.FALSE);
+        // Small poof
+        if (this.getWorld() instanceof ServerWorld sw) {
+            sw.spawnParticles(ParticleTypes.POOF, this.getX(), this.getY() + 0.6, this.getZ(), 6, 0.15, 0.15, 0.15, 0.0);
+            this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.NEUTRAL, 0.6f, 1.3f);
+        }
+    }
+
+    private void spawnBaby(ServerWorld world) {
+        EtherealOrbEntity baby = new EtherealOrbEntity(ModEntities.ETHEREAL_ORB, world);
+        if (baby == null) return;
+        double ox = this.getX() + (this.getRandom().nextDouble() - 0.5) * 0.6;
+        double oy = this.getY() + 0.5;
+        double oz = this.getZ() + (this.getRandom().nextDouble() - 0.5) * 0.6;
+        baby.refreshPositionAndAngles(ox, oy, oz, this.getYaw(), this.getPitch());
+        baby.setBabyTicks(-BABY_GROW_TICKS);
+        baby.dataTracker.set(BABY, Boolean.TRUE);
+        world.spawnEntity(baby);
+        world.spawnParticles(ParticleTypes.END_ROD, ox, oy + 0.4, oz, 10, 0.2, 0.2, 0.2, 0.0);
+        this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.0f);
+    }
+
+    private boolean isRotatingForSpawn() {
+        return this.pendingBabySpawn && this.age < this.babySpawnAge;
+    }
+
+    // Persistence omitted for simplicity; DataTracker can be added later if needed
+
     /**
      * Maintain a persistent crystal "home"; if none found, wander and continuously scan.
      */
+    /**
+     * Babies prefer to follow nearest adult within range; loosely modeled after vanilla FollowParentGoal.
+     */
+    class FollowAdultGoal extends Goal {
+        private static final double RANGE = 16.0;
+        private static final double STOP_DISTANCE = 2.0;
+        private static final int REPATH_COOLDOWN_TICKS = 10;
+
+        private final EtherealOrbEntity orb;
+        private EtherealOrbEntity targetAdult;
+        private int repathCooldown;
+
+        FollowAdultGoal(EtherealOrbEntity orb) {
+            this.orb = orb;
+            this.setControls(EnumSet.of(Goal.Control.MOVE));
+        }
+
+        @Override
+        public boolean canStart() {
+            if (!orb.isBaby()) return false;
+            this.targetAdult = findNearestAdult();
+            return this.targetAdult != null;
+        }
+
+        @Override
+        public boolean shouldContinue() {
+            return orb.isBaby() && this.targetAdult != null && this.targetAdult.isAlive() && orb.squaredDistanceTo(this.targetAdult) > (STOP_DISTANCE * STOP_DISTANCE);
+        }
+
+        @Override
+        public void stop() {
+            this.targetAdult = null;
+        }
+
+        @Override
+        public void tick() {
+            if (this.targetAdult == null) return;
+            if (repathCooldown > 0) {
+                repathCooldown--;
+                return;
+            }
+            repathCooldown = REPATH_COOLDOWN_TICKS;
+            Vec3d pos = this.targetAdult.getPos();
+            // Move towards adult using flight control for natural pathing
+            double speed = 2.2; // slower to reduce overshoot into blocks
+            Vec3d from = orb.getPos();
+            Vec3d desired = new Vec3d(pos.x, pos.y + 0.2, pos.z);
+            Vec3d safeTarget = orb.clampTargetToFreeSpace(from, desired);
+            orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
+            orb.getLookControl().lookAt(this.targetAdult);
+        }
+
+        private EtherealOrbEntity findNearestAdult() {
+            Box box = orb.getBoundingBox().expand(RANGE);
+            List<EtherealOrbEntity> list = orb.getWorld().getEntitiesByClass(EtherealOrbEntity.class, box, e -> e != orb && !e.isBaby());
+            if (list.isEmpty()) return null;
+            return list.stream().min(Comparator.comparingDouble(e -> e.squaredDistanceTo(orb))).orElse(null);
+        }
+    }
+
     class MaintainHomeGoal extends Goal {
         private static final int HOME_RADIUS = 8;
         private static final int SCAN_CHUNKS = 6;
@@ -226,14 +590,24 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             // Movement + avoidance
             Vec3d cur = orb.getPos();
             double d2 = cur.squaredDistanceTo(desired);
-            double speed = d2 > 64 ? 3.75 : 2.7;
+            double speed = d2 > 64 ? 2.8 : 2.0;
 
             HitResult hit = orb.getWorld().raycast(new RaycastContext(
                 cur, desired, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, orb));
             if (hit.getType() == HitResult.Type.BLOCK) {
-                BlockHitResult bhr = (BlockHitResult) hit;
-                BlockPos hp = bhr.getBlockPos();
-                desired = new Vec3d(desired.x, Math.max(desired.y, hp.getY() + 2.5), desired.z);
+                Vec3d dir = desired.subtract(cur);
+                Vec3d horiz = new Vec3d(dir.x, 0.0, dir.z);
+                Vec3d lateral;
+                if (horiz.lengthSquared() < 1.0E-4) {
+                    lateral = new Vec3d(1.0, 0.0, 0.0);
+                } else {
+                    lateral = new Vec3d(-horiz.z, 0.0, horiz.x).normalize();
+                }
+                if (orb.getRandom().nextBoolean()) lateral = lateral.multiply(-1.0);
+                Vec3d forward = horiz.lengthSquared() > 1.0E-4 ? horiz.normalize().multiply(1.0) : Vec3d.ZERO;
+                desired = cur.add(forward).add(lateral.multiply(2.0));
+                // Avoid climbing into ceilings when rerouting
+                desired = new Vec3d(desired.x, Math.min(desired.y, cur.y + 0.5), desired.z);
             }
 
             // Stuck detection
@@ -251,7 +625,8 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             }
             lastPosition = cur;
 
-            orb.getMoveControl().moveTo(desired.x, desired.y, desired.z, speed);
+            Vec3d safeTarget = orb.clampTargetToFreeSpace(cur, desired);
+            orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
             orb.getLookControl().lookAt(desired.x, desired.y, desired.z);
         }
 

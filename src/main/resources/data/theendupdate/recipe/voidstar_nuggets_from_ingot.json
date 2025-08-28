@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [ { "item": "theendupdate:voidstar_ingot" } ],
+  "result": { "id": "theendupdate:voidstar_nugget", "count": 9 }
+}
+
+

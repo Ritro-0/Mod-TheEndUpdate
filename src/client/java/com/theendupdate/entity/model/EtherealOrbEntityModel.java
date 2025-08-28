@@ -1,8 +1,10 @@
 package com.theendupdate.entity.model;
 
 import com.theendupdate.TemplateMod;
+import com.theendupdate.entity.animation.Ethereal;
 import com.theendupdate.entity.state.EtherealOrbRenderState;
 import net.minecraft.client.model.*;
+import net.minecraft.client.render.entity.animation.Animation;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.util.Identifier;
@@ -15,12 +17,16 @@ public class EtherealOrbEntityModel extends EntityModel<EtherealOrbRenderState> 
     public static final EntityModelLayer ETHEREAL_ORB_LAYER = new EntityModelLayer(
         Identifier.of(TemplateMod.MOD_ID, "ethereal_orb"), "main"
     );
-
-    private final ModelPart body;
-
+    private final ModelPart root;
+private final Animation moveforwards;
+private final Animation stopmoving;
+private final Animation rotate;
     public EtherealOrbEntityModel(ModelPart root) {
         super(root);
-        this.body = root.getChild("body");
+        this.root = root;
+        moveforwards = Ethereal.ANIMATION.createAnimation(root);
+        stopmoving =Ethereal.ANIMATION2.createAnimation(root);
+        rotate = Ethereal.ANIMATION3.createAnimation(root);
     }
 
     public static TexturedModelData getTexturedModelData() {
@@ -41,6 +47,13 @@ public class EtherealOrbEntityModel extends EntityModel<EtherealOrbRenderState> 
     }
 
     public void setAngles(EtherealOrbRenderState state) {
+        // Reset all transforms before applying animations to avoid accumulation
+        for (ModelPart part : this.root.traverse()) {
+            part.resetTransform();
+        }
+        moveforwards.apply(state.moveAnimationState, state.age, 1.0f);
+        stopmoving.apply(state.finishmovementAnimationState, state.age, 1.0f);
+        rotate.apply(state.rotateAnimationState, state.age, 1.0f);
         // Hook for future animation application using state
     }
 }

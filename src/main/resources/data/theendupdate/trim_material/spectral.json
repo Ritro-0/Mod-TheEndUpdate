@@ -1,0 +1,11 @@
+{
+  "asset_name": "spectral",
+  "description": {
+    "color": "#B3F7FF",
+    "translate": "trim_material.theendupdate.spectral"
+  },
+  "ingredient": "theendupdate:spectral_debris",
+  "item_model_index": 0.1
+}
+
+

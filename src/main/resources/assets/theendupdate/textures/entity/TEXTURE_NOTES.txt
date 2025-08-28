@@ -1,3 +1,9 @@
+Ethereal Orb textures:
+ - Base: assets/theendupdate/textures/entity/ethereal_orb.png
+ - Emissive overlay (charged): assets/theendupdate/textures/entity/ethereal_orb_emissive.png
+
+The emissive overlay should be authored similar to glow squid emissive, containing only the glowing parts (the yellow bulb), with transparent rest. 32x32 matches current model UVs.
+
 ETHEREAL ORB ENTITY TEXTURE REQUIREMENTS:
 
 The ethereal orb entity needs a texture file at:

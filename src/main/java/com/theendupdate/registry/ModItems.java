@@ -26,6 +26,17 @@ public final class ModItems {
         "voidstar_ingot",
         key -> new Item(new Item.Settings().registryKey(key))
     );
+    
+    // New drop from charged Ethereal Orb
+    public static final Item SPECTRAL_DEBRIS = registerItem(
+        "spectral_debris",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item SPECTRAL_CLUSTER = registerItem(
+        "spectral_cluster",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
 
     // Removed custom bound recovery compass; vanilla recovery compass will be used
     

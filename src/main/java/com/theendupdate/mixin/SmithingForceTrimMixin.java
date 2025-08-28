@@ -44,8 +44,9 @@ public abstract class SmithingForceTrimMixin {
 			boolean templateOk = template.isIn(TAG_TRIM_TEMPLATES);
 			Identifier addId = Registries.ITEM.getId(addition.getItem());
 			boolean isVoidstarAddition = addId.equals(Identifier.of("theendupdate", "voidstar_ingot"));
+			boolean isSpectralAddition = addId.equals(Identifier.of("theendupdate", "spectral_debris")) || addId.equals(Identifier.of("theendupdate", "spectral_cluster"));
 			// Removed debug logging
-			if (!baseTrimmable || !templateOk || !isVoidstarAddition) {
+			if (!baseTrimmable || !templateOk || !(isVoidstarAddition || isSpectralAddition)) {
 				return;
 			}
 
@@ -76,7 +77,8 @@ public abstract class SmithingForceTrimMixin {
 					return;
 				}
 
-				var optMaterial = materials.getEntry(Identifier.of("theendupdate", "voidstar"));
+				Identifier materialId = isVoidstarAddition ? Identifier.of("theendupdate", "voidstar") : (addId.getPath().equals("spectral_cluster") ? Identifier.of("theendupdate", "spectral_cluster") : Identifier.of("theendupdate", "spectral"));
+				var optMaterial = materials.getEntry(materialId);
 				if (optMaterial.isEmpty()) {
 					return;
 				}
@@ -89,7 +91,8 @@ public abstract class SmithingForceTrimMixin {
 				result.set(DataComponentTypes.TRIM, new ArmorTrim(material, pattern));
 				// Ensure model override predicate triggers: set TRIM_TYPE via reflection (mapping-safe)
 				try {
-					float modelIndex = 0.1f; // from data/theendupdate/trim_material/voidstar.json
+					float modelIndex;
+					modelIndex = 0.1f; // unify predicate for spectral + voidstar
 					Class<?> dct = Class.forName("net.minecraft.component.DataComponentTypes");
 					Object trimType = dct.getField("TRIM_TYPE").get(null);
 					var set = ItemStack.class.getMethod("set", Class.forName("net.minecraft.component.DataComponentType"), Object.class);

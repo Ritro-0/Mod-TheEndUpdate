@@ -13,7 +13,6 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.text.Text;
-import net.minecraft.util.ItemScatterer;
 import net.minecraft.block.entity.BeaconBlockEntity;
 
 public class GatewayScreenHandler extends ScreenHandler {
@@ -110,16 +109,17 @@ public class GatewayScreenHandler extends ScreenHandler {
     public void onClosed(PlayerEntity player) {
         super.onClosed(player);
         if (!isServer) return;
-        this.context.run((world, pos) -> {
-            for (int i = 0; i < 2; i++) {
-                ItemStack stack = this.inventory.getStack(i);
-                if (!stack.isEmpty()) {
-                    ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), stack);
-                    this.inventory.setStack(i, ItemStack.EMPTY);
+        for (int i = 0; i < 2; i++) {
+            ItemStack stack = this.inventory.getStack(i);
+            if (!stack.isEmpty()) {
+                this.inventory.setStack(i, ItemStack.EMPTY);
+                boolean inserted = player.getInventory().insertStack(stack);
+                if (!inserted && !stack.isEmpty()) {
+                    player.dropItem(stack, false);
                 }
             }
-            this.inventory.markDirty();
-        });
+        }
+        this.inventory.markDirty();
     }
 
     @Override

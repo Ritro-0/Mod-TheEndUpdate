@@ -4,8 +4,7 @@ import com.theendupdate.TemplateMod;
 import com.theendupdate.entity.EtherealOrbEntity;
 
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
-import net.minecraft.entity.EntityDimensions;
+// removed unused imports
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.registry.Registries;
@@ -23,8 +22,9 @@ public final class ModEntities {
         Registries.ENTITY_TYPE,
         ETHEREAL_ORB_ID,
         EntityType.Builder.create(EtherealOrbEntity::new, SpawnGroup.AMBIENT)
-            .dimensions(0.8f, 0.8f) // Small orb-like size
-            .eyeHeight(0.4f)
+            // 7×7 px by 11 px tall → 0.4375f × 0.6875f blocks
+            .dimensions(0.4375f, 0.6875f)
+            .eyeHeight(0.34375f)
             .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, ETHEREAL_ORB_ID))
     );
     

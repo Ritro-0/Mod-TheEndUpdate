@@ -1,0 +1,11 @@
+{
+  "asset_name": "spectral_cluster",
+  "description": {
+    "color": "#B3F7FF",
+    "translate": "trim_material.theendupdate.spectral_cluster"
+  },
+  "ingredient": "theendupdate:spectral_cluster",
+  "item_model_index": 0.1
+}
+
+

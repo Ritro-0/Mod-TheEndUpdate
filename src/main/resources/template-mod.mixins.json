@@ -12,37 +12,12 @@
 		"ChorusPlantEndStoneCompatMixin",
 		"EntityWallSlidingMixin",
 		"RecoveryCompassUseMixin",
-		"SmithingForceTrimMixin"
-	],
-	"mixins": [
-		"TheEndUpdateMixin",
-		"ChorusFlowerBlockMixin",
-		"ChorusFlowerBlockBreakMixin",
-		"ChorusPlantBlockMixin",
-		"ChorusPlantBlockStateMixin",
-		"ChorusFlowerEndStoneCompatMixin",
-		"ChorusPlantEndStoneCompatMixin",
-		"EntityWallSlidingMixin",
-		"RecoveryCompassUseMixin",
-		"SmithingForceTrimMixin",
-		"BrewingIngredientSlotMixin",
-		"BrewingStandBlockEntityMixin"
-	],
-	"mixins": [
-		"TheEndUpdateMixin",
-		"ChorusFlowerBlockMixin",
-		"ChorusFlowerBlockBreakMixin",
-		"ChorusPlantBlockMixin",
-		"ChorusPlantBlockStateMixin",
-		"ChorusFlowerEndStoneCompatMixin",
-		"ChorusPlantEndStoneCompatMixin",
-		"EntityWallSlidingMixin",
-		"RecoveryCompassUseMixin",
 		"SmithingForceTrimMixin",
 		"BrewingIngredientSlotMixin",
 		"BrewingStandBlockEntityTickMixin",
 		"MobEntityAccessor",
-		"SpiderEntityAvoidChrysanthemumMixin"
+		"SpiderEntityAvoidChrysanthemumMixin",
+		"EndermanAvoidEtherealOrbMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

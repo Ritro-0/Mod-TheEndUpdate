@@ -1,13 +1,13 @@
 package com.theendupdate.world.feature;
 
 import com.mojang.serialization.Codec;
+import com.theendupdate.block.StellarithCrystalBlock;
 import com.theendupdate.registry.ModBlocks;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
@@ -76,6 +76,8 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
 
         return placedAny;
     }
+
+    // orb spawning moved to post-generation chunk-load spawner
 
     private static class Anchor {
         final BlockPos islandBlockPos; // solid island block to which we anchor
@@ -218,7 +220,7 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
                         if (step < baseAstralDepth) {
                             world.setBlockState(bp, ModBlocks.ASTRAL_REMNANT.getDefaultState(), Block.NOTIFY_LISTENERS);
                         } else {
-                            world.setBlockState(bp, ModBlocks.STELLARITH_CRYSTAL.getDefaultState(), Block.NOTIFY_LISTENERS);
+                            world.setBlockState(bp, ModBlocks.STELLARITH_CRYSTAL.getDefaultState().with(StellarithCrystalBlock.NATURAL, Boolean.TRUE), Block.NOTIFY_LISTENERS);
                         }
                         if (placedOut != null) placedOut.add(bp.toImmutable());
                         placedAny = true;
@@ -235,7 +237,7 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
                     if (step < baseAstralDepth) {
                         world.setBlockState(core, ModBlocks.ASTRAL_REMNANT.getDefaultState(), Block.NOTIFY_LISTENERS);
                     } else {
-                        world.setBlockState(core, ModBlocks.STELLARITH_CRYSTAL.getDefaultState(), Block.NOTIFY_LISTENERS);
+                        world.setBlockState(core, ModBlocks.STELLARITH_CRYSTAL.getDefaultState().with(StellarithCrystalBlock.NATURAL, Boolean.TRUE), Block.NOTIFY_LISTENERS);
                     }
                     if (placedOut != null) placedOut.add(core.toImmutable());
                     placedAny = true;
@@ -249,110 +251,13 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
             if (random.nextFloat() < 0.7f) {
                 hugIslandFaceWithAstral(world, anchor, random);
             }
-            // Inject spawners after all placements so nothing overwrites them
-            injectTestSpawnersWithinAstralBase(world, placedOut, random);
+            // Shulker spawner injection removed; spawning handled via post-gen chunk-load logic
         }
 
         return placedAny;
     }
 
-    // All shulker entity spawning code removed in favor of spawner placement
-
-    private static void injectTestSpawnersWithinAstralBase(StructureWorldAccess world, java.util.List<BlockPos> placed, Random random) {
-        if (placed == null || placed.isEmpty()) return;
-        // Replace a subset of Astral base blocks with spawners only if fully enclosed and at 1.6% rate
-        for (BlockPos pos : placed) {
-            BlockState s = world.getBlockState(pos);
-            if (!s.isOf(ModBlocks.ASTRAL_REMNANT)) continue;
-            if (!isFullyEnclosedBySolid(world, pos)) continue;
-            if (random.nextFloat() >= 0.016f) continue;
-            world.setBlockState(pos, Blocks.SPAWNER.getDefaultState(), Block.NOTIFY_ALL);
-            configureSpawnerToShulker(world, pos);
-        }
-    }
-
-    private static void configureSpawnerToShulker(StructureWorldAccess world, BlockPos pos) {
-        try {
-            BlockEntity be = world.getBlockEntity(pos);
-            if (be == null) return;
-            Object logic = null;
-            try {
-                java.lang.reflect.Method m = be.getClass().getMethod("getSpawner");
-                logic = m.invoke(be);
-            } catch (Throwable ignored) {}
-            if (logic == null) {
-                try {
-                    java.lang.reflect.Method m2 = be.getClass().getMethod("getLogic");
-                    logic = m2.invoke(be);
-                } catch (Throwable ignored) {}
-            }
-            if (logic == null) { return; }
-            // 1) Prefer known method names
-            java.lang.reflect.Method chosen = null;
-            for (java.lang.reflect.Method m : logic.getClass().getMethods()) {
-                String n = m.getName();
-                if (!(n.equals("setEntityId") || n.equals("setEntityType") || n.toLowerCase(java.util.Locale.ROOT).contains("entity"))) continue;
-                Class<?>[] pts = m.getParameterTypes();
-                if (pts.length == 0) continue;
-                // Require at least one EntityType-compatible parameter
-                boolean hasEntityType = false;
-                for (Class<?> pt : pts) {
-                    if (pt.isAssignableFrom(net.minecraft.entity.EntityType.class) || pt.getName().endsWith("EntityType")) {
-                        hasEntityType = true; break;
-                    }
-                }
-                if (!hasEntityType) continue;
-                chosen = m; break;
-            }
-
-            if (chosen == null) {
-                // 2) Fallback: any method whose first parameter is EntityType
-                for (java.lang.reflect.Method m : logic.getClass().getMethods()) {
-                    Class<?>[] pts = m.getParameterTypes();
-                    if (pts.length >= 1 && (pts[0].isAssignableFrom(net.minecraft.entity.EntityType.class) || pts[0].getName().endsWith("EntityType"))) {
-                        chosen = m; break;
-                    }
-                }
-            }
-
-            if (chosen == null) { return; }
-
-            // Build arguments dynamically for best-effort compatibility across mappings
-            Class<?>[] pts = chosen.getParameterTypes();
-            Object[] args = new Object[pts.length];
-            for (int i = 0; i < pts.length; i++) {
-                Class<?> pt = pts[i];
-                if (pt.isAssignableFrom(net.minecraft.entity.EntityType.class) || pt.getName().endsWith("EntityType")) {
-                    args[i] = net.minecraft.entity.EntityType.SHULKER;
-                } else if (pt.getName().equals("net.minecraft.util.math.random.Random")) {
-                    args[i] = world.getRandom();
-                } else if (pt == java.util.Random.class) {
-                    args[i] = new java.util.Random(world.getRandom().nextLong());
-                } else if (pt.getName().equals("net.minecraft.util.math.BlockPos") || pt.getName().endsWith("BlockPos")) {
-                    args[i] = pos;
-                } else if (pt.getName().equals("net.minecraft.server.world.ServerWorld") || pt.getName().equals("net.minecraft.world.World")) {
-                    // Feature world is a StructureWorldAccess; no direct ServerWorld available here
-                    args[i] = null;
-                } else {
-                    args[i] = null;
-                }
-            }
-
-            try { chosen.invoke(logic, args); } catch (Throwable ignored) { return; }
-            try { world.getBlockEntity(pos).markDirty(); } catch (Throwable ignored) {}
-        } catch (Throwable ignored) {}
-    }
-
-    // no NBT fallback to avoid mapping churn; rely on reflective Spawner logic methods instead
-
-    private static boolean isFullyEnclosedBySolid(StructureWorldAccess world, BlockPos pos) {
-        for (Direction d : Direction.values()) {
-            BlockPos n = pos.offset(d);
-            BlockState s = world.getBlockState(n);
-            if (s.isAir() || !s.isFullCube(world, n)) return false;
-        }
-        return true;
-    }
+    // All shulker entity spawning code removed here; handled externally on chunk load
 
     private static void thickenBase(StructureWorldAccess world, Anchor anchor, Random random) {
         Vec3d n = Vec3d.of(anchor.outwardFace.getVector()).normalize();
