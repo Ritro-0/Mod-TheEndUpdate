@@ -36,8 +36,8 @@ public class EndMurkBlock extends Block implements Fertilizable {
         if (spread) {
             return;
         }
-        // Otherwise: generate a few Mold Spores around, like warped roots on nylium
-        generateMoldSpores(world, pos, random);
+        // Otherwise: generate Shadow Claws around (Shadowlands vegetation only)
+        generateShadowClaws(world, pos, random);
     }
 
     private boolean trySpreadToEndStone(ServerWorld world, BlockPos origin, Random random) {
@@ -53,26 +53,17 @@ public class EndMurkBlock extends Block implements Fertilizable {
         return convertedAny;
     }
 
-    private void generateMoldSpores(ServerWorld world, BlockPos origin, Random random) {
-        int attempts = 16; // modest amount like roots generation
+    private void generateShadowClaws(ServerWorld world, BlockPos origin, Random random) {
+        int attempts = 24; // denser than spores
         for (int i = 0; i < attempts; i++) {
-            BlockPos target = origin.add(random.nextBetween(-2, 2), random.nextBetween(-1, 1), random.nextBetween(-2, 2));
+            BlockPos target = origin.add(random.nextBetween(-3, 3), random.nextBetween(-1, 1), random.nextBetween(-3, 3));
             BlockPos above = target.up();
-
             if (!world.getBlockState(target).isOf(this)) continue;
             if (!world.isAir(above)) continue;
-
-            int choice = random.nextInt(3);
-            if (choice == 0) {
-                world.setBlockState(above, ModBlocks.MOLD_SPORE.getDefaultState(), Block.NOTIFY_ALL);
-            } else if (choice == 1) {
-                world.setBlockState(above, ModBlocks.MOLD_SPORE_TUFT.getDefaultState(), Block.NOTIFY_ALL);
-            } else {
-                BlockPos top = above.up();
-                if (world.isAir(top)) {
-                    // Place double tall sprout
-                    net.minecraft.block.TallPlantBlock.placeAt(world, ModBlocks.MOLD_SPORE_SPROUT.getDefaultState(), above, Block.NOTIFY_ALL);
-                }
+            int variant = random.nextBetween(0, 3);
+            BlockState claw = ModBlocks.SHADOW_CLAW.getDefaultState().with(ShadowClawBlock.VARIANT, variant);
+            if (claw.canPlaceAt(world, above)) {
+                world.setBlockState(above, claw, Block.NOTIFY_ALL);
             }
         }
     }

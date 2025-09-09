@@ -74,8 +74,22 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
             BlockPos anchor = findClusterAnchor(world, pos);
             if (anchor != null) {
                 BlockPos center = anchor.add(1, 0, 1);
+                // Attempt generation like dark oak but ensure the trunk replaces the saplings at their Y
+                java.util.List<BlockPos> cluster = new java.util.ArrayList<>(9);
+                for (int dx = 0; dx < 3; dx++) {
+                    for (int dz = 0; dz < 3; dz++) {
+                        cluster.add(anchor.add(dx, 0, dz));
+                    }
+                }
                 clearCluster(world, anchor);
                 ShadowClawTreeGenerator.generate(world, center, random);
+                if (!world.getBlockState(center).isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                    // Generation failed → restore saplings
+                    for (BlockPos p : cluster) {
+                        BlockState restored = ModBlocks.SHADOW_CLAW.getDefaultState().with(VARIANT, random.nextInt(4));
+                        world.setBlockState(p, restored, 3);
+                    }
+                }
             }
         }
     }
@@ -88,7 +102,9 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
 
     @Override
     public boolean canGrow(World world, Random random, BlockPos pos, BlockState state) {
-        return true;
+        // Only allow growth when a full 3x3 cluster exists, and add a chance gate
+        // so bonemeal does not guarantee growth (vanilla-like behavior)
+        return findClusterAnchor(world, pos) != null && random.nextFloat() < 0.125f;
     }
 
     @Override
@@ -99,8 +115,39 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
             return; // no 3x3 cluster → bonemeal has no effect
         }
         BlockPos center = anchor.add(1, 0, 1);
+        // Pre-check a clear volume (approx. 5x5x8) above the intended trunk base (ignore ground layer)
+        BlockPos trunkBase = center; // trunk replaces the 3x3 at ground level
+        for (int x = -2; x <= 2; x++) {
+            for (int z = -2; z <= 2; z++) {
+                for (int y = 1; y <= 8; y++) { // start at 1 to ignore ground layer
+                    BlockPos check = trunkBase.add(x, y, z);
+                    BlockState s = world.getBlockState(check);
+                    if (!s.isAir() && !s.isReplaceable()) {
+                        return; // blocked → leave saplings in place
+                    }
+                }
+            }
+        }
+        // Snapshot, clear the 3x3, then try to generate at sapling Y; restore on failure
+        java.util.List<BlockPos> cluster = new java.util.ArrayList<>(9);
+        for (int dx = 0; dx < 3; dx++) {
+            for (int dz = 0; dz < 3; dz++) {
+                cluster.add(anchor.add(dx, 0, dz));
+            }
+        }
         clearCluster(world, anchor);
-        ShadowClawTreeGenerator.generate(world, center, random);
+        ShadowClawTreeGenerator.generate(world, trunkBase, random);
+        // Check a couple of key trunk positions to confirm success
+        boolean success = false;
+        for (int y = 0; y <= 2 && !success; y++) {
+            if (world.getBlockState(trunkBase.up(y)).isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) success = true;
+        }
+        if (!success) {
+            for (BlockPos p : cluster) {
+                BlockState restored = ModBlocks.SHADOW_CLAW.getDefaultState().with(VARIANT, random.nextInt(4));
+                world.setBlockState(p, restored, 3);
+            }
+        }
     }
 
     private BlockPos findClusterAnchor(WorldView world, BlockPos pos) {

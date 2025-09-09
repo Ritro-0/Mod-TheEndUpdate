@@ -16,7 +16,10 @@ public class ChorusFlowerBlockMixin {
     
     @Inject(method = "randomTick", at = @At("TAIL"))
     private void onChorusFlowerRandomTick(BlockState state, ServerWorld world, BlockPos pos, Random random, CallbackInfo ci) {
-        // Grow a Void Bloom when chorus flower ticks (active/mature)
+        // Suppress blooms inside Shadowlands
+        if (com.theendupdate.world.ShadowlandsRegion.isInRegion(pos.getX() >> 4, pos.getZ() >> 4)) {
+            return;
+        }
         VoidBloomChorusGrowthFeature.tryGrow(world, pos, random);
     }
 }

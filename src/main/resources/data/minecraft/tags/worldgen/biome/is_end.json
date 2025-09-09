@@ -8,7 +8,10 @@
     "minecraft:end_barrens",
     "theendupdate:mirelands_highlands",
     "theendupdate:mirelands_midlands",
-    "theendupdate:mirelands_barrens"
+    "theendupdate:mirelands_barrens",
+    "theendupdate:shadowlands_highlands",
+    "theendupdate:shadowlands_midlands",
+    "theendupdate:shadowlands_barrens"
   ]
 }
 

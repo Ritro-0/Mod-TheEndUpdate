@@ -134,7 +134,8 @@ public final class EtherealOrbOnCrystalsSpawner {
             var biomeKey = world.getBiome(tip).getKey().orElse(null);
             if (biomeKey == null) continue;
             String path = biomeKey.getValue().getPath();
-            if (!("mirelands_highlands".equals(path) || "mirelands_midlands".equals(path) || "mirelands_barrens".equals(path))) continue;
+            if (!("mirelands_highlands".equals(path) || "mirelands_midlands".equals(path) || "mirelands_barrens".equals(path)
+                || "shadowlands_highlands".equals(path) || "shadowlands_midlands".equals(path) || "shadowlands_barrens".equals(path))) continue;
 
             // One-time per tip per session
             long tipKey = tip.asLong();

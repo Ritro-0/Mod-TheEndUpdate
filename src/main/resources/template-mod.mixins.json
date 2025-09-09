@@ -17,7 +17,8 @@
 		"BrewingStandBlockEntityTickMixin",
 		"MobEntityAccessor",
 		"SpiderEntityAvoidChrysanthemumMixin",
-		"EndermanAvoidEtherealOrbMixin"
+		"EndermanAvoidEtherealOrbMixin",
+		"BiomeAccessMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

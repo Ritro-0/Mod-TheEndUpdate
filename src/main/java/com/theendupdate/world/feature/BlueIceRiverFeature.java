@@ -42,6 +42,8 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 		StructureWorldAccess world = context.getWorld();
 		BlockPos origin = context.getOrigin();
 
+		// Rivers are global; no mask suppression
+
 		int cx = origin.getX() + 8;
 		int cz = origin.getZ() + 8;
 		if (Math.sqrt((double) (cx * cx) + (double) (cz * cz)) < MAIN_ISLAND_EXCLUSION_RADIUS) {

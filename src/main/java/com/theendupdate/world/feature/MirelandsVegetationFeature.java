@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.registry.ModWorldgen;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.block.Block;
 import net.minecraft.block.TallPlantBlock;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -90,7 +89,7 @@ public class MirelandsVegetationFeature extends Feature<DefaultFeatureConfig> {
                     if (world.isAir(placePos.up())) {
                         BlockState state = ModBlocks.MOLD_SPORE_SPROUT.getDefaultState();
                         if (state.canPlaceAt(world, placePos)) {
-                            ((TallPlantBlock) ModBlocks.MOLD_SPORE_SPROUT).placeAt(world, state, placePos, Block.NOTIFY_LISTENERS);
+                            TallPlantBlock.placeAt(world, state, placePos, Block.NOTIFY_LISTENERS);
                         }
                     }
                 }

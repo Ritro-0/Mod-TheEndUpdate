@@ -118,6 +118,8 @@ public class TemplateMod implements ModInitializer {
 
         // Worldgen registration
         com.theendupdate.registry.ModWorldgen.registerAll();
+        // Commands
+        try { com.theendupdate.debug.DebugCommands.register(); } catch (Throwable ignored) {}
         // Post-gen spawners
         com.theendupdate.world.EtherealOrbOnCrystalsSpawner.init();
         LOGGER.info("[EndUpdate] onInitialize() completed");

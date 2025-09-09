@@ -3,17 +3,22 @@ package com.theendupdate.registry;
 import com.theendupdate.TemplateMod;
 import com.theendupdate.world.feature.MirelandsGroundCoverFeature;
 import com.theendupdate.world.feature.BlueIceRiverFeature;
+import com.theendupdate.world.feature.ShadowlandsGroundCoverFeature;
+import com.theendupdate.world.feature.ShadowlandsChorusCleanupFeature;
+import com.theendupdate.world.feature.ShadowlandsHugeTreeFeature;
+import com.theendupdate.world.feature.ShadowlandsLandmassFeature;
+import com.theendupdate.world.feature.ShadowClawScatterFeature;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
-import net.fabricmc.fabric.api.biome.v1.TheEndBiomes;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.gen.GenerationStep;
+import net.fabricmc.fabric.api.biome.v1.TheEndBiomes;
+import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.PlacedFeature;
@@ -70,6 +75,38 @@ public final class ModWorldgen {
         new BlueIceRiverFeature(DefaultFeatureConfig.CODEC)
     );
 
+    // Shadowlands features
+    public static final Feature<DefaultFeatureConfig> SHADOWLANDS_GROUND_COVER = Registry.register(
+        Registries.FEATURE,
+        id("shadowlands_ground_cover"),
+        new ShadowlandsGroundCoverFeature(DefaultFeatureConfig.CODEC)
+    );
+
+    public static final Feature<DefaultFeatureConfig> SHADOWLANDS_CHORUS_CLEANUP = Registry.register(
+        Registries.FEATURE,
+        id("shadowlands_chorus_cleanup"),
+        new ShadowlandsChorusCleanupFeature(DefaultFeatureConfig.CODEC)
+    );
+
+    public static final Feature<DefaultFeatureConfig> SHADOWLANDS_HUGE_TREE = Registry.register(
+        Registries.FEATURE,
+        id("shadowlands_huge_tree"),
+        new ShadowlandsHugeTreeFeature(DefaultFeatureConfig.CODEC)
+    );
+
+    public static final Feature<DefaultFeatureConfig> SHADOWLANDS_LANDMASS = Registry.register(
+        Registries.FEATURE,
+        id("shadowlands_landmass"),
+        new ShadowlandsLandmassFeature(DefaultFeatureConfig.CODEC)
+    );
+
+    public static final Feature<DefaultFeatureConfig> SHADOW_CLAW_SCATTER = Registry.register(
+        Registries.FEATURE,
+        id("shadow_claw_scatter"),
+        new ShadowClawScatterFeature(DefaultFeatureConfig.CODEC)
+    );
+
+
     public static final RegistryKey<PlacedFeature> MIRELANDS_GROUND_COVER_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("mirelands_ground_cover"));
     public static final RegistryKey<PlacedFeature> MIRELANDS_VEGETATION_PLACED_KEY = RegistryKey.of(
@@ -88,10 +125,23 @@ public final class ModWorldgen {
     public static final RegistryKey<PlacedFeature> BLUE_ICE_RIVER_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("blue_ice_river"));
 
+	// Shadowlands placed features
+	public static final RegistryKey<PlacedFeature> SHADOWLANDS_GROUND_COVER_PLACED_KEY = RegistryKey.of(
+		RegistryKeys.PLACED_FEATURE, id("shadowlands_ground_cover"));
+	public static final RegistryKey<PlacedFeature> SHADOWLANDS_HUGE_TREE_PLACED_KEY = RegistryKey.of(
+		RegistryKeys.PLACED_FEATURE, id("shadowlands_huge_tree"));
+	public static final RegistryKey<PlacedFeature> SHADOW_CLAW_SCATTER_PLACED_KEY = RegistryKey.of(
+		RegistryKeys.PLACED_FEATURE, id("shadow_claw_scatter"));
+	public static final RegistryKey<PlacedFeature> SHADOWLANDS_CHORUS_CLEANUP_PLACED_KEY = RegistryKey.of(
+		RegistryKeys.PLACED_FEATURE, id("shadowlands_chorus_cleanup"));
+
 	// Biome keys
 	public static final RegistryKey<Biome> MIRELANDS_HIGHLANDS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("mirelands_highlands"));
 	public static final RegistryKey<Biome> MIRELANDS_MIDLANDS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("mirelands_midlands"));
 	public static final RegistryKey<Biome> MIRELANDS_BARRENS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("mirelands_barrens"));
+	public static final RegistryKey<Biome> SHADOWLANDS_HIGHLANDS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("shadowlands_highlands"));
+	public static final RegistryKey<Biome> SHADOWLANDS_MIDLANDS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("shadowlands_midlands"));
+	public static final RegistryKey<Biome> SHADOWLANDS_BARRENS_KEY = RegistryKey.of(RegistryKeys.BIOME, id("shadowlands_barrens"));
 
 	public static void registerAll() {
 		// Inject feature into our Mirelands biomes
@@ -135,24 +185,48 @@ public final class ModWorldgen {
             BLUE_ICE_RIVER_PLACED_KEY
         );
 
-        // Ender chrysanthemums on Small End Islands only
+        // Ender chrysanthemums on Small End Islands only (from previous iteration)
         BiomeModifications.addFeature(
             BiomeSelectors.includeByKey(BiomeKeys.SMALL_END_ISLANDS),
             GenerationStep.Feature.VEGETAL_DECORATION,
             ENDER_CHRYSANTHEMUM_ISLANDS_PLACED_KEY
         );
 
-        // End Cities are enabled for our biomes via data tags under minecraft:has_structure/end_city
+        // End biome API: add our Mirelands highlands and link midlands/barrens so worldgen places the biomes
+        TheEndBiomes.addHighlandsBiome(MIRELANDS_HIGHLANDS_KEY, 2);
+        TheEndBiomes.addMidlandsBiome(MIRELANDS_HIGHLANDS_KEY, MIRELANDS_MIDLANDS_KEY, 1);
+        TheEndBiomes.addBarrensBiome(MIRELANDS_HIGHLANDS_KEY, MIRELANDS_BARRENS_KEY, 1);
 
-        // End biome API: add our highlands and link its midlands/barrens
-		TheEndBiomes.addHighlandsBiome(MIRELANDS_HIGHLANDS_KEY, 2);
-		TheEndBiomes.addMidlandsBiome(MIRELANDS_HIGHLANDS_KEY, MIRELANDS_MIDLANDS_KEY, 1);
-		TheEndBiomes.addBarrensBiome(MIRELANDS_HIGHLANDS_KEY, MIRELANDS_BARRENS_KEY, 1);
+        // Shadowlands biomes: register just like Mirelands, but with lower weight so they are rarer
+        TheEndBiomes.addHighlandsBiome(SHADOWLANDS_HIGHLANDS_KEY, 8);
+        TheEndBiomes.addMidlandsBiome(SHADOWLANDS_HIGHLANDS_KEY, SHADOWLANDS_MIDLANDS_KEY, 1);
+        TheEndBiomes.addBarrensBiome(SHADOWLANDS_HIGHLANDS_KEY, SHADOWLANDS_BARRENS_KEY, 1);
 
-        // Debug logs via both slf4j and log4j
-        com.theendupdate.TemplateMod.LOGGER.info("[EndUpdate] ModWorldgen.registerAll completed: spikes+mire registered");
-        org.apache.logging.log4j.LogManager.getLogger(com.theendupdate.TemplateMod.MOD_ID).info("[EndUpdate] ModWorldgen.registerAll completed: spikes+mire registered");
-        System.out.println("[EndUpdate] ModWorldgen.registerAll completed: spikes+mire registered");
+		// Shadowlands injections limited to Shadowlands biomes
+		BiomeModifications.addFeature(
+			BiomeSelectors.includeByKey(SHADOWLANDS_HIGHLANDS_KEY, SHADOWLANDS_MIDLANDS_KEY, SHADOWLANDS_BARRENS_KEY),
+			GenerationStep.Feature.TOP_LAYER_MODIFICATION,
+			SHADOWLANDS_GROUND_COVER_PLACED_KEY
+		);
+
+		BiomeModifications.addFeature(
+			BiomeSelectors.includeByKey(SHADOWLANDS_HIGHLANDS_KEY, SHADOWLANDS_MIDLANDS_KEY, SHADOWLANDS_BARRENS_KEY),
+			GenerationStep.Feature.VEGETAL_DECORATION,
+			SHADOW_CLAW_SCATTER_PLACED_KEY
+		);
+
+		BiomeModifications.addFeature(
+			BiomeSelectors.includeByKey(SHADOWLANDS_HIGHLANDS_KEY, SHADOWLANDS_MIDLANDS_KEY, SHADOWLANDS_BARRENS_KEY),
+			GenerationStep.Feature.VEGETAL_DECORATION,
+			SHADOWLANDS_HUGE_TREE_PLACED_KEY
+		);
+
+		BiomeModifications.addFeature(
+			BiomeSelectors.includeByKey(SHADOWLANDS_HIGHLANDS_KEY, SHADOWLANDS_MIDLANDS_KEY, SHADOWLANDS_BARRENS_KEY),
+			GenerationStep.Feature.TOP_LAYER_MODIFICATION,
+			SHADOWLANDS_CHORUS_CLEANUP_PLACED_KEY
+		);
+
 
         // Registration complete
 	}

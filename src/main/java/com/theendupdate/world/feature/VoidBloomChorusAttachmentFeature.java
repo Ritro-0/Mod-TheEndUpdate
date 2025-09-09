@@ -30,6 +30,13 @@ public class VoidBloomChorusAttachmentFeature extends Feature<DefaultFeatureConf
         StructureWorldAccess world = context.getWorld();
         Random random = context.getRandom();
 
+        // Suppress chorus-related attachments inside Shadowlands region
+        int chunkX = context.getOrigin().getX() >> 4;
+        int chunkZ = context.getOrigin().getZ() >> 4;
+        if (com.theendupdate.world.ShadowlandsRegion.isInRegion(chunkX, chunkZ)) {
+            return false;
+        }
+
         ChunkPos chunkPos = new ChunkPos(context.getOrigin());
         int startX = chunkPos.getStartX();
         int startZ = chunkPos.getStartZ();

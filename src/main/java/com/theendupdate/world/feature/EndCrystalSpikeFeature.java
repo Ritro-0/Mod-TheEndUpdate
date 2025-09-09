@@ -40,6 +40,8 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
         Random random = context.getRandom();
         BlockPos origin = context.getOrigin();
 
+        // Spikes are global; no mask suppression here
+
         // no-op debug
 
         // Exclude the dragon fight area (central island vicinity)

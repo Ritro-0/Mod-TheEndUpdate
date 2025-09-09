@@ -16,6 +16,8 @@ public class ChorusPlantBlockMixin {
 
     @Inject(method = "canPlaceAt", at = @At("HEAD"), cancellable = true)
     private void allowOnEndMireAndMold(BlockState state, WorldView world, BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+        // Block chorus plant placement inside Shadowlands
+        if (com.theendupdate.world.ShadowlandsRegion.isInRegion(pos.getX() >> 4, pos.getZ() >> 4)) { cir.setReturnValue(false); return; }
         BlockPos below = pos.down();
         BlockState belowState = world.getBlockState(below);
 

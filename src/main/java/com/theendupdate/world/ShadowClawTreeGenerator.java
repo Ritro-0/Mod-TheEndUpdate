@@ -3,10 +3,10 @@ package com.theendupdate.world;
 import com.theendupdate.block.EtherealSporocarpBlock;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.block.BlockState;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.WorldAccess;
 
 /**
  * Generates a massive Shadow tree from a Shadow Claw sapling.
@@ -16,7 +16,7 @@ import net.minecraft.util.math.random.Random;
 public final class ShadowClawTreeGenerator {
     private ShadowClawTreeGenerator() {}
 
-    public static void generate(ServerWorld world, BlockPos startPos, Random random) {
+    public static void generate(WorldAccess world, BlockPos startPos, Random random) {
         // Basic parameters — sized beyond a typical 2x2 jungle tree volume
         // Wider circular trunk (radius 3-4 → 7-9 blocks width)
         int trunkRadius = 3 + random.nextInt(2);
@@ -30,7 +30,7 @@ public final class ShadowClawTreeGenerator {
         }
 
         // Clear the sapling spot first
-        world.setBlockState(startPos, net.minecraft.block.Blocks.AIR.getDefaultState());
+        world.setBlockState(startPos, net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
 
         // Build trunk (filled rugged discs) from ground level, thicker and more varied near the base
         BlockPos trunkBase = startPos;
@@ -58,7 +58,7 @@ public final class ShadowClawTreeGenerator {
         buildUpwardFinger(world, crown.up(1), upFingerHeight, random);
     }
 
-    private static boolean hasTrunkSpace(ServerWorld world, BlockPos base, int radius, int height) {
+    private static boolean hasTrunkSpace(WorldAccess world, BlockPos base, int radius, int height) {
         for (int y = 0; y < height; y++) {
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
@@ -73,7 +73,7 @@ public final class ShadowClawTreeGenerator {
         return true;
     }
 
-    private static void buildUpwardBiasedFinger(ServerWorld world, BlockPos origin, Direction dir, int length, Random random) {
+    private static void buildUpwardBiasedFinger(WorldAccess world, BlockPos origin, Direction dir, int length, Random random) {
         Direction.Axis axis = dir.getAxis();
         // 3x3 thickness finger, biased upward over distance
         int yBias = 0;
@@ -106,7 +106,7 @@ public final class ShadowClawTreeGenerator {
         }
     }
 
-    private static boolean placeFingerSlice(ServerWorld world, BlockPos center, Direction.Axis along) {
+    private static boolean placeFingerSlice(WorldAccess world, BlockPos center, Direction.Axis along) {
         boolean placedAny = false;
         // Create a 3x3 cross-section perpendicular to the travel axis
         for (int dx = -1; dx <= 1; dx++) {
@@ -123,7 +123,7 @@ public final class ShadowClawTreeGenerator {
         return placedAny;
     }
 
-    private static void buildUpwardFinger(ServerWorld world, BlockPos origin, int height, Random random) {
+    private static void buildUpwardFinger(WorldAccess world, BlockPos origin, int height, Random random) {
         int blocked = 0;
         for (int y = 0; y < height; y++) {
             BlockPos core = origin.up(y);
@@ -146,7 +146,7 @@ public final class ShadowClawTreeGenerator {
         }
     }
 
-    private static void thickenKnuckle(ServerWorld world, BlockPos center, Direction.Axis along) {
+    private static void thickenKnuckle(WorldAccess world, BlockPos center, Direction.Axis along) {
         // Add a small 3x3x3 bulge centered around the step; elongated along the axis
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
@@ -162,7 +162,7 @@ public final class ShadowClawTreeGenerator {
         }
     }
 
-    private static void placeRuggedDisc(ServerWorld world, BlockPos center, int radius, Random random) {
+    private static void placeRuggedDisc(WorldAccess world, BlockPos center, int radius, Random random) {
         int r2 = radius * radius;
         int manhattanLimit = radius * 2;
         for (int dx = -radius - 1; dx <= radius + 1; dx++) {
@@ -198,7 +198,7 @@ public final class ShadowClawTreeGenerator {
         return base;
     }
 
-    private static void placeButtressFlares(ServerWorld world, BlockPos center, int radius, Random random) {
+    private static void placeButtressFlares(WorldAccess world, BlockPos center, int radius, Random random) {
         // Add small outward nubs around the base in cardinal directions (one block beyond the circle)
         int out = radius + 1;
         // North/South
@@ -222,7 +222,7 @@ public final class ShadowClawTreeGenerator {
         }
     }
 
-    private static boolean placeLogIfAttach(ServerWorld world, BlockPos pos, Direction.Axis axis) {
+    private static boolean placeLogIfAttach(WorldAccess world, BlockPos pos, Direction.Axis axis) {
         BlockState state = world.getBlockState(pos);
         if (!(state.isAir() || state.isReplaceable())) return false;
         // Require adjacency to existing shadow log to avoid detached pieces
@@ -236,7 +236,7 @@ public final class ShadowClawTreeGenerator {
         return false;
     }
 
-    private static boolean placeLogIfReplaceable(ServerWorld world, BlockPos pos, Direction.Axis axis) {
+    private static boolean placeLogIfReplaceable(WorldAccess world, BlockPos pos, Direction.Axis axis) {
         BlockState state = world.getBlockState(pos);
         if (state.isAir() || state.isReplaceable()) {
             world.setBlockState(pos, ModBlocks.SHADOW_CRYPTOMYCOTA.getDefaultState().with(EtherealSporocarpBlock.AXIS, axis), 3);
