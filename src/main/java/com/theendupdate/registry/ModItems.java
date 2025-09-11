@@ -38,6 +38,17 @@ public final class ModItems {
         key -> new Item(new Item.Settings().registryKey(key))
     );
 
+    // Gravitite materials
+    public static final Item GRAVITITE_ESSENCE = registerItem(
+        "gravitite_essence",
+        key -> new Item(new Item.Settings().registryKey(key).fireproof())
+    );
+
+    public static final Item PURE_GRAVITITE = registerItem(
+        "pure_gravitite",
+        key -> new Item(new Item.Settings().registryKey(key).fireproof())
+    );
+
     // Removed custom bound recovery compass; vanilla recovery compass will be used
     
     // Spawn eggs

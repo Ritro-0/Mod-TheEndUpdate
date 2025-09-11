@@ -52,6 +52,11 @@
   "block.theendupdate.spectral_block": "Spectral Block",
   "item.theendupdate.spectral_block": "Spectral Block"
   ,
+  "block.theendupdate.gravitite_ore": "Gravitite Ore",
+  "item.theendupdate.gravitite_ore": "Gravitite Ore",
+  "item.theendupdate.gravitite_essence": "Gravitite Essence",
+  "item.theendupdate.pure_gravitite": "Pure Gravitite",
+  "trim_material.theendupdate.gravitite": "Gravitite Material",
   "item.theendupdate.end_mire": "End Mire",
   "item.theendupdate.end_murk": "End Murk",
   "item.theendupdate.mold_block": "Mold Block",

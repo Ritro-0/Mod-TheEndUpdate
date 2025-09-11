@@ -19,7 +19,13 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.entity.EquipmentSlot;
 import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
+// Explosion blast immunity for certain item entities is implemented via different API versions.
+// For now, remove Fabric ExplosionEvents usage due to missing module in this env.
+// import net.fabricmc.fabric.api.event.world.ExplosionEvents;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 // entity attribute registry called from ModEntities
 // debug-related imports removed
 // (no server tick hooks used currently)
@@ -116,6 +122,8 @@ public class TemplateMod implements ModInitializer {
             }
         });
 
+        // Blast-proof items: rely on fireproof to survive lava/fire and high blast resistance to persist in typical detonations.
+
         // Worldgen registration
         com.theendupdate.registry.ModWorldgen.registerAll();
         // Commands
@@ -127,7 +135,8 @@ public class TemplateMod implements ModInitializer {
         // Server tick: spawn subtle END_ROD particles around players wearing spectral trims
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
             for (ServerWorld world : server.getWorlds()) {
-                if (world.getTime() % 10 != 0) continue; // check twice per second
+                // Cadence ~6.7 Hz for elegant motion
+                boolean theendupdate$cadence = (world.getTime() % 3) == 0;
                 for (ServerPlayerEntity player : world.getPlayers()) {
                     if (!player.isAlive()) continue;
 
@@ -141,16 +150,18 @@ public class TemplateMod implements ModInitializer {
                     if (hasChest) spectralPieces++;
                     if (hasLegs) spectralPieces++;
                     if (hasFeet) spectralPieces++;
-                    if (spectralPieces <= 0) continue;
 
-                    // Scale chance with pieces: 1->0.5, 2->0.7, 3->0.85, 4->1.0
-                    float spawnChance = switch (spectralPieces) {
-                        case 1 -> 0.5f;
-                        case 2 -> 0.7f;
-                        case 3 -> 0.85f;
-                        default -> 1.0f;
-                    };
-                    if (world.getRandom().nextFloat() > spawnChance) continue;
+                    // Spectral particles: gated but do not early-continue so other effects still run
+                    boolean shouldSpawnSpectral = false;
+                    if (spectralPieces > 0) {
+                        float spawnChance = switch (spectralPieces) {
+                            case 1 -> 0.5f;
+                            case 2 -> 0.7f;
+                            case 3 -> 0.85f;
+                            default -> 1.0f;
+                        };
+                        shouldSpawnSpectral = world.getRandom().nextFloat() <= spawnChance;
+                    }
 
                     // Orientation vectors based on player yaw
                     double yawRad = Math.toRadians(player.getYaw());
@@ -162,7 +173,7 @@ public class TemplateMod implements ModInitializer {
                     // Alternate sides over time (front/back or left/right) and never both
                     boolean phase = ((world.getTime() / 20) % 2) == 0; // toggles ~every second
 
-                    if (hasChest) {
+                    if (shouldSpawnSpectral && hasChest) {
                         // Chest: front/back alternate. Heavier randomization while biased forward/back
                         double baseY = player.getY() + 1.30;
                         double fbMag = 0.85;
@@ -183,7 +194,7 @@ public class TemplateMod implements ModInitializer {
                         theendupdate$spawnForOthers(world, player, x, y, z);
                     }
 
-                    if (hasHead) {
+                    if (shouldSpawnSpectral && hasHead) {
                         // Head: front/back alternate near helmet with more variability
                         double baseY = player.getEyeY() + 0.00;
                         double fbMag = 0.55;
@@ -204,7 +215,7 @@ public class TemplateMod implements ModInitializer {
                         theendupdate$spawnForOthers(world, player, x, y, z);
                     }
 
-                    if (hasLegs) {
+                    if (shouldSpawnSpectral && hasLegs) {
                         // Legs: left/right alternate near waist; increase lateral and add forward/back spread
                         double baseY = player.getY() + 0.95;
                         double lrMag = 0.55;
@@ -222,7 +233,7 @@ public class TemplateMod implements ModInitializer {
                         theendupdate$spawnForOthers(world, player, x, y, z);
                     }
 
-                    if (hasFeet) {
+                    if (shouldSpawnSpectral && hasFeet) {
                         // Feet: left/right alternate near boots; increase lateral and forward/back sway
                         double baseY = player.getY() + 0.25;
                         double lrMag = 0.45;
@@ -238,6 +249,11 @@ public class TemplateMod implements ModInitializer {
                         double y = baseY + (world.getRandom().nextDouble() - 0.5) * yMag;
                         double z = player.getZ() + offZ + swayZ + (world.getRandom().nextDouble() - 0.5) * 0.14;
                         theendupdate$spawnForOthers(world, player, x, y, z);
+                    }
+                    // Gravitite trim: attract nearby items based on number of pieces (2,4,6,8 blocks)
+                    int gravititePieces = theendupdate$countGravititeTrimPieces(player);
+                    if (gravititePieces > 0 && theendupdate$cadence) {
+                        theendupdate$pullNearbyItems(world, player, gravititePieces);
                     }
                 }
             }
@@ -295,6 +311,52 @@ public class TemplateMod implements ModInitializer {
             return "spectral".equals(path) || "spectral_cluster".equals(path);
         } catch (Throwable ignored) {}
         return false;
+    }
+
+    private static int theendupdate$countGravititeTrimPieces(ServerPlayerEntity player) {
+        int count = 0;
+        try {
+            for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
+                ItemStack armor = player.getEquippedStack(slot);
+                if (armor == null || armor.isEmpty()) continue;
+                ArmorTrim trim = armor.get(DataComponentTypes.TRIM);
+                if (trim == null) continue;
+                Identifier matId = trim.material().getKey().map(RegistryKey::getValue).orElse(null);
+                if (matId == null) continue;
+                if ("gravitite".equals(matId.getPath())) count++;
+            }
+        } catch (Throwable ignored) {}
+        return count;
+    }
+
+    private static void theendupdate$pullNearbyItems(ServerWorld world, ServerPlayerEntity player, int pieces) {
+        // Range scales 2,4,6,8 for 1..4 pieces
+        int range = switch (pieces) { case 1 -> 2; case 2 -> 4; case 3 -> 6; default -> 8; };
+        Box box = player.getBoundingBox().expand(range);
+        try {
+            java.util.List<ItemEntity> items = world.getEntitiesByClass(ItemEntity.class, box, e -> e != null && e.isAlive());
+            if (items.isEmpty()) return;
+            Vec3d playerPos = player.getPos().add(0.0, 0.8, 0.0);
+            double baseAccel = 0.42 + 0.05 * pieces; // slightly reduced for smoother, elegant motion
+            for (ItemEntity item : items) {
+                // Skip if just thrown by the same player this tick (optional), keep simple for now
+                Vec3d diff = playerPos.subtract(item.getPos());
+                double dist = diff.length();
+                if (dist < 0.001) continue;
+                // Scale pull a bit with distance but clamp so far items still move
+                double strength = baseAccel * Math.min(1.0, (dist / range) + 0.35);
+                Vec3d dir = diff.normalize();
+                // Add a slight upward bias to help climb steps/blocks against gravity
+                dir = new Vec3d(dir.x, Math.max(dir.y + 0.06, 0.035), dir.z).normalize();
+                Vec3d pull = dir.multiply(strength);
+                // Blend pull with current velocity for smoothing
+                Vec3d vel = item.getVelocity().multiply(0.80).add(pull.multiply(0.90));
+                // Damp excessive velocities
+                if (vel.lengthSquared() > 1.4) vel = vel.normalize().multiply(1.15);
+                item.setVelocity(vel);
+                item.velocityModified = true;
+            }
+        } catch (Throwable ignored) {}
     }
 }
 

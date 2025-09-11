@@ -1,0 +1,11 @@
+{
+  "feature": "theendupdate:gravitite_ore",
+  "placement": [
+    { "type": "minecraft:in_square" },
+    { "type": "minecraft:count", "count": 2 },
+    { "type": "minecraft:height_range", "height": { "type": "minecraft:uniform", "max_inclusive": { "absolute": 60 }, "min_inclusive": { "absolute": -64 } } },
+    { "type": "minecraft:biome" }
+  ]
+}
+
+

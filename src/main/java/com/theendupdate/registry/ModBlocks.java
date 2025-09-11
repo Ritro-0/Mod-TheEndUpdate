@@ -438,6 +438,17 @@ public final class ModBlocks {
         )
     );
 
+    // Gravitite Ore: blast-proof like Netherite block; fireproof block item
+    public static final Block GRAVITITE_ORE = registerBlockFireproofItem(
+        "gravitite_ore",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.NETHERITE_BLOCK) // match netherite mining speed/requirements and blast resistance
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
     private static Block registerBlock(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
@@ -456,6 +467,29 @@ public final class ModBlocks {
         Registry.register(Registries.ITEM, id, item);
         // Add to a creative tab so it's visible in creative inventory
         if (isPlantLike) {
+            ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
+        } else {
+            ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
+        }
+        return block;
+    }
+
+    // Variant that registers a fireproof BlockItem for blast/burn-proof item form
+    private static Block registerBlockFireproofItem(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
+        Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
+        RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
+        Block block = factory.apply(key);
+        Registry.register(Registries.BLOCK, id, block);
+        RegistryKey<Item> itemKey = RegistryKey.of(Registries.ITEM.getKey(), id);
+        Item.Settings itemSettings = new Item.Settings().registryKey(itemKey).fireproof();
+        BlockItem item;
+        boolean isPlantLike = (block instanceof PlantBlock) || (block instanceof TallPlantBlock);
+        item = isPlantLike ? new com.theendupdate.item.AdjacentPlantBlockItem(block, itemSettings)
+                           : new BlockItem(block, itemSettings);
+        Registry.register(Registries.ITEM, id, item);
+        if (isPlantLike) {
+            ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
+        } else if (name.endsWith("_ore")) {
             ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
         } else {
             ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));

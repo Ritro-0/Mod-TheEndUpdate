@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:blasting",
+  "ingredient": "theendupdate:gravitite_ore",
+  "result": { "id": "theendupdate:gravitite_essence" },
+  "experience": 1.0,
+  "cookingtime": 100
+}
+
+

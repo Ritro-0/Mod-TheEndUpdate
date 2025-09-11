@@ -61,6 +61,13 @@ public final class ModWorldgen {
         new com.theendupdate.world.feature.EndCrystalSpikeFeature(DefaultFeatureConfig.CODEC)
     );
 
+    // Gravitite single-node ore feature
+    public static final Feature<DefaultFeatureConfig> GRAVITITE_ORE_NODE = Registry.register(
+        Registries.FEATURE,
+        id("gravitite_ore_node"),
+        new com.theendupdate.world.feature.GravititeOreNodeFeature(DefaultFeatureConfig.CODEC)
+    );
+
     // Ender chrysanthemum attachment on small end islands
     public static final Feature<DefaultFeatureConfig> ENDER_CHRYSANTHEMUM_ISLANDS = Registry.register(
         Registries.FEATURE,
@@ -125,6 +132,12 @@ public final class ModWorldgen {
     public static final RegistryKey<PlacedFeature> BLUE_ICE_RIVER_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("blue_ice_river"));
 
+    // Ores
+    public static final RegistryKey<PlacedFeature> GRAVITITE_ORE_PLACED_KEY = RegistryKey.of(
+        RegistryKeys.PLACED_FEATURE, id("gravitite_ore"));
+    public static final RegistryKey<PlacedFeature> GRAVITITE_ORE_NODE_PLACED_KEY = RegistryKey.of(
+        RegistryKeys.PLACED_FEATURE, id("gravitite_ore_node"));
+
 	// Shadowlands placed features
 	public static final RegistryKey<PlacedFeature> SHADOWLANDS_GROUND_COVER_PLACED_KEY = RegistryKey.of(
 		RegistryKeys.PLACED_FEATURE, id("shadowlands_ground_cover"));
@@ -183,6 +196,20 @@ public final class ModWorldgen {
             BiomeSelectors.foundInTheEnd(),
             GenerationStep.Feature.LOCAL_MODIFICATIONS,
             BLUE_ICE_RIVER_PLACED_KEY
+        );
+
+        // Inject Gravitite ore into End biomes during underground ore generation
+        BiomeModifications.addFeature(
+            BiomeSelectors.foundInTheEnd(),
+            GenerationStep.Feature.UNDERGROUND_ORES,
+            GRAVITITE_ORE_PLACED_KEY
+        );
+
+        // Also inject Gravitite single-node placements to reach desired density
+        BiomeModifications.addFeature(
+            BiomeSelectors.foundInTheEnd(),
+            GenerationStep.Feature.UNDERGROUND_ORES,
+            GRAVITITE_ORE_NODE_PLACED_KEY
         );
 
         // Ender chrysanthemums on Small End Islands only (from previous iteration)
