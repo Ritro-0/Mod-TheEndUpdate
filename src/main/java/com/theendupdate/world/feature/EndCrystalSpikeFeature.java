@@ -63,6 +63,16 @@ public class EndCrystalSpikeFeature extends Feature<DefaultFeatureConfig> {
             Anchor anchor = findAnchor(world, origin, random);
             if (anchor == null) continue;
 
+			// Skip generation inside Shadowlands biomes
+			net.minecraft.registry.entry.RegistryEntry<net.minecraft.world.biome.Biome> biomeEntry = world.getBiome(anchor.islandBlockPos);
+			java.util.Optional<net.minecraft.registry.RegistryKey<net.minecraft.world.biome.Biome>> biomeKeyOpt = biomeEntry.getKey();
+			if (biomeKeyOpt.isPresent()) {
+				String bpath = biomeKeyOpt.get().getValue().getPath();
+				if ("shadowlands_highlands".equals(bpath) || "shadowlands_midlands".equals(bpath) || "shadowlands_barrens".equals(bpath)) {
+					continue;
+				}
+			}
+
             if (DEBUG_SHULKER_SPAWNS) {
                 System.out.println("[EndUpdate] Spike anchor at " + anchor.islandBlockPos + " facing " + anchor.outwardFace);
             }

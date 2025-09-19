@@ -59,18 +59,26 @@ public final class ShadowClawTreeGenerator {
     }
 
     private static boolean hasTrunkSpace(WorldAccess world, BlockPos base, int radius, int height) {
-        for (int y = 0; y < height; y++) {
+        // Dark-oak-like permissiveness: ignore ground layer entirely and allow a small fraction
+        // of obstructions above ground. This lets the tree grow around minor bumps/blocks.
+        int checked = 0;
+        int blocked = 0;
+        for (int y = 1; y < height; y++) {
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
                     BlockPos p = base.add(dx, y, dz);
                     var state = world.getBlockState(p);
+                    checked++;
                     if (!state.isAir() && !state.isReplaceable()) {
-                        return false;
+                        blocked++;
                     }
                 }
             }
         }
-        return true;
+        if (checked == 0) return true;
+        // Allow up to ~12% blocked, but at least 8 blocks tolerance for tall trees
+        int tolerance = Math.max(8, (int)Math.ceil(checked * 0.12));
+        return blocked <= tolerance;
     }
 
     private static void buildUpwardBiasedFinger(WorldAccess world, BlockPos origin, Direction dir, int length, Random random) {

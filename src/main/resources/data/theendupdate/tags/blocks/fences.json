@@ -1,7 +1,8 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:ethereal_fence"
+    "theendupdate:ethereal_fence",
+    "theendupdate:shadow_fence"
   ]
 }
 

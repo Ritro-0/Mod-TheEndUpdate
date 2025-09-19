@@ -22,8 +22,8 @@ public class MoldSporeBlock extends PlantBlock {
 
     public static final MapCodec<MoldSporeBlock> CODEC = createCodec(MoldSporeBlock::new);
 
-    // Use a small, low profile shape similar to roots
-    private static final VoxelShape OUTLINE_SHAPE = VoxelShapes.cuboid(0.125, 0.0, 0.125, 0.875, 0.375, 0.875);
+    // 8px wide (centered) x 12px tall
+    private static final VoxelShape OUTLINE_SHAPE = VoxelShapes.cuboid(0.25, 0.0, 0.25, 0.75, 0.75, 0.75);
 
     public MoldSporeBlock(AbstractBlock.Settings settings) {
         super(settings);

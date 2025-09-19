@@ -17,7 +17,8 @@ import net.minecraft.registry.tag.BlockTags;
 public class MoldSporeTuftBlock extends PlantBlock {
     public static final MapCodec<MoldSporeTuftBlock> CODEC = createCodec(MoldSporeTuftBlock::new);
 
-    private static final VoxelShape OUTLINE_SHAPE = VoxelShapes.cuboid(0.0625, 0.0, 0.0625, 0.9375, 0.5, 0.9375);
+    // 14px wide (centered) x 15px tall
+    private static final VoxelShape OUTLINE_SHAPE = VoxelShapes.cuboid(0.125, 0.0, 0.125, 0.875, 0.9375, 0.875);
 
     public MoldSporeTuftBlock(AbstractBlock.Settings settings) {
         super(settings);

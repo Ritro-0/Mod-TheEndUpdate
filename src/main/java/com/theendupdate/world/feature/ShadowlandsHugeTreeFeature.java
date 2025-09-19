@@ -31,56 +31,37 @@ public class ShadowlandsHugeTreeFeature extends Feature<DefaultFeatureConfig> {
         int startX = chunkPos.getStartX();
         int startZ = chunkPos.getStartZ();
 
-        // Feature is injected only into Shadowlands biomes via BiomeModifications; no extra region scan here
+        // Very sparse placement: ~16% of chunks attempt, up to 3 tries within the chunk
+        if (random.nextFloat() > 0.16f) {
+            return false;
+        }
 
         boolean placedAny = false;
-        int attempts = 192; // even more random attempts for higher density
-        // Grid attempts every 2 blocks in both dimensions to maximize coverage
-        for (int gx = 1; gx < 16; gx += 2) {
-            for (int gz = 1; gz < 16; gz += 2) {
-                int x = startX + gx;
-                int z = startZ + gz;
-                BlockPos surface = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, new BlockPos(x, 0, z)).down();
-                if (surface.getY() <= world.getBottomY()) continue;
-                var biome = world.getBiome(surface);
-                boolean isShadow = biome.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_HIGHLANDS_KEY)
-                    || biome.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_MIDLANDS_KEY)
-                    || biome.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_BARRENS_KEY);
-                if (!isShadow) continue;
-                BlockState ground = world.getBlockState(surface);
-                if (!(ground.isOf(ModBlocks.END_MURK) || ground.isOf(net.minecraft.block.Blocks.END_STONE))) continue;
-                if (ground.isOf(net.minecraft.block.Blocks.END_STONE)) {
-                    world.setBlockState(surface, ModBlocks.END_MURK.getDefaultState(), net.minecraft.block.Block.NOTIFY_LISTENERS);
-                }
-                BlockPos trunkBase = surface.up();
-                if (!world.isAir(trunkBase)) continue;
-                ShadowClawTreeGenerator.generate(world, trunkBase, random);
-                placedAny = true;
-            }
-        }
+        int attempts = 3;
         for (int i = 0; i < attempts; i++) {
             int x = startX + random.nextInt(16);
             int z = startZ + random.nextInt(16);
             BlockPos surface = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, new BlockPos(x, 0, z)).down();
             if (surface.getY() <= world.getBottomY()) continue;
-            var biome2 = world.getBiome(surface);
-            boolean isShadow2 = biome2.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_HIGHLANDS_KEY)
-                || biome2.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_MIDLANDS_KEY)
-                || biome2.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_BARRENS_KEY);
-            if (!isShadow2) continue;
-            // Acceptable ground
+            var biome = world.getBiome(surface);
+            boolean isShadow = biome.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_HIGHLANDS_KEY)
+                || biome.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_MIDLANDS_KEY)
+                || biome.matchesKey(com.theendupdate.registry.ModWorldgen.SHADOWLANDS_BARRENS_KEY);
+            if (!isShadow) continue;
             BlockState ground = world.getBlockState(surface);
             if (!(ground.isOf(ModBlocks.END_MURK) || ground.isOf(net.minecraft.block.Blocks.END_STONE))) continue;
-            // Favor End Murk by converting surface if needed to allow large trees
             if (ground.isOf(net.minecraft.block.Blocks.END_STONE)) {
                 world.setBlockState(surface, ModBlocks.END_MURK.getDefaultState(), net.minecraft.block.Block.NOTIFY_LISTENERS);
             }
             BlockPos trunkBase = surface.up();
             if (!world.isAir(trunkBase)) continue;
 
-            // Delegate to generator (works with WorldAccess)
             ShadowClawTreeGenerator.generate(world, trunkBase, random);
-            placedAny = true;
+            // consider success if any trunk appeared
+            if (world.getBlockState(trunkBase).isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                placedAny = true;
+                break;
+            }
         }
 
         return placedAny;

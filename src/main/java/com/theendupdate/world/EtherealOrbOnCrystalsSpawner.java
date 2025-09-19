@@ -130,12 +130,11 @@ public final class EtherealOrbOnCrystalsSpawner {
             net.minecraft.util.math.Vec3d outward = tipData.outward();
             if (outward.lengthSquared() < 1.0e-6) outward = new Vec3d(0, 1, 0);
 
-            // Check Mirelands biome
+			// Check Mirelands biome only (disable in Shadowlands)
             var biomeKey = world.getBiome(tip).getKey().orElse(null);
             if (biomeKey == null) continue;
             String path = biomeKey.getValue().getPath();
-            if (!("mirelands_highlands".equals(path) || "mirelands_midlands".equals(path) || "mirelands_barrens".equals(path)
-                || "shadowlands_highlands".equals(path) || "shadowlands_midlands".equals(path) || "shadowlands_barrens".equals(path))) continue;
+			if (!("mirelands_highlands".equals(path) || "mirelands_midlands".equals(path) || "mirelands_barrens".equals(path))) continue;
 
             // One-time per tip per session
             long tipKey = tip.asLong();

@@ -1,7 +1,9 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:ethereal_slab"
+    { "id": "theendupdate:ethereal_slab" },
+    { "id": "theendupdate:shadow_slab" },
+    { "id": "c:wooden_slabs", "required": false }
   ]
 }
 

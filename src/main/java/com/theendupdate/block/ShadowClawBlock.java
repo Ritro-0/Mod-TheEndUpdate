@@ -18,6 +18,10 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemStack;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Shadow Claw - a sapling-like plant that grows a massive shadow tree.
@@ -47,8 +51,20 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
 
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
-        int variant = ctx.getWorld().getRandom().nextInt(4);
+        // Deterministic per-position variant to avoid client/server desync flicker on placement
+        long seed = ctx.getBlockPos().asLong() * 25214903917L + 11L;
+        int variant = (int) (Long.rotateRight(seed, 16) & 3L);
         return this.getDefaultState().with(VARIANT, variant);
+    }
+
+    @Override
+    public void onPlaced(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack itemStack) {
+        // Server-only: choose a truly random variant per placement, so re-placing at same coords can differ
+        if (!world.isClient) {
+            int variant = world.getRandom().nextInt(4);
+            world.setBlockState(pos, state.with(VARIANT, variant), Block.NOTIFY_LISTENERS);
+        }
+        super.onPlaced(world, pos, state, placer, itemStack);
     }
 
     @Override
@@ -74,20 +90,25 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
             BlockPos anchor = findClusterAnchor(world, pos);
             if (anchor != null) {
                 BlockPos center = anchor.add(1, 0, 1);
-                // Attempt generation like dark oak but ensure the trunk replaces the saplings at their Y
-                java.util.List<BlockPos> cluster = new java.util.ArrayList<>(9);
+                // Snapshot exact states to restore on failure (preserves variants)
+                Map<BlockPos, BlockState> snapshot = new HashMap<>(9);
                 for (int dx = 0; dx < 3; dx++) {
                     for (int dz = 0; dz < 3; dz++) {
-                        cluster.add(anchor.add(dx, 0, dz));
+                        BlockPos p = anchor.add(dx, 0, dz);
+                        snapshot.put(p, world.getBlockState(p));
                     }
                 }
                 clearCluster(world, anchor);
                 ShadowClawTreeGenerator.generate(world, center, random);
-                if (!world.getBlockState(center).isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
-                    // Generation failed → restore saplings
-                    for (BlockPos p : cluster) {
-                        BlockState restored = ModBlocks.SHADOW_CLAW.getDefaultState().with(VARIANT, random.nextInt(4));
-                        world.setBlockState(p, restored, 3);
+                // Consider success if any of the first few trunk blocks placed
+                boolean success = false;
+                for (int y = 0; y <= 2 && !success; y++) {
+                    if (world.getBlockState(center.up(y)).isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) success = true;
+                }
+                if (!success) {
+                    // Restore original states exactly
+                    for (Map.Entry<BlockPos, BlockState> e : snapshot.entrySet()) {
+                        world.setBlockState(e.getKey(), e.getValue(), 3);
                     }
                 }
             }
@@ -102,9 +123,8 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
 
     @Override
     public boolean canGrow(World world, Random random, BlockPos pos, BlockState state) {
-        // Only allow growth when a full 3x3 cluster exists, and add a chance gate
-        // so bonemeal does not guarantee growth (vanilla-like behavior)
-        return findClusterAnchor(world, pos) != null && random.nextFloat() < 0.125f;
+        // Require the 3x3 cluster and apply a chance gate so bonemeal doesn't always succeed (vanilla-like)
+        return findClusterAnchor(world, pos) != null && random.nextFloat() < 0.45f;
     }
 
     @Override
@@ -115,26 +135,15 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
             return; // no 3x3 cluster → bonemeal has no effect
         }
         BlockPos center = anchor.add(1, 0, 1);
-        // Pre-check a clear volume (approx. 5x5x8) above the intended trunk base (ignore ground layer)
-        BlockPos trunkBase = center; // trunk replaces the 3x3 at ground level
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                for (int y = 1; y <= 8; y++) { // start at 1 to ignore ground layer
-                    BlockPos check = trunkBase.add(x, y, z);
-                    BlockState s = world.getBlockState(check);
-                    if (!s.isAir() && !s.isReplaceable()) {
-                        return; // blocked → leave saplings in place
-                    }
-                }
-            }
-        }
-        // Snapshot, clear the 3x3, then try to generate at sapling Y; restore on failure
-        java.util.List<BlockPos> cluster = new java.util.ArrayList<>(9);
+        // Snapshot exact states, clear the 3x3, then try to generate at sapling Y; restore on failure
+        Map<BlockPos, BlockState> snapshot = new HashMap<>(9);
         for (int dx = 0; dx < 3; dx++) {
             for (int dz = 0; dz < 3; dz++) {
-                cluster.add(anchor.add(dx, 0, dz));
+                BlockPos p = anchor.add(dx, 0, dz);
+                snapshot.put(p, world.getBlockState(p));
             }
         }
+        BlockPos trunkBase = center;
         clearCluster(world, anchor);
         ShadowClawTreeGenerator.generate(world, trunkBase, random);
         // Check a couple of key trunk positions to confirm success
@@ -143,9 +152,9 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
             if (world.getBlockState(trunkBase.up(y)).isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) success = true;
         }
         if (!success) {
-            for (BlockPos p : cluster) {
-                BlockState restored = ModBlocks.SHADOW_CLAW.getDefaultState().with(VARIANT, random.nextInt(4));
-                world.setBlockState(p, restored, 3);
+            // Restore original states exactly (no re-rolling variants)
+            for (Map.Entry<BlockPos, BlockState> e : snapshot.entrySet()) {
+                world.setBlockState(e.getKey(), e.getValue(), 3);
             }
         }
     }
