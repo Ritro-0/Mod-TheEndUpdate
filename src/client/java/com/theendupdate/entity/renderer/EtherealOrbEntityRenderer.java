@@ -46,6 +46,8 @@ public class EtherealOrbEntityRenderer extends MobEntityRenderer<EtherealOrbEnti
         state.rotateAnimationState.copyFrom(entity.rotateAnimationState);
         state.charged = entity.isCharged();
         state.baby = entity.isBaby();
+        state.stunted = entity.isStunted();
+        state.bulbPresent = entity.hasBulb();
     }
     
     @Override

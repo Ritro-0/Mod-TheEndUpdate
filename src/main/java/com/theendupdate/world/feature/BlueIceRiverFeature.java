@@ -33,6 +33,31 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 	private static final int RIVERS_PER_CELL_BASE = 0; // base count per supercell
 	private static final float RIVERS_PER_CELL_EXTRA_CHANCE = 0.18f; // ~18% chance to spawn one river in this cell
 
+	// Flow styling
+	private static final int MEANDER_GRID = 24; // blocks between meander control points
+	private static final double MEANDER_STRENGTH = 0.18; // radians of turn per sample
+	private static final int WIDTH_NOISE_GRID = 32; // coherence of width field
+
+	private static int coherentWidthAt(int x, int z) {
+		// Bilinear noise on a grid for stable width across chunks
+		int gx = Math.floorDiv(x, WIDTH_NOISE_GRID);
+		int gz = Math.floorDiv(z, WIDTH_NOISE_GRID);
+		int bx = gx * WIDTH_NOISE_GRID;
+		int bz = gz * WIDTH_NOISE_GRID;
+		double fx = (x - bx) / (double) WIDTH_NOISE_GRID;
+		double fz = (z - bz) / (double) WIDTH_NOISE_GRID;
+		double n00 = ((mix64((((long) gx) << 32) ^ (long) gz) & 0xFFFF) / 65535.0);
+		double n10 = ((mix64((((long) (gx + 1)) << 32) ^ (long) gz) & 0xFFFF) / 65535.0);
+		double n01 = ((mix64((((long) gx) << 32) ^ (long) (gz + 1)) & 0xFFFF) / 65535.0);
+		double n11 = ((mix64((((long) (gx + 1)) << 32) ^ (long) (gz + 1)) & 0xFFFF) / 65535.0);
+		double nx0 = n00 * (1.0 - fx) + n10 * fx;
+		double nx1 = n01 * (1.0 - fx) + n11 * fx;
+		double n = nx0 * (1.0 - fz) + nx1 * fz; // 0..1
+		int base = 7; // widened baseline
+		int range = 3; // +0..3 → 7..10
+		return base + (int) Math.round(n * range);
+	}
+
 	public BlueIceRiverFeature(Codec<DefaultFeatureConfig> codec) {
 		super(codec);
 	}
@@ -79,9 +104,14 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 			double z = path.startZ;
 			double dirX = path.dirX;
 			double dirZ = path.dirZ;
+			// Remember the intended cross-cell heading to discourage coastal hugging
+			final double goalDX = path.dirX;
+			final double goalDZ = path.dirZ;
 			// Within-chunk continuity hold to promote coast-to-coast paths
 			final int ISLAND_HOLD_STEPS = 26;
 			int islandStreak = 0;
+			// Smooth width across steps to avoid stuttery/thin segments
+			double smoothWidth = 8.0; // start near median
 
 			// Allow across multiple cells
 			int allowedMinX = cellMinX - SUPERCELL_SIZE;
@@ -105,12 +135,16 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 						islandStreak--;
 					}
 
-					int width = 5 + (int) hashToRange(xi, zi, 0, 3); // 5..8
+                    // Widen rivers by ~2 blocks on average: 7..10
+					// Deterministic width field to match across chunk edges
+					int targetWidth = coherentWidthAt(xi, zi);
+					smoothWidth = smoothWidth * 0.75 + targetWidth * 0.25; // mild easing, still stable
+					int width = Math.max(5, (int) Math.round(smoothWidth));
 					boolean force = islandStreak > 0;
 					placedAny |= placeRiverStripe(world, xi, zi, width, force);
 				}
 
-				// Slight jitter to prevent straight lines, keeps deterministic using hashed offsets
+				// Slight jitter/meander stays deterministic and local; keep it but do not query across chunks
 				if ((step & 7) == 0) {
 					long h = mix64((long) xi * 31_557L ^ (long) zi * 7_021L ^ cellSeed);
 					double jitter = ((h & 0xFFL) / 255.0 - 0.5) * 0.6; // -0.3..0.3
@@ -121,6 +155,77 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 					dirX = ndx / len;
 					dirZ = ndz / len;
 				}
+
+				// Add low-frequency meandering to reduce straight segments
+				if ((step % MEANDER_GRID) == 0) {
+					int mx = Math.floorDiv(xi, MEANDER_GRID);
+					int mz = Math.floorDiv(zi, MEANDER_GRID);
+					long mh = mix64((((long) mx) << 32) ^ (long) mz ^ cellSeed);
+					double a = (((mh >>> 16) & 0x3FFL) / 1023.0) * 2.0 - 1.0; // [-1,1]
+					double rot2 = a * MEANDER_STRENGTH;
+					double mdx = dirX * Math.cos(rot2) - dirZ * Math.sin(rot2);
+					double mdz = dirX * Math.sin(rot2) + dirZ * Math.cos(rot2);
+					double mlen = Math.max(0.0001, Math.hypot(mdx, mdz));
+					dirX = mdx / mlen;
+					dirZ = mdz / mlen;
+				}
+
+                // Slope preference with coastal avoidance: steer along slopes but resist void edges
+                if ((step & 3) == 0) { // light-weight sampling every 4 steps
+                    // Only sample when the current position is within this chunk
+                    if (xi >= chunkMinX && xi <= chunkMaxX && zi >= chunkMinZ && zi <= chunkMaxZ) {
+                        int cMinX = chunkMinX, cMaxX = chunkMaxX, cMinZ = chunkMinZ, cMaxZ = chunkMaxZ;
+                        BlockPos p = new BlockPos(xi, 0, zi);
+                        BlockPos eP = p.east();
+                        BlockPos wP = p.west();
+                        BlockPos nP = p.north();
+                        BlockPos sP = p.south();
+                        int yCenter = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, p).getY();
+                        int yE = (eP.getX() >= cMinX && eP.getX() <= cMaxX && eP.getZ() >= cMinZ && eP.getZ() <= cMaxZ)
+                            ? world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, eP).getY() : yCenter;
+                        int yW = (wP.getX() >= cMinX && wP.getX() <= cMaxX && wP.getZ() >= cMinZ && wP.getZ() <= cMaxZ)
+                            ? world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, wP).getY() : yCenter;
+                        int yN = (nP.getX() >= cMinX && nP.getX() <= cMaxX && nP.getZ() >= cMinZ && nP.getZ() <= cMaxZ)
+                            ? world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, nP).getY() : yCenter;
+                        int yS = (sP.getX() >= cMinX && sP.getX() <= cMaxX && sP.getZ() >= cMinZ && sP.getZ() <= cMaxZ)
+                            ? world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, sP).getY() : yCenter;
+
+                        // Gradient components: positive means downhill toward that axis direction
+                        double gx = (double) (yW - yE); // downhill toward east if positive
+                        double gz = (double) (yN - yS); // downhill toward south if positive
+                        double gLen = Math.hypot(gx, gz);
+
+                        if (gLen > 0.001) {
+                            // Blend current direction with normalized gradient (favoring slopes up or down equally)
+                            double ngx = gx / gLen;
+                            double ngz = gz / gLen;
+                            // Detect proximity to a cliff/void edge by local drop severity
+                            int maxDrop = Math.max(Math.max(yCenter - yE, yCenter - yW), Math.max(yCenter - yN, yCenter - yS));
+                            double coast = Math.max(0.0, Math.min(1.0, (maxDrop - 5) / 10.0)); // 0 when gentle, ->1 near sheer drop
+
+                            // Compute an inland push opposite steepest descent to avoid hugging coasts
+                            double inlandX = -ngx;
+                            double inlandZ = -ngz;
+
+                            // Encourage staying aligned with the original cross-cell heading near coasts
+                            double goalLen = Math.max(0.0001, Math.hypot(goalDX, goalDZ));
+                            double gdx = goalDX / goalLen;
+                            double gdz = goalDZ / goalLen;
+
+                            // Base weights
+                            double wSlope = 0.16; // follow slope a bit
+                            double wGoal = 0.18 + 0.22 * coast; // stronger cross-island alignment near coasts
+                            double wInland = 0.00 + 0.30 * coast; // push inland when edge is severe
+
+                            double rem = Math.max(0.0, 1.0 - (wSlope + wGoal + wInland));
+                            double bdx = rem * dirX + wSlope * ngx + wGoal * gdx + wInland * inlandX;
+                            double bdz = rem * dirZ + wSlope * ngz + wGoal * gdz + wInland * inlandZ;
+                            double blen = Math.max(0.0001, Math.hypot(bdx, bdz));
+                            dirX = bdx / blen;
+                            dirZ = bdz / blen;
+                        }
+                    }
+                }
 
 				x += dirX;
 				z += dirZ;
@@ -193,7 +298,8 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 		if (!isEndIslandSurface(world.getBlockState(surfaceCenter))) return false;
 
 		boolean nearEdge = isBiomeEdge(world, surfaceCenter);
-		if (!force && !nearEdge) {
+		boolean nearChunkBorder = ((centerX & 15) <= 1) || ((centerX & 15) >= 14) || ((centerZ & 15) <= 1) || ((centerZ & 15) >= 14);
+		if (!force && !nearEdge && !nearChunkBorder) {
 			// Mostly favor edges: skip non-edge stripes some of the time
 			long h = mix64(((long) centerX << 32) ^ (long) centerZ);
 			// Reduce skipping to improve continuity (approx 19% skip)
@@ -207,63 +313,88 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 		Direction orth = (mainDir.getAxis() == Direction.Axis.X) ? Direction.NORTH : Direction.EAST;
 
 		int half = width / 2;
-		for (int o = -half; o <= half; o++) {
-			BlockPos col = surfaceCenter.offset(orth, o);
-			if (col.getX() < chunkMinX || col.getX() > chunkMaxX || col.getZ() < chunkMinZ || col.getZ() > chunkMaxZ) continue;
-			BlockPos top = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, col).down();
-			if (top.getY() <= bottomY) continue;
-			BlockState topState = world.getBlockState(top);
+		int radius = Math.max(1, half);
+		for (int dx = -radius; dx <= radius; dx++) {
+			for (int dz = -radius; dz <= radius; dz++) {
+				if (dx * dx + dz * dz > radius * radius) continue;
+				BlockPos sample = surfaceCenter.add(dx, 0, dz);
+				if (sample.getX() < chunkMinX || sample.getX() > chunkMaxX || sample.getZ() < chunkMinZ || sample.getZ() > chunkMaxZ) continue;
+				BlockPos top = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, sample).down();
+				if (top.getY() <= bottomY) continue;
+				BlockState topState = world.getBlockState(top);
 
-			// Avoid End Cities heuristically (limited to within-chunk to avoid cross-chunk queries)
-			if ((o & 3) == 0 && isNearEndCityBlocks(world, top, 12)) continue;
-
-			if (isEndIslandSurface(topState)) {
-				// Carve/replace top with blue ice
-				world.setBlockState(top, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
-				placed++;
-
-				// Forward/back smoothing to avoid visible striping: paint small brush in path direction
-				BlockPos fwdXZ = top.offset(mainDir);
-				if (fwdXZ.getX() >= chunkMinX && fwdXZ.getX() <= chunkMaxX && fwdXZ.getZ() >= chunkMinZ && fwdXZ.getZ() <= chunkMaxZ) {
-					BlockPos fwd = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, fwdXZ).down();
-					if (isEndIslandSurface(world.getBlockState(fwd))) {
-						world.setBlockState(fwd, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+				// Avoid End Cities heuristically (limited to within-chunk to avoid cross-chunk queries)
+					if (((dx ^ dz) & 3) == 0 && isNearEndCityBlocks(world, top, 12)) continue;
+					// Avoid overwriting large feature blocks like our huge trees' logs when adjacent
+					// Keep within-chunk only: peek 1 block up for wood-like blocks
+					if ((dx * dx + dz * dz) <= 1) {
+						BlockPos up1 = top.up();
+						BlockState up1s = world.getBlockState(up1);
+						if (up1s.getBlock() == net.minecraft.block.Blocks.OAK_LOG || up1s.getBlock() == net.minecraft.block.Blocks.SPRUCE_LOG
+							|| up1s.getBlock() == net.minecraft.block.Blocks.DARK_OAK_LOG) {
+							continue;
+						}
 					}
-				}
-				BlockPos fwd2XZ = top.offset(mainDir, 2);
-				if (fwd2XZ.getX() >= chunkMinX && fwd2XZ.getX() <= chunkMaxX && fwd2XZ.getZ() >= chunkMinZ && fwd2XZ.getZ() <= chunkMaxZ) {
-					BlockPos fwd2 = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, fwd2XZ).down();
-					if ((Math.abs(o) <= half - 1) && isEndIslandSurface(world.getBlockState(fwd2))) {
-						world.setBlockState(fwd2, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+
+				if (isEndIslandSurface(topState)) {
+					world.setBlockState(top, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+					placed++;
+
+					// Forward/back smoothing: only for inner disk to keep cost modest
+					if (dx * dx + dz * dz <= Math.max(1, radius - 1) * Math.max(1, radius - 1)) {
+						BlockPos fwdXZ = top.offset(mainDir);
+						if (fwdXZ.getX() >= chunkMinX && fwdXZ.getX() <= chunkMaxX && fwdXZ.getZ() >= chunkMinZ && fwdXZ.getZ() <= chunkMaxZ) {
+							BlockPos fwd = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, fwdXZ).down();
+							if (isEndIslandSurface(world.getBlockState(fwd))) {
+								world.setBlockState(fwd, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+							}
+						}
+						BlockPos fwd2XZ = top.offset(mainDir, 2);
+						if (fwd2XZ.getX() >= chunkMinX && fwd2XZ.getX() <= chunkMaxX && fwd2XZ.getZ() >= chunkMinZ && fwd2XZ.getZ() <= chunkMaxZ) {
+							BlockPos fwd2 = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, fwd2XZ).down();
+							if (isEndIslandSurface(world.getBlockState(fwd2))) {
+								world.setBlockState(fwd2, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+							}
+						}
 					}
-				}
 
-				// If this column borders the void or a large drop, create a hanging drip
-				Direction outward = mostOpenOutward(world, top);
-				if (outward != null) {
-					makeHangingShelf(world, top, outward, 2 + (int) hashToRange(top.getX(), top.getZ(), 0, 2),
-						3 + (int) hashToRange(top.getZ(), top.getX(), 0, 4));
-				}
+					// Hanging shelf scaled by width, and lightly paint adjacent vertical faces to read as a river wall
+					Direction outward = mostOpenOutward(world, top);
+					if (outward != null) {
+						int shelfOut = Math.min(6, 2 + (width / 4) + (int) hashToRange(top.getX(), top.getZ(), 0, 1));
+						int dripDown = Math.min(10, 3 + (width / 2) + (int) hashToRange(top.getZ(), top.getX(), 0, 2));
+						makeHangingShelf(world, top, outward, shelfOut, dripDown);
 
-				// If this is a floating platform, create pillar(s) connecting to lower river/surface below
-				BlockPos underside = findUndersideBelowTop(world, top);
-				if (underside != null) {
-					BlockPos lowerSurface = findNextLowerSurfaceBelow(world, underside, 56);
-					if (lowerSurface != null) {
-						int drop = underside.getY() - lowerSurface.getY();
-						if (drop >= 6) {
-							placeIcePillar(world, underside.down(), lowerSurface.up());
-							// Seed a bit of river continuation on the lower surface for visual connection
-							if (isEndIslandSurface(world.getBlockState(lowerSurface))) {
-								world.setBlockState(lowerSurface, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
-								// widen by one orth step for cohesion
-								BlockPos ls1 = lowerSurface.offset(orth);
-								BlockPos ls2 = lowerSurface.offset(orth.getOpposite());
-								if (isEndIslandSurface(world.getBlockState(ls1))) {
-									world.setBlockState(ls1, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+					// Quick wall coating: 2-3 blocks down along the outward face (slightly more aggressive)
+					for (int dy = 1; dy <= Math.min(3, 1 + (width + 2) / 5); dy++) {
+							BlockPos downFace = top.offset(outward).down(dy);
+							if (downFace.getX() >= chunkMinX && downFace.getX() <= chunkMaxX && downFace.getZ() >= chunkMinZ && downFace.getZ() <= chunkMaxZ) {
+								BlockState s = world.getBlockState(downFace);
+								if (s.isAir()) {
+									world.setBlockState(downFace, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
 								}
-								if (isEndIslandSurface(world.getBlockState(ls2))) {
-									world.setBlockState(ls2, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+							}
+						}
+					}
+
+					// Pillar continuation if floating
+					BlockPos underside = findUndersideBelowTop(world, top);
+					if (underside != null) {
+						BlockPos lowerSurface = findNextLowerSurfaceBelow(world, underside, 56);
+						if (lowerSurface != null) {
+							int drop = underside.getY() - lowerSurface.getY();
+							if (drop >= 6) {
+								placeIcePillar(world, underside.down(), lowerSurface.up(), Math.max(1, width / 4));
+								if (isEndIslandSurface(world.getBlockState(lowerSurface))) {
+									world.setBlockState(lowerSurface, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+									BlockPos ls1 = lowerSurface.offset(orth);
+									BlockPos ls2 = lowerSurface.offset(orth.getOpposite());
+									if (isEndIslandSurface(world.getBlockState(ls1))) {
+										world.setBlockState(ls1, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+									}
+									if (isEndIslandSurface(world.getBlockState(ls2))) {
+										world.setBlockState(ls2, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+									}
 								}
 							}
 						}
@@ -299,7 +430,7 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 		return null;
 	}
 
-	private static void placeIcePillar(StructureWorldAccess world, BlockPos fromExclusive, BlockPos toInclusive) {
+private static void placeIcePillar(StructureWorldAccess world, BlockPos fromExclusive, BlockPos toInclusive, int radius) {
 		// Clamp to this chunk only
 		int chunkMinX = Math.floorDiv(fromExclusive.getX(), 16) * 16;
 		int chunkMinZ = Math.floorDiv(fromExclusive.getZ(), 16) * 16;
@@ -307,20 +438,25 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 		int chunkMaxZ = chunkMinZ + 15;
 
 		int minY = Math.min(fromExclusive.getY(), toInclusive.getY());
-		for (int y = fromExclusive.getY(); y >= minY && y >= world.getBottomY() + 1; y--) {
-			BlockPos p = new BlockPos(fromExclusive.getX(), y, fromExclusive.getZ());
-			if (p.getX() < chunkMinX || p.getX() > chunkMaxX || p.getZ() < chunkMinZ || p.getZ() > chunkMaxZ) {
-				break;
-			}
-			if (!world.getBlockState(p).isAir()) {
-				// stop when we hit solid to avoid tunneling through islands
-				break;
-			}
-			world.setBlockState(p, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
-			if (y <= toInclusive.getY()) {
-				break;
-			}
-		}
+    for (int y = fromExclusive.getY(); y >= minY && y >= world.getBottomY() + 1; y--) {
+        // Draw a small solid disk per level
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx * dx + dz * dz > radius * radius) continue;
+                BlockPos p = new BlockPos(fromExclusive.getX() + dx, y, fromExclusive.getZ() + dz);
+                if (p.getX() < chunkMinX || p.getX() > chunkMaxX || p.getZ() < chunkMinZ || p.getZ() > chunkMaxZ) {
+                    continue;
+                }
+                if (!world.getBlockState(p).isAir()) {
+                    continue;
+                }
+                world.setBlockState(p, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+            }
+        }
+        if (y <= toInclusive.getY()) {
+            break;
+        }
+    }
 	}
 
 	private static void makeHangingShelf(StructureWorldAccess world, BlockPos edgeTop, Direction outward, int outExtent, int downExtent) {

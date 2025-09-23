@@ -9,4 +9,6 @@ public class EtherealOrbRenderState extends LivingEntityRenderState {
     public final AnimationState rotateAnimationState = new AnimationState();
     public boolean charged;
     public boolean baby;
+    public boolean stunted;
+    public boolean bulbPresent;
 }

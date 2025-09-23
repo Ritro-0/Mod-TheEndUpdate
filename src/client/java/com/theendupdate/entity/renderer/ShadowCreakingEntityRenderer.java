@@ -1,0 +1,406 @@
+package com.theendupdate.entity.renderer;
+
+import com.theendupdate.TemplateMod;
+import com.theendupdate.entity.ShadowCreakingEntity;
+import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.entity.CreakingEntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.entity.MobEntityRenderer;
+import net.minecraft.client.render.entity.model.CreakingEntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayer;
+import net.minecraft.client.render.entity.state.CreakingEntityRenderState;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.MathHelper;
+// import removed: RotationAxis
+import net.minecraft.entity.AnimationState;
+import java.lang.reflect.Field;
+import java.util.Map;
+
+public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreakingEntity, CreakingEntityRenderState, CreakingEntityModel> {
+	private static final Identifier TEXTURE = Identifier.of(TemplateMod.MOD_ID, "textures/entity/shadow_creaking.png");
+	// Kept for reference; timing derives from AnimationState now
+	// private static final int EMERGE_DURATION_TICKS = 134;
+	private static final EntityModelLayer CREAKING_LAYER = new EntityModelLayer(Identifier.ofVanilla("creaking"), "main");
+	private static final int EMERGE_DURATION_TICKS = 134;
+	private static final int LEVITATE_DURATION_TICKS = 140; // match server extension
+	private float lastEmergeProgress;
+	private final CreakingEntityRenderer<ShadowCreakingEntity> vanillaDelegate;
+
+	public ShadowCreakingEntityRenderer(EntityRendererFactory.Context ctx) {
+		super(ctx, new ShadowCreakingPlantingModel(ctx.getPart(CREAKING_LAYER)), 0.6f);
+		this.vanillaDelegate = new CreakingEntityRenderer<>(ctx);
+	}
+
+	@Override
+	public CreakingEntityRenderState createRenderState() {
+		return new CreakingEntityRenderState();
+	}
+
+	@Override
+	public void updateRenderState(ShadowCreakingEntity entity, CreakingEntityRenderState state, float tickDelta) {
+		// Populate all vanilla creaking animation state via delegate
+		this.vanillaDelegate.updateRenderState(entity, state, tickDelta);
+		try {
+			// Drive emerge progress from the entity's AnimationState time when POSE == EMERGING
+			float raw;
+			if (entity.getPose() == net.minecraft.entity.EntityPose.EMERGING) {
+				float ms = (float)entity.emergingAnimationState.getTimeInMilliseconds(entity.age);
+				raw = MathHelper.clamp(ms / 6700.0f, 0.0f, 1.0f);
+			} else {
+				raw = 1.0f;
+			}
+			// Remapped to surface earlier (~2s), hold mid-height until final rise (~0.70 raw),
+			// then complete the rise to standing.
+			float mapped;
+			if (raw < 0.12f) {
+				// Initial settle: shallow sink only
+				float x = raw / 0.12f;
+				float e = 1.0f - (float)Math.pow(1.0f - x, 2.0);
+				mapped = e * 0.12f;
+			} else if (raw < 0.30f) {
+				// Early surfacing to expose legs/feet above ground by ~2s
+				float x = (raw - 0.12f) / 0.18f;
+				float e = x < 0.5f ? 2.0f * x * x : 1.0f - (float)Math.pow(-2.0f * x + 2.0f, 2.0) / 2.0f;
+				mapped = 0.12f + e * 0.44f; // -> 0.56 at raw=0.30
+			} else if (raw < 0.70f) {
+				// Plateau so the body holds while the leg provides leverage
+				mapped = 0.56f;
+			} else if (raw < 0.90f) {
+				// Final rise
+				float x = (raw - 0.70f) / 0.20f;
+				mapped = 0.56f + x * 0.43f; // 0.56 -> 0.99
+			} else {
+				// Final settle
+				float x = (raw - 0.90f) / 0.10f;
+				mapped = 0.99f + x * 0.01f;
+			}
+			this.lastEmergeProgress = MathHelper.clamp(mapped, 0.0f, 1.0f);
+			if (this.getModel() instanceof ShadowCreakingPlantingModel m) {
+				m.setEmergeProgress(this.lastEmergeProgress);
+				if (entity.getPose() == net.minecraft.entity.EntityPose.EMERGING) {
+					m.beginEmerge((int)(entity.age + tickDelta));
+				} else {
+					m.endEmerge();
+				}
+				// Pass levitation state/time for head spin overlay. Use multiple signals to be robust:
+				boolean trackedLev = entity.isLevitating() || entity.levitatingAnimationState.isRunning();
+				boolean windowLev = (entity.getPose() != net.minecraft.entity.EntityPose.EMERGING)
+					&& (entity.age >= EMERGE_DURATION_TICKS)
+					&& (entity.age < EMERGE_DURATION_TICKS + LEVITATE_DURATION_TICKS);
+				boolean lev = trackedLev || windowLev;
+				// Compute phase: first 2s arms-out; after that is hover
+				float totalMs;
+				if (trackedLev) {
+					totalMs = (float)entity.levitatingAnimationState.getTimeInMilliseconds(entity.age) + tickDelta * 50.0f;
+				} else if (windowLev) {
+					totalMs = Math.max(0.0f, ((entity.age + tickDelta) - EMERGE_DURATION_TICKS) * 50.0f);
+				} else {
+					totalMs = 0.0f;
+				}
+				m.setLevitating(lev, totalMs, (int)(entity.age + tickDelta));
+			}
+		} catch (Throwable ignored) {
+			this.lastEmergeProgress = 1.0f;
+		}
+	}
+
+	@Override
+	public Identifier getTexture(CreakingEntityRenderState state) {
+		return TEXTURE;
+	}
+
+	@Override
+	public void render(CreakingEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+		float progress = this.lastEmergeProgress; // 0..1
+		float inv = 1.0f - progress;
+		float h = inv * 1.6f;
+		if (h > 0.0f) {
+			matrices.translate(0.0, -h, 0.0);
+		}
+		super.render(state, matrices, vertexConsumers, light);
+	}
+
+	private static final class ShadowCreakingPlantingModel extends CreakingEntityModel {
+		private final ModelPart modelRoot;
+		private ModelPart body;
+		private ModelPart head;
+		private ModelPart leftArm;
+		private ModelPart rightArm;
+		private ModelPart leftLeg;
+		private ModelPart rightLeg;
+		// Progress is computed and used only for vertical offset during render
+		private float emergeProgress;
+		private final net.minecraft.client.render.entity.animation.Animation emergingAnim;
+		private final net.minecraft.client.render.entity.animation.Animation levitatingAnim;
+		private final AnimationState emergingState = new AnimationState();
+		private boolean emergingActive;
+		private final AnimationState levitatingState = new AnimationState();
+		private boolean levitatingActive;
+		private float levitatingMs;
+		private float lastLevitationAngle;
+		// removed unused overlay tracking
+
+		public ShadowCreakingPlantingModel(ModelPart root) {
+			super(root);
+			this.modelRoot = root;
+			try {
+				// First, try common direct names
+				this.body = tryGet(root, "body");
+				this.head = tryGet(root, "head");
+				this.leftArm = tryGet(root, "left_arm");
+				this.rightArm = tryGet(root, "right_arm");
+				this.leftLeg = tryGet(root, "left_leg");
+				this.rightLeg = tryGet(root, "right_leg");
+				// If missing, do a deep recursive discovery based on name substrings
+				if (this.body == null) this.body = findDeepByNames(root, new String[]{"body"}, new String[]{"torso", "spine", "chest"});
+				if (this.head == null) this.head = findDeepByNames(root, new String[]{"head"}, new String[]{"skull"});
+				if (this.leftArm == null) this.leftArm = findDeepByNames(root, new String[]{"left","arm"}, new String[]{"arm_left","leftarm","left","hand"});
+				if (this.rightArm == null) this.rightArm = findDeepByNames(root, new String[]{"right","arm"}, new String[]{"arm_right","rightarm","right","hand"});
+				if (this.leftLeg == null) this.leftLeg = findDeepByNames(root, new String[]{"left","leg"}, new String[]{"leg_left","leftleg","left","thigh"});
+				if (this.rightLeg == null) this.rightLeg = findDeepByNames(root, new String[]{"right","leg"}, new String[]{"leg_right","rightleg","right","thigh"});
+			} catch (Throwable ignored) {}
+			this.emergingAnim = com.theendupdate.entity.animation.ShadowCreakingAnimations.EMERGING.createAnimation(root);
+			this.levitatingAnim = com.theendupdate.entity.animation.ShadowCreakingAnimations.LEVITATING.createAnimation(root);
+		}
+
+		private ModelPart tryGet(ModelPart base, String name) {
+			if (base == null) return null;
+			try {
+				return base.getChild(name);
+			} catch (Throwable ignored) {
+				return null;
+			}
+		}
+
+		public void setEmergeProgress(float p) {
+			this.emergeProgress = MathHelper.clamp(p, 0.0f, 1.0f);
+		}
+
+		public void beginEmerge(int age) {
+			this.emergingState.startIfNotRunning(age);
+			this.emergingActive = true;
+		}
+
+		public void endEmerge() {
+			this.emergingState.stop();
+			this.emergingActive = false;
+		}
+
+		public void setLevitating(boolean active, float ms, int renderAge) {
+			this.levitatingActive = active;
+			this.levitatingMs = ms;
+			if (active) {
+				int offsetTicks = Math.max(0, (int)(ms / 50.0f));
+				int startAge = Math.max(0, renderAge - offsetTicks);
+				this.levitatingState.startIfNotRunning(startAge);
+			} else {
+				this.levitatingState.stop();
+			}
+		}
+
+		@Override
+		public void setAngles(CreakingEntityRenderState state) {
+			// Take full control during LEVITATING just like EMERGING
+			if (this.levitatingActive) {
+				for (ModelPart part : this.modelRoot.traverse()) part.resetTransform();
+				this.levitatingAnim.apply(this.levitatingState, state.age, 1.0f);
+				// Ensure parts resolved for spin overlay
+				if (this.head == null) {
+					this.head = tryGet(this.modelRoot, "head");
+					if (this.head == null) this.head = findDeepByNames(this.modelRoot, new String[]{"head"}, new String[]{"skull","cranium","neck"});
+				}
+				if (this.body == null) {
+					this.body = tryGet(this.modelRoot, "body");
+					if (this.body == null) this.body = findDeepByNames(this.modelRoot, new String[]{"body"}, new String[]{"torso","chest"});
+				}
+				// After the 2s intro, overlay rapid head spin
+				float levMsNow = (float)this.levitatingState.getTimeInMilliseconds(state.age);
+				if (levMsNow >= 2000.0f) {
+					ModelPart spinTarget = this.head != null ? this.head : this.body;
+					if (spinTarget != null) {
+						// Use age in ticks to accumulate spin delta frame-over-frame for stability
+						float seconds = (state.age % 200000) / 20.0f; // avoid float overflow
+						float revolutionsPerSecond = 3.0f;
+						float angle = (float)(Math.PI * 2.0) * revolutionsPerSecond * seconds;
+						float twoPi = (float)(Math.PI * 2.0);
+						angle = angle % twoPi;
+						spinTarget.yaw -= this.lastLevitationAngle;
+						spinTarget.yaw += angle;
+						this.lastLevitationAngle = angle;
+					}
+				}
+				return;
+			}
+			// Apply EMERGING animation 1:1 during emerge; otherwise defer to vanilla setAngles
+			if (this.emergingActive) {
+				for (ModelPart part : this.modelRoot.traverse()) part.resetTransform();
+				this.emergingAnim.apply(this.emergingState, state.age, 1.0f);
+
+				// Overlay physical mechanics: hands plant early, then a right-leg step drives the rise
+				// without snapping arms backward.
+				float p = MathHelper.clamp(this.emergeProgress, 0.0f, 1.0f); // vertical progress 0..1
+				float ms = (float)this.emergingState.getTimeInMilliseconds(state.age);
+				float raw = MathHelper.clamp(ms / 6700.0f, 0.0f, 1.0f); // timeline 0..1
+				float release = p > 0.98f ? MathHelper.clamp((p - 0.98f) / 0.02f, 0.0f, 1.0f) : 0.0f;
+				float overlayFade = 1.0f - MathHelper.clamp((raw - 0.90f) / 0.10f, 0.0f, 1.0f); // fade overlays before the very end
+				float scale = (1.0f - release) * overlayFade;
+				float heightNorm = MathHelper.clamp(1.0f - p, 0.0f, 1.0f); // 1 high above, 0 near ground
+
+				// Early reach-down while settling (raw≈0.05..0.45)
+				float pre = MathHelper.clamp((raw - 0.04f) / 0.41f, 0.0f, 1.0f);
+				// Arm plant scales with height to avoid clipping when near ground
+				float plantByHeight = MathHelper.clamp(heightNorm * 0.35f + 0.12f, 0.0f, 1.0f); // hover just above surface
+				// Positive pitch bends arms forward toward the ground on this rig
+				float earlyDownDeg = 52.0f * pre * (1.0f - MathHelper.clamp((raw - 0.45f) / 0.14f, 0.0f, 1.0f)) * plantByHeight * scale;
+				float earlyDownRad = earlyDownDeg * (float)Math.PI / 180.0f;
+				if (this.leftArm != null) this.leftArm.pitch += earlyDownRad;
+				if (this.rightArm != null) this.rightArm.pitch += earlyDownRad;
+				// Clamp arm pitch to avoid floor clipping (allow strong forward bend; limit positive up-rotation)
+				float maxDownDegHigh = 85.0f;
+				float maxDownDegLow = 45.0f;
+				float maxDownDeg = maxDownDegHigh + (maxDownDegLow - maxDownDegHigh) * MathHelper.clamp(p, 0.0f, 1.0f);
+				float maxDownRad = maxDownDeg * (float)Math.PI / 180.0f;
+				float maxUpRad = 0.75f; // ~43°
+				if (this.leftArm != null) this.leftArm.pitch = MathHelper.clamp(this.leftArm.pitch, -maxUpRad, maxDownRad);
+				if (this.rightArm != null) this.rightArm.pitch = MathHelper.clamp(this.rightArm.pitch, -maxUpRad, maxDownRad);
+
+				// Right-leg step previously driven procedurally is now fully authored in keyframes
+				float upT = MathHelper.clamp((raw - 0.42f) / 0.14f, 0.0f, 1.0f);
+				float up = (float)Math.sin((Math.PI * 0.5f) * upT);
+				float downT = MathHelper.clamp((raw - 0.56f) / 0.44f, 0.0f, 1.0f);
+				float down = 1.0f - (float)Math.pow(downT, 1.3);
+				float stepFactor = raw < 0.56f ? up : down; // used for arm/body blending only
+
+				// As the step begins, ease arms back toward neutral (no backward snap)
+				float armLiftBackDeg = 25.0f * stepFactor * scale * (1.0f - heightNorm);
+				float armLiftBackRad = armLiftBackDeg * (float)Math.PI / 180.0f;
+				if (this.leftArm != null) this.leftArm.pitch -= armLiftBackRad;
+				if (this.rightArm != null) this.rightArm.pitch -= armLiftBackRad;
+
+				// Body bend coordinated with the step and rise (deeper waist bend)
+				// Blend waist bend down before the end so stance is neutral when EMERGING ends
+				float standWindow = MathHelper.clamp((raw - 0.70f) / 0.26f, 0.0f, 1.0f); // extend to align with slow retract
+				float bodyLeanDeg = (18.0f * pre * (1.0f - stepFactor) + 32.0f * stepFactor * (1.0f - standWindow)) * overlayFade;
+				if (this.body != null) this.body.pitch += (bodyLeanDeg * scale) * (float)Math.PI / 180.0f;
+
+				// Legs: do not procedurally override; keyframes handle early plant and hold
+				return;
+			}
+			super.setAngles(state);
+			// Ensure critical parts are located even if not found at construction time
+			if (this.head == null) {
+				this.head = tryGet(this.modelRoot, "head");
+				if (this.head == null) this.head = findDeepByNames(this.modelRoot, new String[]{"head"}, new String[]{"skull","cranium","neck"});
+			}
+			if (this.body == null) {
+				this.body = tryGet(this.modelRoot, "body");
+				if (this.body == null) this.body = findDeepByNames(this.modelRoot, new String[]{"body"}, new String[]{"torso","chest"});
+			}
+			if (this.leftArm == null) {
+				this.leftArm = tryGet(this.modelRoot, "left_arm");
+				if (this.leftArm == null) this.leftArm = findDeepByNames(this.modelRoot, new String[]{"left","arm"}, new String[]{"arm_left","leftarm","left","hand"});
+			}
+			if (this.rightArm == null) {
+				this.rightArm = tryGet(this.modelRoot, "right_arm");
+				if (this.rightArm == null) this.rightArm = findDeepByNames(this.modelRoot, new String[]{"right","arm"}, new String[]{"arm_right","rightarm","right","hand"});
+			}
+
+			// Apply authored LEVITATING animation when levitating
+			if (this.levitatingActive) {
+				// Reset transforms so levitation animation fully controls the pose
+				for (ModelPart part : this.modelRoot.traverse()) part.resetTransform();
+				// Drive using the same API as EMERGING: advance by the levitation state's time
+				// Sync levitatingState time from ms for consistency
+				int syntheticAge = (int)(this.levitatingMs / 50.0f);
+				this.levitatingAnim.apply(this.levitatingState, syntheticAge, 1.0f);
+				// After the 2s intro, overlay rapid head spin
+				if (this.levitatingMs >= 2000.0f) {
+					ModelPart spinTarget = this.head != null ? this.head : findDeepByNames(this.modelRoot, new String[]{"head"}, new String[]{"skull","cranium","neck"});
+					if (spinTarget == null) spinTarget = this.body != null ? this.body : findDeepByNames(this.modelRoot, new String[]{"body"}, new String[]{"torso","chest"});
+					if (spinTarget != null) {
+						float seconds = this.levitatingMs / 1000.0f;
+						float revolutionsPerSecond = 3.0f;
+						float angle = (float)(Math.PI * 2.0) * revolutionsPerSecond * seconds;
+						float twoPi = (float)(Math.PI * 2.0);
+						angle = angle % twoPi;
+						if (angle > Math.PI) angle -= twoPi;
+						spinTarget.yaw -= this.lastLevitationAngle;
+						spinTarget.yaw += angle;
+						this.lastLevitationAngle = angle;
+					}
+				}
+			} else if (this.lastLevitationAngle != 0.0f) {
+				// Clear any leftover overlay when levitation ends
+				ModelPart spinTarget = this.head != null ? this.head : this.body;
+				if (spinTarget != null) {
+					spinTarget.yaw -= this.lastLevitationAngle;
+				}
+				this.lastLevitationAngle = 0.0f;
+			}
+
+			// Remove manual arm overlay; handled by authored LEVITATING animation
+		}
+
+		// kept intentionally for potential future use; not used currently
+		@SuppressWarnings("unused")
+		private void discoverPartsByReflection() {}
+
+		@SuppressWarnings("unchecked")
+		private static Map<String, ModelPart> getChildrenMap(ModelPart part) {
+			if (part == null) return null;
+			try {
+				Field f = null;
+				for (Field ff : part.getClass().getDeclaredFields()) {
+					if (Map.class.isAssignableFrom(ff.getType())) { f = ff; break; }
+				}
+				if (f == null) return null;
+				f.setAccessible(true);
+				Object v = f.get(part);
+				if (v instanceof Map) return (Map<String, ModelPart>) v;
+			} catch (Throwable ignored) {}
+			return null;
+		}
+
+		private static ModelPart findDeepByNames(ModelPart base, String[] requiredAll, String[] altAny) {
+			ModelPart found = findDeepByNames0(base, requiredAll);
+			if (found != null) return found;
+			if (altAny != null) {
+				for (String token : altAny) {
+					found = findDeepByNames0(base, new String[]{token});
+					if (found != null) return found;
+				}
+			}
+			return null;
+		}
+
+		private static ModelPart findDeepByNames0(ModelPart base, String[] reqs) {
+			Map<String, ModelPart> map = getChildrenMap(base);
+			if (map == null || map.isEmpty()) return null;
+			for (Map.Entry<String, ModelPart> e : map.entrySet()) {
+				String key = e.getKey();
+				if (key != null) {
+					String k = key.toLowerCase();
+					boolean ok = true;
+					for (String r : reqs) { if (!k.contains(r)) { ok = false; break; } }
+					if (ok) return e.getValue();
+				}
+				ModelPart deeper = findDeepByNames0(e.getValue(), reqs);
+				if (deeper != null) return deeper;
+			}
+			return null;
+		}
+	}
+
+	// Helpers intentionally stubbed; suppress unused warnings
+	@SuppressWarnings("unused")
+	private static void startAnimationStatesContaining(CreakingEntityRenderState state, int age, String... keys) {}
+	@SuppressWarnings("unused")
+	private static void stopAnimationStatesContaining(CreakingEntityRenderState state, String... keys) {}
+	@SuppressWarnings("unused")
+	private static Field[] getAllFields(Class<?> clazz) { return new Field[0]; }
+}
+
+
+

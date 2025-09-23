@@ -12,6 +12,13 @@
     ],
     "subtitle": "subtitle.theendupdate.ethereal_orb.death"
   }
+  ,
+  "entity.ethereal_orb.loses_bulb": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_loses_bulb"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.loses_bulb"
+  }
 }
 
 

@@ -24,11 +24,12 @@ import com.theendupdate.registry.ModItems;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.hit.BlockHitResult;
+// import removed: BlockHitResult
 import net.minecraft.world.RaycastContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ActionResult;
@@ -43,7 +44,7 @@ import java.util.Comparator;
 import java.util.List;
 import net.minecraft.util.math.Box;
 import com.theendupdate.registry.ModEntities;
-import net.minecraft.nbt.NbtCompound;
+// import removed: NbtCompound
 
 /**
  * EtherealOrbEntity - A floating, glowing orb creature that inhabits The End
@@ -60,12 +61,16 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     private static final TrackedData<Boolean> BREED_READY = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> GROWING_AGE = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> BREEDING = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+	private static final TrackedData<Boolean> STUNTED = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+	private static final TrackedData<Boolean> BULB_PRESENT = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final int BREED_COOLDOWN_TICKS = 3 * 60 * 20; // 3 minutes
     public final AnimationState rotateAnimationState = new AnimationState();
     public final AnimationState moveAnimationState = new AnimationState();
     public final AnimationState finishmovementAnimationState = new AnimationState();
     private boolean hasStartedMoving = false;
     private int breedCooldownTicks = 0;
+    private int panicTicks = 0;
+    private int bloodTicks = 0;
 
     // Baby/growth system
     private static final int BABY_GROW_TICKS = 24000; // 20 minutes like vanilla
@@ -122,6 +127,8 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         builder.add(BREED_READY, Boolean.FALSE);
         builder.add(GROWING_AGE, 0);
         builder.add(BREEDING, Boolean.FALSE);
+		builder.add(STUNTED, Boolean.FALSE);
+		builder.add(BULB_PRESENT, Boolean.TRUE);
     }
 
     public boolean isCharged() {
@@ -135,6 +142,26 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             else this.removeCommandTag("theendupdate:charged");
         }
     }
+
+	public boolean isStunted() {
+		return this.dataTracker.get(STUNTED);
+	}
+
+	public void setStunted(boolean value) {
+		this.dataTracker.set(STUNTED, value);
+		if (!this.getWorld().isClient) {
+			if (value) this.addCommandTag("theendupdate:stunted");
+			else this.removeCommandTag("theendupdate:stunted");
+		}
+	}
+
+	public boolean hasBulb() {
+		return this.dataTracker.get(BULB_PRESENT);
+	}
+
+	public void setBulbPresent(boolean value) {
+		this.dataTracker.set(BULB_PRESENT, value);
+	}
     
     @Override
     protected void initGoals() {
@@ -173,10 +200,33 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             }
         }
 
+        // Panic & blood timers (server) and blood particle spew
+        if (!this.getWorld().isClient) {
+            if (this.panicTicks > 0) this.panicTicks--;
+            if (this.bloodTicks > 0) {
+                this.bloodTicks--;
+                if (this.getWorld() instanceof ServerWorld sw) {
+                    double cx = this.getX();
+                    double cy = this.getY() + 0.9;
+                    double cz = this.getZ();
+                    // Red block-dust spew using powered redstone wire for active-wire color
+                    net.minecraft.block.BlockState wire = net.minecraft.block.Blocks.REDSTONE_WIRE.getDefaultState().with(net.minecraft.state.property.Properties.POWER, 15);
+                    net.minecraft.particle.BlockStateParticleEffect redDust = new net.minecraft.particle.BlockStateParticleEffect(
+                        ParticleTypes.BLOCK,
+                        wire
+                    );
+                    sw.spawnParticles(redDust, cx, cy, cz, 14, 0.35, 0.35, 0.35, 0.20);
+                }
+            }
+        }
+
         // Sync charged from scoreboard tags on server (persists across saves)
         if (!this.getWorld().isClient) {
             if (this.getCommandTags().contains("theendupdate:charged") && !this.isCharged()) {
                 this.setCharged(true);
+            }
+            if (this.getCommandTags().contains("theendupdate:stunted") && !this.isStunted()) {
+                this.setStunted(true);
             }
         }
 
@@ -201,29 +251,35 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 this.getNavigation().stop();
             }
 
-            // Growth ticking for babies and speed/base adjustments
-            if (this.growingAgeTicks < 0) {
-                this.growingAgeTicks++;
-                this.dataTracker.set(GROWING_AGE, this.growingAgeTicks);
-                // Ensure client knows we are a baby
-                if (!this.dataTracker.get(BABY)) this.dataTracker.set(BABY, Boolean.TRUE);
-                if (this.growingAgeTicks == 0) {
-                    this.onGrowUp();
-                }
-            }
+		// Growth ticking for babies and speed/base adjustments
+		if (this.growingAgeTicks < 0) {
+			if (!this.isStunted()) {
+				this.growingAgeTicks++;
+				this.dataTracker.set(GROWING_AGE, this.growingAgeTicks);
+				// Ensure client knows we are a baby
+				if (!this.dataTracker.get(BABY)) this.dataTracker.set(BABY, Boolean.TRUE);
+				if (this.growingAgeTicks == 0) {
+					this.onGrowUp();
+				}
+			} else {
+				// Remain a baby forever when stunted
+				if (!this.dataTracker.get(BABY)) this.dataTracker.set(BABY, Boolean.TRUE);
+			}
+		}
 
             // Adjust base speed attributes for babies for a slight boost
             EntityAttributeInstance walk = this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED);
             EntityAttributeInstance fly = this.getAttributeInstance(EntityAttributes.FLYING_SPEED);
-            if (walk != null && fly != null) {
-                if (this.isBaby()) {
-                    walk.setBaseValue(0.4 * 1.2); // +20%
-                    fly.setBaseValue(0.7 * 1.2);  // +20%
-                } else {
-                    walk.setBaseValue(0.4);
-                    fly.setBaseValue(0.7);
-                }
-            }
+			if (walk != null && fly != null) {
+				if (this.isBaby()) {
+					// Mirror vanilla baby animals: modest speed boost over adults
+					walk.setBaseValue(0.4 * 1.25);
+					fly.setBaseValue(0.7 * 1.25);
+				} else {
+					walk.setBaseValue(0.4);
+					fly.setBaseValue(0.7);
+				}
+			}
 
             // Delayed baby spawn after rotate animation completes
             if (this.pendingBabySpawn && this.age >= this.babySpawnAge) {
@@ -237,11 +293,27 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 }
             }
         }
+
+        // While panicking, move erratically at higher speed to simulate fear
+        if (!this.getWorld().isClient && this.isPanicking()) {
+            Vec3d pos = this.getPos();
+            double range = 4.0;
+            double dx = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
+            double dy = (this.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
+            double dz = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
+            Vec3d target = new Vec3d(
+                pos.x + dx,
+                MathHelper.clamp(pos.y + dy, this.getWorld().getBottomY() + 5, this.getWorld().getBottomY() + 100),
+                pos.z + dz
+            );
+            Vec3d safe = this.clampTargetToFreeSpace(pos, target);
+            this.getMoveControl().moveTo(safe.x, safe.y, safe.z, 3.2);
+        }
     }
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return com.theendupdate.registry.ModSounds.ETHEREAL_ORB_IDLE;
+        return this.isPanicking() ? null : com.theendupdate.registry.ModSounds.ETHEREAL_ORB_IDLE;
     }
 
     @Override
@@ -299,8 +371,44 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     }
 
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
-        // Priority: brushing to harvest spectral debris (and remove glow)
-        ItemStack stack = player.getStackInHand(hand);
+		// Shearing a baby orb to remove bulb and stunt growth
+		ItemStack stack = player.getStackInHand(hand);
+        if (this.isBaby() && !this.isStunted() && stack != null && stack.isOf(Items.SHEARS)) {
+			if (!this.getWorld().isClient) {
+				this.setStunted(true);
+				this.panicTicks = 40; // 2 seconds of panic
+				this.bloodTicks = 20; // brief spew of dust
+                this.setBulbPresent(false);
+				// Drop ethereal bulb block item
+				if (this.getWorld() instanceof ServerWorld sw) {
+					this.dropStack(sw, new ItemStack(ModBlocks.ETHEREAL_BULB));
+				}
+				// Damage shears
+				if (!player.getAbilities().creativeMode) {
+					stack.damage(1, player, hand);
+				}
+				// Play lose bulb sound
+				this.getWorld().playSound(null, this.getBlockPos(), com.theendupdate.registry.ModSounds.ETHEREAL_ORB_LOSES_BULB, SoundCategory.NEUTRAL, 1.0f, 1.0f);
+			}
+			return this.getWorld().isClient ? ActionResult.SUCCESS : ActionResult.CONSUME;
+		}
+
+		// Reattach bulb to a stunted baby using the ethereal bulb item
+		if (this.isBaby() && this.isStunted() && !this.hasBulb() && stack != null && stack.isOf(ModBlocks.ETHEREAL_BULB.asItem())) {
+			if (!this.getWorld().isClient) {
+				if (!player.getAbilities().creativeMode) {
+					stack.decrement(1);
+				}
+				this.setBulbPresent(true);
+				this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.2f);
+				if (this.getWorld() instanceof ServerWorld sw) {
+					sw.spawnParticles(ParticleTypes.END_ROD, this.getX(), this.getY() + 0.9, this.getZ(), 8, 0.15, 0.15, 0.15, 0.0);
+				}
+			}
+			return this.getWorld().isClient ? ActionResult.SUCCESS : ActionResult.CONSUME;
+		}
+
+		// Priority: brushing to harvest spectral debris (and remove glow)
         if (this.isCharged() && stack != null && stack.isOf(Items.BRUSH)) {
             if (!this.getWorld().isClient) {
                 if (this.getWorld() instanceof ServerWorld sw) {
@@ -324,8 +432,12 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         return this.theendupdate$handleFeed(player, hand);
     }
 
-    private ActionResult theendupdate$handleFeed(PlayerEntity player, Hand hand) {
+	private ActionResult theendupdate$handleFeed(PlayerEntity player, Hand hand) {
         ItemStack stack = player.getStackInHand(hand);
+		// Refuse all feeding when stunted
+		if (this.isStunted()) {
+			return ActionResult.PASS;
+		}
         // Feed voidstar block to initiate rotate animation and delayed baby spawn
         if (stack != null && stack.isOf(com.theendupdate.registry.ModBlocks.VOIDSTAR_BLOCK.asItem())) {
             // Must be adult, not already spawning, and not on cooldown
@@ -424,7 +536,6 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
     private void spawnBaby(ServerWorld world) {
         EtherealOrbEntity baby = new EtherealOrbEntity(ModEntities.ETHEREAL_ORB, world);
-        if (baby == null) return;
         double ox = this.getX() + (this.getRandom().nextDouble() - 0.5) * 0.6;
         double oy = this.getY() + 0.5;
         double oz = this.getZ() + (this.getRandom().nextDouble() - 0.5) * 0.6;
@@ -452,7 +563,6 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     class FollowAdultGoal extends Goal {
         private static final double RANGE = 16.0;
         private static final double STOP_DISTANCE = 2.0;
-        private static final int REPATH_COOLDOWN_TICKS = 10;
 
         private final EtherealOrbEntity orb;
         private EtherealOrbEntity targetAdult;
@@ -465,14 +575,14 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         @Override
         public boolean canStart() {
-            if (!orb.isBaby()) return false;
+            if (!orb.isBaby() || orb.isPanicking()) return false;
             this.targetAdult = findNearestAdult();
             return this.targetAdult != null;
         }
 
         @Override
         public boolean shouldContinue() {
-            return orb.isBaby() && this.targetAdult != null && this.targetAdult.isAlive() && orb.squaredDistanceTo(this.targetAdult) > (STOP_DISTANCE * STOP_DISTANCE);
+            return orb.isBaby() && !orb.isPanicking() && this.targetAdult != null && this.targetAdult.isAlive() && orb.squaredDistanceTo(this.targetAdult) > (STOP_DISTANCE * STOP_DISTANCE);
         }
 
         @Override
@@ -483,19 +593,16 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         @Override
         public void tick() {
             if (this.targetAdult == null) return;
-            if (repathCooldown > 0) {
-                repathCooldown--;
-                return;
-            }
-            repathCooldown = REPATH_COOLDOWN_TICKS;
-            Vec3d pos = this.targetAdult.getPos();
-            // Move towards adult using flight control for natural pathing
-            double speed = 2.2; // slower to reduce overshoot into blocks
-            Vec3d from = orb.getPos();
-            Vec3d desired = new Vec3d(pos.x, pos.y + 0.2, pos.z);
-            Vec3d safeTarget = orb.clampTargetToFreeSpace(from, desired);
-            orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
-            orb.getLookControl().lookAt(this.targetAdult);
+				// Recalculate frequently so babies are responsive like vanilla FollowParent
+				repathCooldown = Math.max(0, repathCooldown - 1);
+				Vec3d pos = this.targetAdult.getPos();
+				// Slightly faster than adults so babies can catch up
+				double speed = 2.6;
+				Vec3d from = orb.getPos();
+				Vec3d desired = new Vec3d(pos.x, pos.y + 0.2, pos.z);
+				Vec3d safeTarget = orb.clampTargetToFreeSpace(from, desired);
+				orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
+				orb.getLookControl().lookAt(this.targetAdult);
         }
 
         private EtherealOrbEntity findNearestAdult() {
@@ -514,10 +621,18 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         private final EtherealOrbEntity orb;
         private BlockPos homeCrystalPos;
+		private BlockPos lastHomeCrystalPos;
         private Vec3d intermediateWaypoint;
         private Vec3d lastPosition;
         private int stuckCounter;
         private int repathCooldown;
+		// When horizontal circling is obstructed, allow a vertical orbit mode
+		private boolean verticalOrbitMode;
+		private boolean verticalOrbitLock;
+		private int orbitModeCooldown;
+		private int obstructionCounter;
+		// 0 = orbit in X-Y plane (vary x,y; z near home), 1 = orbit in Y-Z plane (vary y,z; x near home)
+		private int verticalPlaneAxis;
 
         MaintainHomeGoal(EtherealOrbEntity orb) {
             this.orb = orb;
@@ -526,12 +641,12 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         @Override
         public boolean canStart() {
-            return !orb.getWorld().isClient && orb.getTarget() == null;
+            return !orb.getWorld().isClient && orb.getTarget() == null && !orb.isPanicking();
         }
 
         @Override
         public boolean shouldContinue() {
-            return true; // runs continuously
+            return !orb.isPanicking(); // pause while panicking
         }
 
         @Override
@@ -539,22 +654,33 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             this.lastPosition = orb.getPos();
             this.stuckCounter = 0;
             this.repathCooldown = 0;
+			this.verticalOrbitMode = false;
+			this.verticalOrbitLock = false;
+			this.obstructionCounter = 0;
+			this.orbitModeCooldown = 0;
+			this.verticalPlaneAxis = orb.getRandom().nextBoolean() ? 0 : 1;
         }
 
         @Override
         public void tick() {
             if (repathCooldown > 0) repathCooldown--;
+			if (orbitModeCooldown > 0) orbitModeCooldown--;
 
-            // Validate or acquire home
+			// Validate or acquire home
             if (homeCrystalPos == null || !isTargetBlock(homeCrystalPos)) {
                 BlockPos found = findNearbyCrystal();
                 if (found == null) found = scanChunksForCrystal(SCAN_CHUNKS);
                 homeCrystalPos = found; // may be null
             }
+			// Configure orbit mode when home changes
+			if (homeCrystalPos != null && (lastHomeCrystalPos == null || !homeCrystalPos.equals(lastHomeCrystalPos))) {
+				configureOrbitModeForHome(homeCrystalPos);
+				lastHomeCrystalPos = homeCrystalPos.toImmutable();
+			}
 
             Vec3d desired;
             if (homeCrystalPos != null) {
-                Vec3d home = Vec3d.ofCenter(homeCrystalPos);
+				Vec3d home = Vec3d.ofCenter(homeCrystalPos);
                 double dist = orb.getPos().distanceTo(home);
                 // Detach if dragged too far from home
                 if (dist > HOME_MAX_DISTANCE) {
@@ -566,17 +692,58 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                     Vec3d target = home.add(dir.multiply(-Math.max(1.5, 0.5)));
                     desired = target;
                 } else {
-                    // Idle around home: pick a small offset ring target every few ticks
-                    if (repathCooldown == 0 || intermediateWaypoint == null || orb.getPos().squaredDistanceTo(intermediateWaypoint) < 1.0) {
-                        double angle = (orb.age % 360) * 0.0174533;
-                        double radius = 3.0 + (orb.getRandom().nextDouble() * 2.0);
-                        double x = home.x + Math.cos(angle) * radius;
-                        double y = home.y + 0.5 + (orb.getRandom().nextDouble() * 1.5 - 0.75);
-                        double z = home.z + Math.sin(angle) * radius;
-                        intermediateWaypoint = new Vec3d(x, y, z);
-                        repathCooldown = REPATH_TICKS;
-                    }
-                    desired = intermediateWaypoint;
+					// Idle around home: choose an orbit waypoint with clearance preference
+					if (repathCooldown == 0 || intermediateWaypoint == null || orb.getPos().squaredDistanceTo(intermediateWaypoint) < 1.0) {
+						double angle = (orb.age % 360) * 0.0174533;
+						// Keep same radius regardless of orbit mode
+						double radius = 3.0 + (orb.getRandom().nextDouble() * 2.0);
+						Vec3d curPos = orb.getPos();
+						Vec3d candidate;
+						if (verticalOrbitMode) {
+							candidate = computeVerticalOrbit(home, radius, angle, verticalPlaneAxis);
+							// If chosen axis is not clear, try the other vertical axis before falling back
+							if (!isSegmentClear(curPos, candidate)) {
+								int other = verticalPlaneAxis == 0 ? 1 : 0;
+								Vec3d alt = computeVerticalOrbit(home, radius, angle, other);
+								if (isSegmentClear(curPos, alt)) {
+									verticalPlaneAxis = other;
+									candidate = alt;
+								} else {
+									// If both vertical planes are blocked, stay in place radius but nudge forward slightly
+									candidate = computeHorizontalOrbit(home, Math.max(2.5, radius - 1.0), angle);
+								}
+						} else {
+							// Once vertical is enabled and locked, do not revert to horizontal circling
+							// even if horizontal appears clear now.
+							if (verticalOrbitLock) {
+								// no-op; keep candidate as current vertical orbit
+							}
+						}
+						} else {
+							candidate = computeHorizontalOrbit(home, radius, angle);
+							// If horizontal path is repeatedly obstructed, prefer switching to vertical when possible
+							if (!isSegmentClear(curPos, candidate)) {
+								obstructionCounter++;
+								if (obstructionCounter >= 3 && orbitModeCooldown == 0) {
+									Vec3d v0 = computeVerticalOrbit(home, radius, angle, 0);
+									Vec3d v1 = computeVerticalOrbit(home, radius, angle, 1);
+									if (isSegmentClear(curPos, v0) || isSegmentClear(curPos, v1)) {
+										verticalOrbitMode = true;
+										verticalPlaneAxis = isSegmentClear(curPos, v0) ? 0 : 1;
+										verticalOrbitLock = true; // stick with vertical once switched due to obstruction
+										orbitModeCooldown = 100;
+										candidate = verticalPlaneAxis == 0 ? v0 : v1;
+										obstructionCounter = 0;
+									}
+								}
+							} else {
+								obstructionCounter = 0;
+							}
+						}
+						intermediateWaypoint = candidate;
+						repathCooldown = REPATH_TICKS;
+					}
+					desired = intermediateWaypoint;
                 }
             } else {
                 // No home; wander and keep scanning
@@ -619,15 +786,35 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 desired = new Vec3d(desired.x, Math.min(desired.y, cur.y + 0.5), desired.z);
             }
 
-            // Stuck detection
+			// Stuck detection
             if (lastPosition != null) {
                 double move = cur.squaredDistanceTo(lastPosition);
                 if (move < 0.01) {
                     stuckCounter++;
-                    if (stuckCounter > 10) {
-                        desired = new Vec3d(desired.x, Math.max(desired.y + 4.0, cur.y + 6.0), desired.z);
-                        stuckCounter = 0;
-                    }
+					if (stuckCounter > 10) {
+						// If near home and horizontal circling is failing, try enabling vertical orbit
+						if (homeCrystalPos != null && !verticalOrbitMode && orbitModeCooldown == 0) {
+							Vec3d home = Vec3d.ofCenter(homeCrystalPos);
+							double angle = (orb.age % 360) * 0.0174533;
+							double radius = 3.5;
+							Vec3d v0 = computeVerticalOrbit(home, radius, angle, 0);
+							Vec3d v1 = computeVerticalOrbit(home, radius, angle, 1);
+							if (isSegmentClear(cur, v0) || isSegmentClear(cur, v1)) {
+								verticalOrbitMode = true;
+								verticalPlaneAxis = isSegmentClear(cur, v0) ? 0 : 1;
+								verticalOrbitLock = true;
+								orbitModeCooldown = 120;
+								intermediateWaypoint = verticalPlaneAxis == 0 ? v0 : v1;
+							} else {
+								// As a fallback, climb a bit to escape local obstruction
+								desired = new Vec3d(desired.x, Math.max(desired.y + 4.0, cur.y + 6.0), desired.z);
+							}
+						} else {
+							// Default behavior: climb upwards to free space
+							desired = new Vec3d(desired.x, Math.max(desired.y + 4.0, cur.y + 6.0), desired.z);
+						}
+						stuckCounter = 0;
+					}
                 } else {
                     stuckCounter = 0;
                 }
@@ -638,6 +825,90 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
             orb.getLookControl().lookAt(desired.x, desired.y, desired.z);
         }
+
+		private void configureOrbitModeForHome(BlockPos homePos) {
+			Direction.Axis axis = determineDominantSpikeAxis(homePos);
+			// If the crystal/spike is horizontal (X or Z), default to vertical circling and lock it
+			if (axis == Direction.Axis.X) {
+				verticalOrbitMode = true;
+				verticalOrbitLock = true;
+				verticalPlaneAxis = 1; // Y-Z plane to wrap around X-oriented spike
+			} else if (axis == Direction.Axis.Z) {
+				verticalOrbitMode = true;
+				verticalOrbitLock = true;
+				verticalPlaneAxis = 0; // X-Y plane to wrap around Z-oriented spike
+			} else {
+				// Likely vertical spike; allow normal behavior (start horizontal)
+				verticalOrbitMode = false;
+				verticalOrbitLock = false;
+			}
+		}
+
+		private Direction.Axis determineDominantSpikeAxis(BlockPos center) {
+			int lenX = countLine(center, Direction.EAST) + countLine(center, Direction.WEST);
+			int lenY = countLine(center, Direction.UP) + countLine(center, Direction.DOWN);
+			int lenZ = countLine(center, Direction.SOUTH) + countLine(center, Direction.NORTH);
+			if (lenX >= lenY && lenX >= lenZ) return Direction.Axis.X;
+			if (lenZ >= lenY && lenZ >= lenX) return Direction.Axis.Z;
+			return Direction.Axis.Y;
+		}
+
+		private int countLine(BlockPos origin, Direction dir) {
+			int max = 6; // small local scan
+			int count = 0;
+			BlockPos.Mutable p = origin.mutableCopy();
+			for (int i = 1; i <= max; i++) {
+				p.move(dir);
+				if (isTargetBlock(p)) count++;
+				else break;
+			}
+			return count;
+		}
+
+		private Vec3d computeHorizontalOrbit(Vec3d home, double radius, double angle) {
+			double x = home.x + Math.cos(angle) * radius;
+			double y = clampY(home.y + (orb.getRandom().nextDouble() * 1.5 - 0.75));
+			double z = home.z + Math.sin(angle) * radius;
+			return new Vec3d(x, y, z);
+		}
+
+		private Vec3d computeVerticalOrbit(Vec3d home, double radius, double angle, int axis) {
+			// axis 0: X-Y plane (vary x,y; z ≈ constant), axis 1: Y-Z plane (vary y,z; x ≈ constant)
+			if (axis == 0) {
+				double x = home.x + Math.cos(angle) * radius;
+				double y = clampY(home.y + Math.sin(angle) * radius);
+				double z = home.z + (orb.getRandom().nextDouble() * 1.5 - 0.75);
+				return new Vec3d(x, y, z);
+			} else {
+				double x = home.x + (orb.getRandom().nextDouble() * 1.5 - 0.75);
+				double y = clampY(home.y + Math.sin(angle) * radius);
+				double z = home.z + Math.cos(angle) * radius;
+				return new Vec3d(x, y, z);
+			}
+		}
+
+		private double clampY(double y) {
+			int bottom = orb.getWorld().getBottomY() + 5;
+			int top = orb.getWorld().getBottomY() + 100;
+			return MathHelper.clamp(y, bottom, top);
+		}
+
+		private boolean isSegmentClear(Vec3d from, Vec3d to) {
+			// Raycast for hard blockers first
+			HitResult hit = orb.getWorld().raycast(new RaycastContext(
+				from, to, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, orb));
+			if (hit.getType() == HitResult.Type.BLOCK) return false;
+			// Step with the entity's bounding box to ensure there is enough clearance to move
+			final int steps = 8;
+			for (int i = 1; i <= steps; i++) {
+				double t = i / (double) steps;
+				Vec3d step = from.lerp(to, t);
+				Vec3d delta = step.subtract(orb.getPos());
+				Box test = orb.getBoundingBox().offset(delta);
+				if (!orb.getWorld().isSpaceEmpty(orb, test)) return false;
+			}
+			return true;
+		}
 
         private boolean isTargetBlock(BlockPos pos) {
             var state = orb.getWorld().getBlockState(pos);
@@ -680,5 +951,9 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             }
             return null;
         }
+    }
+
+    public boolean isPanicking() {
+        return this.panicTicks > 0;
     }
 }

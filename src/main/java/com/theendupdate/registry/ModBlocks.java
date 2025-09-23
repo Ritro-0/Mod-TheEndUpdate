@@ -10,6 +10,7 @@ import net.minecraft.block.StairsBlock;
 import net.minecraft.block.ButtonBlock;
 import net.minecraft.block.PressurePlateBlock;
 import net.minecraft.block.BlockSetType;
+// import removed: WallMountedBlock
 import net.minecraft.block.DoorBlock;
 import net.minecraft.block.TrapdoorBlock;
 import net.minecraft.block.FenceGateBlock;
@@ -214,6 +215,20 @@ public final class ModBlocks {
             BlockSetType.OAK,
             30,
             AbstractBlock.Settings.copy(Blocks.OAK_BUTTON).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    // Ethereal Bulb - luminous button crafted from orb bulb, longer press, bright like soul lantern (~10)
+    public static final Block ETHEREAL_BULB = registerBlock(
+        "ethereal_bulb",
+        key -> new com.theendupdate.block.EtherealBulbButtonBlock(
+            BlockSetType.STONE,
+            60,
+            AbstractBlock.Settings.copy(Blocks.STONE_BUTTON)
+                .sounds(BlockSoundGroup.AMETHYST_BLOCK)
+                .luminance(state -> 10)
+                .nonOpaque()
+                .registryKey(key)
         )
     );
 

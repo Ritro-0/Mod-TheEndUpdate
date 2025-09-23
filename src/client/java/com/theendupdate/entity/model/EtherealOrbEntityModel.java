@@ -18,6 +18,7 @@ public class EtherealOrbEntityModel extends EntityModel<EtherealOrbRenderState> 
         Identifier.of(TemplateMod.MOD_ID, "ethereal_orb"), "main"
     );
     private final ModelPart root;
+    private ModelPart headPart;
 private final Animation moveforwards;
 private final Animation stopmoving;
 private final Animation rotate;
@@ -50,6 +51,16 @@ private final Animation rotate;
         // Reset all transforms before applying animations to avoid accumulation
         for (ModelPart part : this.root.traverse()) {
             part.resetTransform();
+        }
+        if (headPart == null) {
+            try {
+                headPart = this.root.getChild("body").getChild("head");
+            } catch (Throwable ignored) {}
+        }
+        if (headPart != null) {
+            // Show head when bulbPresent is true; hide only when stunted and bulb is absent
+            boolean hide = state.baby && state.stunted && !state.bulbPresent;
+            headPart.visible = !hide;
         }
         moveforwards.apply(state.moveAnimationState, state.age, 1.0f);
         stopmoving.apply(state.finishmovementAnimationState, state.age, 1.0f);

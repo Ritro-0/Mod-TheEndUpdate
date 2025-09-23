@@ -6,6 +6,7 @@ import net.fabricmc.api.EnvType;
 
 import com.theendupdate.entity.model.EtherealOrbEntityModel;
 import com.theendupdate.entity.renderer.EtherealOrbEntityRenderer;
+import com.theendupdate.entity.renderer.ShadowCreakingEntityRenderer;
 import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.registry.ModEntities;
 
@@ -63,6 +64,8 @@ public class TemplateModClient implements ClientModInitializer {
         // Entity Initialization
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
+        // Shadow Creaking renderer (uses vanilla creaking model layer, inverted)
+        EntityRendererRegistry.register(ModEntities.SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
         // Register custom screen for Quantum Gateway
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
 

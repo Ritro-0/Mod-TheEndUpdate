@@ -1,6 +1,8 @@
 {
   "entity.theendupdate.ethereal_orb": "Ethereal Orb",
+  "entity.theendupdate.shadow_creaking": "Shadow Creaking",
   "item.theendupdate.ethereal_orb_spawn_egg": "Ethereal Orb Spawn Egg",
+  "item.theendupdate.shadow_creaking_spawn_egg": "Shadow Creaking Spawn Egg",
 
   "item.theendupdate.voidstar_shard": "Voidstar Shard",
   "item.theendupdate.voidstar_nugget": "Voidstar Nugget",
@@ -28,6 +30,7 @@
   "block.theendupdate.ethereal_fence": "Ethereal Fence",
   "block.theendupdate.ethereal_fence_gate": "Ethereal Fence Gate",
   "block.theendupdate.ethereal_button": "Ethereal Button",
+  "block.theendupdate.ethereal_bulb": "Ethereal Bulb",
   "block.theendupdate.ethereal_pressure_plate": "Ethereal Pressure Plate",
   "block.theendupdate.shadow_cryptomycota": "Shadow Cryptomycota",
   "block.theendupdate.umbracarp": "Umbracarp",
@@ -76,6 +79,7 @@
   "item.theendupdate.ethereal_fence": "Ethereal Fence",
   "item.theendupdate.ethereal_fence_gate": "Ethereal Fence Gate",
   "item.theendupdate.ethereal_button": "Ethereal Button",
+  "item.theendupdate.ethereal_bulb": "Ethereal Bulb",
   "item.theendupdate.ethereal_pressure_plate": "Ethereal Pressure Plate",
   "item.theendupdate.shadow_cryptomycota": "Shadow Cryptomycota",
   "item.theendupdate.umbracarp": "Umbracarp",
@@ -100,4 +104,6 @@
   "trim_material.theendupdate.voidstar": "Voidstar Material",
   "trim_material.theendupdate.spectral": "Spectral Material",
   "trim_material.theendupdate.spectral_cluster": "Spectral Cluster Material"
+  ,
+  "subtitle.theendupdate.ethereal_orb.loses_bulb": "Ethereal orb loses its bulb"
 }
