@@ -70,6 +70,24 @@ public final class ModItems {
         net.minecraft.item.ItemGroups.SPAWN_EGGS
     );
 
+    public static final Item MINI_SHADOW_CREAKING_SPAWN_EGG = registerItem(
+        "mini_shadow_creaking_spawn_egg",
+        key -> new SpawnEggItem(
+            com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING,
+            new Item.Settings().registryKey(key)
+        ),
+        net.minecraft.item.ItemGroups.SPAWN_EGGS
+    );
+
+    public static final Item TINY_SHADOW_CREAKING_SPAWN_EGG = registerItem(
+        "tiny_shadow_creaking_spawn_egg",
+        key -> new SpawnEggItem(
+            com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING,
+            new Item.Settings().registryKey(key)
+        ),
+        net.minecraft.item.ItemGroups.SPAWN_EGGS
+    );
+
     @SafeVarargs
     private static Item registerItem(String name, java.util.function.Function<RegistryKey<Item>, Item> factory, net.minecraft.registry.RegistryKey<net.minecraft.item.ItemGroup>... groups) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);

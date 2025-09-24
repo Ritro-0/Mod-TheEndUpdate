@@ -66,6 +66,9 @@ public class TemplateModClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
         // Shadow Creaking renderer (uses vanilla creaking model layer, inverted)
         EntityRendererRegistry.register(ModEntities.SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
+        // Reuse same renderer for mini/tiny (uses scaled dimensions)
+        EntityRendererRegistry.register(ModEntities.MINI_SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.TINY_SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
         // Register custom screen for Quantum Gateway
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
 

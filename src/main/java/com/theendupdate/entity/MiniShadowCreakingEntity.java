@@ -1,0 +1,91 @@
+package com.theendupdate.entity;
+
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
+import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.damage.DamageSource;
+// no extra imports needed
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.world.World;
+
+public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
+
+    public MiniShadowCreakingEntity(EntityType<? extends ShadowCreakingEntity> entityType, World world) {
+        super(entityType, world);
+        this.experiencePoints = 3;
+    }
+
+    public static DefaultAttributeContainer.Builder createMiniAttributes() {
+        return ShadowCreakingEntity.createShadowCreakingAttributes()
+            .add(EntityAttributes.MAX_HEALTH, 83.3333333333)
+            .add(EntityAttributes.ATTACK_DAMAGE, 3.0)
+            .add(EntityAttributes.MOVEMENT_SPEED, 0.56)
+            .add(EntityAttributes.FOLLOW_RANGE, 28.0);
+    }
+
+    @Override
+    protected boolean shouldTriggerHalfHealthLevitation() {
+        // Minis do not have a second-phase levitation; they are never weeping angels
+        return false;
+    }
+
+    @Override
+    protected boolean isWeepingAngelActive() {
+        // Minis never freeze when looked at
+        return false;
+    }
+
+    @Override
+    public void onDeath(DamageSource damageSource) {
+        super.onDeath(damageSource);
+        if (!(this.getWorld() instanceof ServerWorld sw)) return;
+        if (!wasKilledByPlayer(damageSource)) return;
+        double baseX = this.getX();
+        double baseY = this.getY();
+        double baseZ = this.getZ();
+        double separation = 1.0; // 2.0 blocks between centers for tinies
+        double angle = this.random.nextDouble() * Math.PI * 2.0;
+        boolean spawned = false;
+        for (int attempt = 0; attempt < 8 && !spawned; attempt++) {
+            double a = angle + attempt * (Math.PI / 4.0);
+            double dirX = Math.cos(a);
+            double dirZ = Math.sin(a);
+            double x1 = baseX - dirX * separation;
+            double z1 = baseZ - dirZ * separation;
+            double x2 = baseX + dirX * separation;
+            double z2 = baseZ + dirZ * separation;
+            TinyShadowCreakingEntity s1 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
+            TinyShadowCreakingEntity s2 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
+            s1.refreshPositionAndAngles(x1, baseY, z1, this.getYaw(), this.getPitch());
+            s2.refreshPositionAndAngles(x2, baseY, z2, this.getYaw(), this.getPitch());
+            if (sw.isSpaceEmpty(s1) && sw.isSpaceEmpty(s2)) {
+                sw.spawnEntity(s1);
+                sw.spawnEntity(s2);
+                spawned = true;
+            }
+        }
+        if (!spawned) {
+            for (int i = 0; i < 2; i++) {
+                TinyShadowCreakingEntity spawn = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
+                double ox = baseX + (this.random.nextDouble() - 0.5) * 1.0;
+                double oz = baseZ + (this.random.nextDouble() - 0.5) * 1.0;
+                spawn.refreshPositionAndAngles(ox, baseY, oz, this.getYaw(), this.getPitch());
+                sw.spawnEntity(spawn);
+            }
+        }
+    }
+
+    @Override
+    protected boolean shouldSpawnOnDeath() {
+        // Prevent base class from spawning more minis on death
+        return false;
+    }
+
+    @Override
+    public boolean isAiDisabled() {
+        // Never allow AI to be disabled due to gaze
+        return false;
+    }
+}
+
+

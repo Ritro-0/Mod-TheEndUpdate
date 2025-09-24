@@ -18,7 +18,10 @@
 		"MobEntityAccessor",
 		"SpiderEntityAvoidChrysanthemumMixin",
 		"EndermanAvoidEtherealOrbMixin",
-		"BiomeAccessMixin"
+		"BiomeAccessMixin",
+		"ShadowCreakingGazeMixin",
+		"MobEntitySetAiMixin",
+		"EntityNavigationStopMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -2,6 +2,8 @@ package com.theendupdate.entity.renderer;
 
 import com.theendupdate.TemplateMod;
 import com.theendupdate.entity.ShadowCreakingEntity;
+import com.theendupdate.entity.MiniShadowCreakingEntity;
+import com.theendupdate.entity.TinyShadowCreakingEntity;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.CreakingEntityRenderer;
@@ -27,6 +29,7 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 	private static final int LEVITATE_DURATION_TICKS = 140; // match server extension
 	private float lastEmergeProgress;
 	private final CreakingEntityRenderer<ShadowCreakingEntity> vanillaDelegate;
+	private float currentScale = 1.0f;
 
 	public ShadowCreakingEntityRenderer(EntityRendererFactory.Context ctx) {
 		super(ctx, new ShadowCreakingPlantingModel(ctx.getPart(CREAKING_LAYER)), 0.6f);
@@ -42,6 +45,18 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 	public void updateRenderState(ShadowCreakingEntity entity, CreakingEntityRenderState state, float tickDelta) {
 		// Populate all vanilla creaking animation state via delegate
 		this.vanillaDelegate.updateRenderState(entity, state, tickDelta);
+		// Decide scale for this entity instance
+		if (entity instanceof MiniShadowCreakingEntity) {
+			this.currentScale = 0.5f; // render scale matches 0.5x hitbox
+		} else if (entity instanceof TinyShadowCreakingEntity) {
+			this.currentScale = 0.25f; // render scale matches 0.25x hitbox
+		} else {
+			this.currentScale = 1.0f;
+		}
+		// If server signals forced running overlay (during anti-freeze step), let model apply a run overlay
+		if (this.getModel() instanceof ShadowCreakingPlantingModel m) {
+			m.setRunOverlay(entity.isForcingRunOverlay());
+		}
 		try {
 			// Drive emerge progress from the entity's AnimationState time when POSE == EMERGING
 			float raw;
@@ -119,6 +134,9 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 		if (h > 0.0f) {
 			matrices.translate(0.0, -h, 0.0);
 		}
+		if (this.currentScale != 1.0f) {
+			matrices.scale(this.currentScale, this.currentScale, this.currentScale);
+		}
 		super.render(state, matrices, vertexConsumers, light);
 	}
 
@@ -140,6 +158,7 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 		private boolean levitatingActive;
 		private float levitatingMs;
 		private float lastLevitationAngle;
+		private boolean runOverlay;
 		// removed unused overlay tracking
 
 		public ShadowCreakingPlantingModel(ModelPart root) {
@@ -164,6 +183,8 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			this.emergingAnim = com.theendupdate.entity.animation.ShadowCreakingAnimations.EMERGING.createAnimation(root);
 			this.levitatingAnim = com.theendupdate.entity.animation.ShadowCreakingAnimations.LEVITATING.createAnimation(root);
 		}
+
+		public void setRunOverlay(boolean active) { this.runOverlay = active; }
 
 		private ModelPart tryGet(ModelPart base, String name) {
 			if (base == null) return null;
@@ -338,6 +359,15 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 					spinTarget.yaw -= this.lastLevitationAngle;
 				}
 				this.lastLevitationAngle = 0.0f;
+			}
+
+			// Run overlay: add slight leg swing if requested to ensure motion isn't visually static
+			if (this.runOverlay && this.leftLeg != null && this.rightLeg != null) {
+				float swing = 0.5f;
+				float speed = 0.25f;
+				float t = (state.age % 200000) * speed;
+				this.leftLeg.pitch += MathHelper.sin(t) * swing * 0.6f;
+				this.rightLeg.pitch += MathHelper.sin(t + (float)Math.PI) * swing * 0.6f;
 			}
 
 			// Remove manual arm overlay; handled by authored LEVITATING animation
