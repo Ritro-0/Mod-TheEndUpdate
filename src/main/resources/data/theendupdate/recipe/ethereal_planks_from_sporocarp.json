@@ -1,6 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": ["theendupdate:ethereal_sporocarp"],
-  "result": { "id": "theendupdate:ethereal_planks", "count": 4 }
-}
-

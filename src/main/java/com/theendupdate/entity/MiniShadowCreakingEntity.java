@@ -10,6 +10,10 @@ import net.minecraft.world.World;
 
 public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
 
+    // Each mini carries two preassigned drop roles for the tiny children
+    private int childTinyDropRoleA = com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE;
+    private int childTinyDropRoleB = com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE;
+
     public MiniShadowCreakingEntity(EntityType<? extends ShadowCreakingEntity> entityType, World world) {
         super(entityType, world);
         this.experiencePoints = 3;
@@ -39,7 +43,10 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
     public void onDeath(DamageSource damageSource) {
         super.onDeath(damageSource);
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
-        if (!wasKilledByPlayer(damageSource)) return;
+        // Spawn tiny children if killed by player, or if roles were preset from a parent
+        boolean allowSpawn = wasKilledByPlayer(damageSource) ||
+            (this.childTinyDropRoleA != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE || this.childTinyDropRoleB != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE);
+        if (!allowSpawn) return;
         double baseX = this.getX();
         double baseY = this.getY();
         double baseZ = this.getZ();
@@ -58,6 +65,9 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
             TinyShadowCreakingEntity s2 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
             s1.refreshPositionAndAngles(x1, baseY, z1, this.getYaw(), this.getPitch());
             s2.refreshPositionAndAngles(x2, baseY, z2, this.getYaw(), this.getPitch());
+            // Apply preassigned drop roles to tinies
+            s1.setDropRole(this.childTinyDropRoleA);
+            s2.setDropRole(this.childTinyDropRoleB);
             if (sw.isSpaceEmpty(s1) && sw.isSpaceEmpty(s2)) {
                 sw.spawnEntity(s1);
                 sw.spawnEntity(s2);
@@ -70,6 +80,8 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
                 double ox = baseX + (this.random.nextDouble() - 0.5) * 1.0;
                 double oz = baseZ + (this.random.nextDouble() - 0.5) * 1.0;
                 spawn.refreshPositionAndAngles(ox, baseY, oz, this.getYaw(), this.getPitch());
+                if (i == 0) spawn.setDropRole(this.childTinyDropRoleA);
+                else spawn.setDropRole(this.childTinyDropRoleB);
                 sw.spawnEntity(spawn);
             }
         }
@@ -85,6 +97,11 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
     public boolean isAiDisabled() {
         // Never allow AI to be disabled due to gaze
         return false;
+    }
+
+    public void setChildTinyDropRoles(int roleA, int roleB) {
+        this.childTinyDropRoleA = roleA;
+        this.childTinyDropRoleB = roleB;
     }
 }
 

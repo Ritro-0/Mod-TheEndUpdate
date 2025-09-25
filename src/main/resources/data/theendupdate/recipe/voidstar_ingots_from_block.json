@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shapeless",
-  "ingredients": [ { "item": "theendupdate:voidstar_block" } ],
+  "ingredients": [ "theendupdate:voidstar_block" ],
   "result": { "id": "theendupdate:voidstar_ingot", "count": 9 }
 }
 

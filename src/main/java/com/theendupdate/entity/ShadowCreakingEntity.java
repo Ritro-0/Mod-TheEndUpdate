@@ -99,6 +99,13 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		if (!(this.getWorld() instanceof ServerWorld sw)) return;
 		if (!this.shouldSpawnOnDeath()) return;
 		if (wasKilledByPlayer(damageSource)) {
+			// Pre-assign tiny drop roles: one cover, one pages, two wood chips
+			int[] roles = new int[] {
+				com.theendupdate.entity.TinyShadowCreakingEntity.DROP_ENCHANTED_BOOK_COVER,
+				com.theendupdate.entity.TinyShadowCreakingEntity.DROP_ENCHANTED_PAGES,
+				com.theendupdate.entity.TinyShadowCreakingEntity.DROP_WOOD_CHIP,
+				com.theendupdate.entity.TinyShadowCreakingEntity.DROP_WOOD_CHIP
+			};
 			// Spawn two minis with guaranteed horizontal separation so they don't overlap
 			double baseX = this.getX();
 			double baseY = this.getY();
@@ -118,6 +125,9 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				com.theendupdate.entity.MiniShadowCreakingEntity s2 = new com.theendupdate.entity.MiniShadowCreakingEntity(com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING, sw);
 				s1.refreshPositionAndAngles(x1, baseY, z1, this.getYaw(), this.getPitch());
 				s2.refreshPositionAndAngles(x2, baseY, z2, this.getYaw(), this.getPitch());
+				// Assign each mini a pair of tiny drop roles
+				s1.setChildTinyDropRoles(roles[0], roles[1]);
+				s2.setChildTinyDropRoles(roles[2], roles[3]);
 				if (sw.isSpaceEmpty(s1) && sw.isSpaceEmpty(s2)) {
 					sw.spawnEntity(s1);
 					sw.spawnEntity(s2);
@@ -126,11 +136,13 @@ public class ShadowCreakingEntity extends CreakingEntity {
 			}
 			// If all attempts fail, fall back to slight random jitter to avoid hard failure
 			if (!spawned) {
+				int[][] pairs = new int[][] { { roles[0], roles[1] }, { roles[2], roles[3] } };
 				for (int i = 0; i < 2; i++) {
 					com.theendupdate.entity.MiniShadowCreakingEntity spawn = new com.theendupdate.entity.MiniShadowCreakingEntity(com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING, sw);
 					double ox = baseX + (this.random.nextDouble() - 0.5) * 1.2;
 					double oz = baseZ + (this.random.nextDouble() - 0.5) * 1.2;
 					spawn.refreshPositionAndAngles(ox, baseY, oz, this.getYaw(), this.getPitch());
+					spawn.setChildTinyDropRoles(pairs[i][0], pairs[i][1]);
 					sw.spawnEntity(spawn);
 				}
 			}

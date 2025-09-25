@@ -1,7 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": ["theendupdate:ethereal_pustule"],
-  "result": { "id": "theendupdate:ethereal_planks", "count": 4 }
-}
-
-

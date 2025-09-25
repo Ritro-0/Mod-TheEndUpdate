@@ -139,6 +139,8 @@ public class TemplateMod implements ModInitializer {
             }
         });
 
+        // Wooden cone interaction now handled on the item itself
+
         // Blast-proof items: rely on fireproof to survive lava/fire and high blast resistance to persist in typical detonations.
 
         // Worldgen registration

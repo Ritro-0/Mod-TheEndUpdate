@@ -1,8 +1,6 @@
 {
   "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    "theendupdate:void_bloom"
-  ],
+  "ingredients": [ "theendupdate:void_bloom" ],
   "result": { "id": "theendupdate:void_sap", "count": 1 }
 }
 

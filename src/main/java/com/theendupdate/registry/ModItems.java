@@ -38,6 +38,32 @@ public final class ModItems {
         key -> new Item(new Item.Settings().registryKey(key))
     );
 
+    // Quest items and components
+    public static final Item ENCHANTED_BOOK_COVER = registerItem(
+        "enchanted_book_cover",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item ENCHANTED_PAGES = registerItem(
+        "enchanted_pages",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item WOOD_CHIP = registerItem(
+        "wood_chip",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item WOODEN_CONE = registerItem(
+        "wooden_cone",
+        key -> new com.theendupdate.item.WoodenConeItem(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item ICE_CREAM_CONE = registerItem(
+        "ice_cream_cone",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
     // Gravitite materials
     public static final Item GRAVITITE_ESSENCE = registerItem(
         "gravitite_essence",

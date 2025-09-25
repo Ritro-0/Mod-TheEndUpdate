@@ -4,10 +4,7 @@
     "PSP",
     "PSP"
   ],
-  "key": {
-    "P": "theendupdate:ethereal_planks",
-    "S": "minecraft:stick"
-  },
+  "key": { "P": "theendupdate:ethereal_planks", "S": "minecraft:stick" },
   "result": { "id": "theendupdate:ethereal_fence", "count": 3 }
 }
 

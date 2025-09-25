@@ -4,10 +4,7 @@
     "SPS",
     "SPS"
   ],
-  "key": {
-    "P": "theendupdate:shadow_planks",
-    "S": "minecraft:stick"
-  },
+  "key": { "P": "theendupdate:shadow_planks", "S": "minecraft:stick" },
   "result": { "id": "theendupdate:shadow_fence_gate", "count": 1 }
 }
 

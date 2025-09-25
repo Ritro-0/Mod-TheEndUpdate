@@ -1,7 +1,7 @@
 {
   "type": "minecraft:crafting_shapeless",
-  "ingredients": ["theendupdate:shadow_planks"],
-  "result": { "id": "theendupdate:shadow_button" }
+  "ingredients": [ "theendupdate:shadow_planks" ],
+  "result": { "id": "theendupdate:shadow_button", "count": 1 }
 }
 
 

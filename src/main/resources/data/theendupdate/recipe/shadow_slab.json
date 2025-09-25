@@ -3,9 +3,7 @@
   "pattern": [
     "PPP"
   ],
-  "key": {
-    "P": "theendupdate:shadow_planks"
-  },
+  "key": { "P": "theendupdate:shadow_planks" },
   "result": { "id": "theendupdate:shadow_slab", "count": 6 }
 }
 

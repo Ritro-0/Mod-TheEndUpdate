@@ -11,7 +11,14 @@
   "item.theendupdate.spectral_cluster": "Spectral Cluster",
   
 
+  "item.theendupdate.enchanted_book_cover": "Enchanted Book Cover",
+  "item.theendupdate.enchanted_pages": "Enchanted Pages",
+  "item.theendupdate.wood_chip": "Wood Chip",
+  "item.theendupdate.wooden_cone": "Wooden Cone",
+  "item.theendupdate.ice_cream_cone": "Ice Cream Cone",
+
   "block.theendupdate.end_mire": "End Mire",
+  "enchantment.theendupdate.chopping": "Chopping",
   "block.theendupdate.end_murk": "End Murk",
   "block.theendupdate.mold_block": "Mold Block",
   "block.theendupdate.void_bloom": "Void Bloom",

@@ -1,0 +1,15 @@
+{
+  "description": { "translate": "enchantment.theendupdate.chopping" },
+  "max_level": 1,
+  "weight": 5,
+  "anvil_cost": 1,
+  "slots": ["mainhand"],
+  "supported_items": "#minecraft:axes",
+  "primary_items": "#minecraft:axes",
+  "secondary_items": [],
+  "exclusive_set": ["minecraft:silk_touch"],
+  "min_cost": { "base": 1, "per_level_above_first": 0 },
+  "max_cost": { "base": 1, "per_level_above_first": 0 }
+}
+
+

@@ -3,10 +3,8 @@
   "pattern": [
     "PP"
   ],
-  "key": {
-    "P": "theendupdate:ethereal_planks"
-  },
-  "result": { "id": "theendupdate:ethereal_pressure_plate" }
+  "key": { "P": "theendupdate:ethereal_planks" },
+  "result": { "id": "theendupdate:ethereal_pressure_plate", "count": 1 }
 }
 
 

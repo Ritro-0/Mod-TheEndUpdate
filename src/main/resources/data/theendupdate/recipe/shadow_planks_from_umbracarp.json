@@ -1,7 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": ["theendupdate:umbracarp"],
-  "result": { "id": "theendupdate:shadow_planks", "count": 4 }
-}
-
-

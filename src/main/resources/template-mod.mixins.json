@@ -21,7 +21,9 @@
 		"BiomeAccessMixin",
 		"ShadowCreakingGazeMixin",
 		"MobEntitySetAiMixin",
-		"EntityNavigationStopMixin"
+		"EntityNavigationStopMixin",
+		"PlayerEntityMiningSpeedMixin",
+		"ItemStackMiningSpeedMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -1,15 +1,11 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "pattern": [
-    "EPE",
-    "PEP",
-    "EPE"
+    "GGG",
+    "GGG",
+    "GGG"
   ],
-  "key": {
-    "E": "theendupdate:gravitite_essence",
-    "P": "minecraft:ender_pearl"
-  },
+  "key": { "G": "theendupdate:gravitite_essence" },
   "result": { "id": "theendupdate:pure_gravitite", "count": 1 }
 }
 

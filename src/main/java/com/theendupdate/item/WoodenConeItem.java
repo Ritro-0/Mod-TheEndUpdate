@@ -1,0 +1,46 @@
+package com.theendupdate.item;
+
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.passive.CowEntity;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.world.World;
+
+public class WoodenConeItem extends Item {
+    public WoodenConeItem(Settings settings) {
+        super(settings);
+    }
+
+    @Override
+    public ActionResult useOnEntity(ItemStack stack, PlayerEntity user, LivingEntity entity, Hand hand) {
+        if (hand != Hand.MAIN_HAND) return ActionResult.PASS;
+        if (!(entity instanceof CowEntity cow)) return ActionResult.PASS;
+        if (cow.isBaby()) return ActionResult.PASS;
+        World world = user.getWorld();
+        if (world.isClient) return ActionResult.PASS;
+
+        boolean creative = user.getAbilities().creativeMode;
+        ItemStack iceCream = new ItemStack(com.theendupdate.registry.ModItems.ICE_CREAM_CONE);
+        if (!creative) {
+            if (stack.getCount() == 1) {
+                user.setStackInHand(hand, iceCream);
+            } else {
+                stack.decrement(1);
+                if (!user.getInventory().insertStack(iceCream)) {
+                    user.dropItem(iceCream, false);
+                }
+            }
+        } else {
+            if (!user.getInventory().insertStack(iceCream)) {
+                user.dropItem(iceCream, false);
+            }
+        }
+        try { user.playSound(net.minecraft.sound.SoundEvents.ENTITY_COW_MILK, 1.0f, 1.0f); } catch (Throwable ignored) {}
+        return ActionResult.CONSUME;
+    }
+}
+
+

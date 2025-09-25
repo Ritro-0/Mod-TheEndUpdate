@@ -5,9 +5,7 @@
     "PP",
     "PP"
   ],
-  "key": {
-    "P": "theendupdate:ethereal_planks"
-  },
+  "key": { "P": "theendupdate:ethereal_planks" },
   "result": { "id": "theendupdate:ethereal_door", "count": 3 }
 }
 

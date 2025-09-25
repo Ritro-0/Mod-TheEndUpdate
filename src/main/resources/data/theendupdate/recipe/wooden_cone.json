@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "W",
+    "W"
+  ],
+  "key": {
+    "W": "theendupdate:wood_chip"
+  },
+  "result": { "id": "theendupdate:wooden_cone", "count": 1 }
+}
+
+

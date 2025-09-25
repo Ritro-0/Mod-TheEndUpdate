@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "theendupdate:enchanted_book_cover",
+    "theendupdate:enchanted_pages"
+  ],
+  "result": {
+    "id": "minecraft:enchanted_book",
+    "count": 1,
+    "components": {
+      "minecraft:stored_enchantments": {
+        "theendupdate:chopping": 1
+      }
+    }
+  }
+}
+
+

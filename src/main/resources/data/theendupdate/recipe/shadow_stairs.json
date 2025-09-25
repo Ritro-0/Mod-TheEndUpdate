@@ -5,9 +5,7 @@
     "PP ",
     "PPP"
   ],
-  "key": {
-    "P": "theendupdate:shadow_planks"
-  },
+  "key": { "P": "theendupdate:shadow_planks" },
   "result": { "id": "theendupdate:shadow_stairs", "count": 4 }
 }
 
