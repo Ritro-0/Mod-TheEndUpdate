@@ -14,7 +14,6 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.CreakingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.particle.ParticleTypes;
@@ -32,6 +31,8 @@ public class ShadowCreakingEntity extends CreakingEntity {
 
 	private static final TrackedData<Boolean> LEVITATING = DataTracker.registerData(ShadowCreakingEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 	private static final TrackedData<Boolean> FORCE_RUNNING = DataTracker.registerData(ShadowCreakingEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> SPAWN_EMERGED = DataTracker.registerData(ShadowCreakingEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    protected static final TrackedData<Boolean> LEVITATION_INTRO_PLAYED = DataTracker.registerData(ShadowCreakingEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 
 	// Pose-driven animation states (client uses these to time animations)
 	public final AnimationState emergingAnimationState = new AnimationState();
@@ -39,6 +40,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	public final AnimationState levitatingAnimationState = new AnimationState();
 
 	private boolean playedSpawnLevitation;
+	private boolean hasSpawnEmerged;
 	private int levitateTicksRemaining;
 	private boolean waitingForPostLandFreeze;
 	private int postLandFreezeTicks;
@@ -79,6 +81,8 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		super.initDataTracker(builder);
 		builder.add(LEVITATING, Boolean.FALSE);
 		builder.add(FORCE_RUNNING, Boolean.FALSE);
+        builder.add(SPAWN_EMERGED, Boolean.FALSE);
+        builder.add(LEVITATION_INTRO_PLAYED, Boolean.FALSE);
 	}
 
 	public boolean isLevitating() {
@@ -128,6 +132,8 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				// Assign each mini a pair of tiny drop roles
 				s1.setChildTinyDropRoles(roles[0], roles[1]);
 				s2.setChildTinyDropRoles(roles[2], roles[3]);
+				try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+				try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
 				if (sw.isSpaceEmpty(s1) && sw.isSpaceEmpty(s2)) {
 					sw.spawnEntity(s1);
 					sw.spawnEntity(s2);
@@ -143,6 +149,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 					double oz = baseZ + (this.random.nextDouble() - 0.5) * 1.2;
 					spawn.refreshPositionAndAngles(ox, baseY, oz, this.getYaw(), this.getPitch());
 					spawn.setChildTinyDropRoles(pairs[i][0], pairs[i][1]);
+					try { spawn.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
 					sw.spawnEntity(spawn);
 				}
 			}
@@ -172,15 +179,67 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	public void tick() {
 		super.tick();
 
-		// Drive initial emerging pose when spawned
+		// Restore persisted one-time state on fresh loads so rejoin does not replay cinematics
+		if (!this.getWorld().isClient) {
+            try {
+                if (this.age <= 1) {
+                    java.util.Set<String> tags = this.getCommandTags();
+                    if (tags != null && tags.contains("theendupdate:emerged") && !this.dataTracker.get(SPAWN_EMERGED)) {
+                        this.dataTracker.set(SPAWN_EMERGED, Boolean.TRUE);
+                        if (this.getPose() == EntityPose.EMERGING) this.setPose(EntityPose.STANDING);
+                    }
+                }
+            } catch (Throwable ignored) {}
+		}
+
+		// If not spawned by altar or by a parent, never run spawn cinematics (emerge/levitation)
+		if (!this.getWorld().isClient && this.age <= 1) {
+			try {
+				java.util.Set<String> tags = this.getCommandTags();
+				boolean fromAltar = tags != null && tags.contains("theendupdate:spawned_by_altar");
+				boolean fromParent = tags != null && tags.contains("theendupdate:spawned_by_parent");
+				if (!(fromAltar || fromParent)) {
+					if (this.getPose() == EntityPose.EMERGING) this.setPose(EntityPose.STANDING);
+					this.dataTracker.set(SPAWN_EMERGED, Boolean.TRUE);
+					this.dataTracker.set(LEVITATION_INTRO_PLAYED, Boolean.TRUE);
+					this.playedSpawnLevitation = true;
+				}
+			} catch (Throwable ignored) {}
+		}
+
+		// Drive initial emerging pose once when first spawned; persist via tracked flag to clients
 		if (!this.isRemoved()) {
-			if (this.age == 1) {
+			if (!this.dataTracker.get(SPAWN_EMERGED) && this.age == 1) {
 				this.setPose(EntityPose.EMERGING);
 				this.playSound(SoundEvents.ENTITY_WARDEN_EMERGE, 1.0f, 1.0f);
 			}
-			if (this.getPose() == EntityPose.EMERGING && this.age >= EMERGE_DURATION_TICKS) {
+            if (this.getPose() == EntityPose.EMERGING && this.age >= EMERGE_DURATION_TICKS) {
+                this.setPose(EntityPose.STANDING);
+                this.dataTracker.set(SPAWN_EMERGED, Boolean.TRUE);
+                try { this.addCommandTag("theendupdate:emerged"); } catch (Throwable ignored) {}
+                // Start levitation immediately and mark as played if and only if spawned by altar
+                try {
+                    java.util.Set<String> tags = this.getCommandTags();
+                    boolean fromAltar = tags != null && tags.contains("theendupdate:spawned_by_altar");
+                    boolean fromParent = tags != null && tags.contains("theendupdate:spawned_by_parent");
+                    if ((fromAltar || fromParent) && !this.dataTracker.get(LEVITATION_INTRO_PLAYED)) {
+                        this.dataTracker.set(LEVITATION_INTRO_PLAYED, Boolean.TRUE);
+                        this.playedSpawnLevitation = true;
+                        this.levitateTicksRemaining = LEVITATE_DURATION_TICKS;
+                        this.setLevitating(true);
+                        this.setNoGravity(true);
+                        this.setInvulnerable(true);
+                    }
+                } catch (Throwable ignored) {}
+            }
+			// Safety: if persisted as emerged, ensure pose is not EMERGING after reload
+			if (this.dataTracker.get(SPAWN_EMERGED) && this.getPose() == EntityPose.EMERGING) {
 				this.setPose(EntityPose.STANDING);
 			}
+            // Additional safety: if age is far beyond emerge window but somehow pose is EMERGING, correct it
+            if (this.age > (EMERGE_DURATION_TICKS + 5) && this.getPose() == EntityPose.EMERGING) {
+                this.setPose(EntityPose.STANDING);
+            }
 		}
 
 		// Proactively strip vanilla gaze-freeze goals when weeping is not active (base <50% hp) or for mini/tiny
@@ -206,15 +265,9 @@ public class ShadowCreakingEntity extends CreakingEntity {
 			this.setInvulnerable(true);
 		}
 
-		// Server: start and run post-spawn levitation immediately after emerging finishes
-		if (!this.getWorld().isClient) {
-			if (!this.playedSpawnLevitation && this.getPose() != EntityPose.EMERGING && this.age >= EMERGE_DURATION_TICKS) {
-				this.playedSpawnLevitation = true;
-				this.levitateTicksRemaining = LEVITATE_DURATION_TICKS;
-				this.setLevitating(true);
-				this.setNoGravity(true);
-				this.setInvulnerable(true);
-			}
+        // Server: run levitation if already active; do not auto-start by time on reload
+        if (!this.getWorld().isClient) {
+            // Removed age-window auto-start. Levitation is started only at emerge completion (above).
 
 			// Trigger a second levitation when dropping below half health (phase 2), then drop weeping-angel restriction
 			if (this.shouldTriggerHalfHealthLevitation()
@@ -229,7 +282,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				this.setInvulnerable(true);
 			}
 
-			if (this.isLevitating()) {
+            if (this.isLevitating()) {
 				// Halt navigation and horizontal motion while levitating
 				try { this.getNavigation().stop(); } catch (Throwable ignored) {}
 				this.setSprinting(false);
@@ -272,7 +325,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 						if (m1 != null) {
 							m1.refreshPositionAndAngles(leftPx, handY, leftPz, this.getYaw(), 0.0f);
 							sw2.spawnEntity(m1);
-						}
+            }
 						if (m2 != null) {
 							m2.refreshPositionAndAngles(rightPx, handY, rightPz, this.getYaw(), 0.0f);
 							sw2.spawnEntity(m2);
@@ -398,6 +451,8 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		}
 	}
 
+    // Removed NBT overrides; use age-based gating and booleans during runtime instead
+
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	private void removePotentialGazeFreezeGoals() {
 		try {
@@ -498,7 +553,12 @@ protected boolean isWeepingAngelActive() {
 		if (Entity.POSE.equals(data)) {
 			switch (this.getPose()) {
 				case EMERGING:
-					this.emergingAnimationState.start(this.age);
+					// Only play once per lifetime; prevent replay after reload/unload using tracked flag
+					if (!this.dataTracker.get(SPAWN_EMERGED) && this.age <= EMERGE_DURATION_TICKS) {
+						this.emergingAnimationState.start(this.age);
+					} else {
+						try { this.setPose(EntityPose.STANDING); } catch (Throwable ignored) {}
+					}
 					break;
 				case DIGGING:
 					this.diggingAnimationState.start(this.age);
@@ -577,8 +637,7 @@ protected boolean isWeepingAngelActive() {
 		float damage = 14.0f; // roughly TNT-like to mobs nearby
 		double radius = 4.25;
 		Box box = new Box(cx - radius, this.getY() - 1.5, cz - radius, cx + radius, this.getY() + 3.5, cz + radius);
-		for (LivingEntity e : sw.getEntitiesByClass(LivingEntity.class, box, (le) -> le.isAlive() && le != this)) {
-			if (e instanceof net.minecraft.entity.mob.EndermiteEntity) continue; // explicitly ignore Endermites
+		for (PlayerEntity e : sw.getEntitiesByClass(PlayerEntity.class, box, (pe) -> pe.isAlive())) {
 			// Damage using mobAttack to ensure damage is applied
 			e.damage(sw, sw.getDamageSources().mobAttack(this), damage);
 			// Knockback away from center

@@ -5,6 +5,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
@@ -21,6 +24,17 @@ public class WoodenConeItem extends Item {
         if (cow.isBaby()) return ActionResult.PASS;
         World world = user.getWorld();
         if (world.isClient) return ActionResult.PASS;
+
+        // Prevent same-frame refill immediately after eating
+        NbtComponent custom = stack.get(DataComponentTypes.CUSTOM_DATA);
+        long blockedUntil = 0L;
+        if (custom != null) {
+            NbtCompound tag = custom.copyNbt();
+            blockedUntil = tag.getLong("theendupdate_refill_blocked_until").orElse(0L);
+        }
+        if ((world.getTime()) < blockedUntil) {
+            return ActionResult.PASS;
+        }
 
         boolean creative = user.getAbilities().creativeMode;
         ItemStack iceCream = new ItemStack(com.theendupdate.registry.ModItems.ICE_CREAM_CONE);

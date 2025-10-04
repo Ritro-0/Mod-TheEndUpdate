@@ -125,6 +125,11 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 				int xi = (int) Math.round(x);
 				int zi = (int) Math.round(z);
 
+				// Compute width deterministically every step so adjacent chunks agree exactly
+				int targetWidth = coherentWidthAt(xi, zi);
+				smoothWidth = smoothWidth * 0.75 + targetWidth * 0.25; // mild easing, still stable
+				int width = Math.max(5, (int) Math.round(smoothWidth));
+
 				if (xi >= chunkMinX && xi <= chunkMaxX && zi >= chunkMinZ && zi <= chunkMaxZ) {
 					// Only query heights within the current chunk region to avoid cross-chunk loads
 					BlockPos topHere = world.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, new BlockPos(xi, 0, zi)).down();
@@ -135,11 +140,6 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 						islandStreak--;
 					}
 
-                    // Widen rivers by ~2 blocks on average: 7..10
-					// Deterministic width field to match across chunk edges
-					int targetWidth = coherentWidthAt(xi, zi);
-					smoothWidth = smoothWidth * 0.75 + targetWidth * 0.25; // mild easing, still stable
-					int width = Math.max(5, (int) Math.round(smoothWidth));
 					boolean force = islandStreak > 0;
 					placedAny |= placeRiverStripe(world, xi, zi, width, force);
 				}
@@ -297,8 +297,12 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 		if (surfaceCenter.getY() <= bottomY) return false;
 		if (!isEndIslandSurface(world.getBlockState(surfaceCenter))) return false;
 
+		// Width-aware chunk-border proximity: avoid random skipping when the stripe spans a border
+		int half = width / 2;
+		int radius = Math.max(1, half);
 		boolean nearEdge = isBiomeEdge(world, surfaceCenter);
-		boolean nearChunkBorder = ((centerX & 15) <= 1) || ((centerX & 15) >= 14) || ((centerZ & 15) <= 1) || ((centerZ & 15) >= 14);
+		boolean nearChunkBorder = ((centerX & 15) < radius) || ((centerX & 15) > (15 - radius))
+			|| ((centerZ & 15) < radius) || ((centerZ & 15) > (15 - radius));
 		if (!force && !nearEdge && !nearChunkBorder) {
 			// Mostly favor edges: skip non-edge stripes some of the time
 			long h = mix64(((long) centerX << 32) ^ (long) centerZ);
@@ -312,8 +316,6 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 		Direction mainDir = guessDownhillDirection(world, surfaceCenter);
 		Direction orth = (mainDir.getAxis() == Direction.Axis.X) ? Direction.NORTH : Direction.EAST;
 
-		int half = width / 2;
-		int radius = Math.max(1, half);
 		for (int dx = -radius; dx <= radius; dx++) {
 			for (int dz = -radius; dz <= radius; dz++) {
 				if (dx * dx + dz * dz > radius * radius) continue;
@@ -339,6 +341,24 @@ public class BlueIceRiverFeature extends Feature<DefaultFeatureConfig> {
 				if (isEndIslandSurface(topState)) {
 					world.setBlockState(top, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
 					placed++;
+
+					// Sculpt underside: first a uniform base thickness, then a curved "boat" below it
+					int widthAxisX = orth.getOffsetX();
+					int widthAxisZ = orth.getOffsetZ();
+					int off = dx * widthAxisX + dz * widthAxisZ; // perpendicular offset from center
+					double u = Math.min(1.0, Math.abs(off) / (double) Math.max(1, radius));
+					int baseDepth = 3; // extend straight down at least 3 blocks everywhere under the river
+					int extraCenter = Math.max(2, Math.min(6, (width + 2) / 3)); // additional depth scales with width
+					int extra = Math.max(0, (int) Math.floor(extraCenter * (1.0 - u * u))); // parabolic, 0 at edges
+					int totalDepth = baseDepth + extra;
+					for (int dy = 1; dy <= totalDepth; dy++) {
+						BlockPos b = top.down(dy);
+						if (b.getX() < chunkMinX || b.getX() > chunkMaxX || b.getZ() < chunkMinZ || b.getZ() > chunkMaxZ) continue;
+						BlockState bs = world.getBlockState(b);
+						if (bs.isAir() || isEndIslandSurface(bs) || bs.isReplaceable()) {
+							world.setBlockState(b, Blocks.BLUE_ICE.getDefaultState(), Block.NOTIFY_LISTENERS);
+						}
+					}
 
 					// Forward/back smoothing: only for inner disk to keep cost modest
 					if (dx * dx + dz * dz <= Math.max(1, radius - 1) * Math.max(1, radius - 1)) {

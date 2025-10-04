@@ -36,6 +36,23 @@ public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        // If spawned by a parent (mini or main), force a one-time intro regardless of altar
+        if (!this.getWorld().isClient && this.age == 1) {
+            try {
+                java.util.Set<String> tags = this.getCommandTags();
+                if (tags != null && tags.contains("theendupdate:spawned_by_parent")) {
+                    // Only start intro if not already started/played
+                    if (!this.dataTracker.get(LEVITATION_INTRO_PLAYED)) {
+                        this.setPose(net.minecraft.entity.EntityPose.EMERGING);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    @Override
     protected boolean isWeepingAngelActive() {
         // Tinies never freeze when looked at
         return false;
@@ -61,7 +78,6 @@ public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
     public void onDeath(net.minecraft.entity.damage.DamageSource damageSource) {
         super.onDeath(damageSource);
         if (!(this.getWorld() instanceof net.minecraft.server.world.ServerWorld sw)) return;
-        if (!wasKilledByPlayer(damageSource)) return;
         // Apply the deterministic drop based on assigned role
         net.minecraft.item.Item dropItem = null;
         if (this.dropRole == DROP_ENCHANTED_BOOK_COVER) {
@@ -69,7 +85,8 @@ public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
         } else if (this.dropRole == DROP_ENCHANTED_PAGES) {
             dropItem = com.theendupdate.registry.ModItems.ENCHANTED_PAGES;
         } else if (this.dropRole == DROP_WOOD_CHIP) {
-            dropItem = com.theendupdate.registry.ModItems.WOOD_CHIP;
+            // Design change: tiny creakings drop a Wooden Cone instead of a Wood Chip
+            dropItem = com.theendupdate.registry.ModItems.WOODEN_CONE;
         }
         if (dropItem != null) {
             this.dropStack(sw, new net.minecraft.item.ItemStack(dropItem));

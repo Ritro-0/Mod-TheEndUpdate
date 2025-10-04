@@ -40,6 +40,22 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        // If spawned by a parent (main creaking), force a one-time intro regardless of altar
+        if (!this.getWorld().isClient && this.age == 1) {
+            try {
+                java.util.Set<String> tags = this.getCommandTags();
+                if (tags != null && tags.contains("theendupdate:spawned_by_parent")) {
+                    if (!this.dataTracker.get(LEVITATION_INTRO_PLAYED)) {
+                        this.setPose(net.minecraft.entity.EntityPose.EMERGING);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    @Override
     public void onDeath(DamageSource damageSource) {
         super.onDeath(damageSource);
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
@@ -69,6 +85,9 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
             s1.setDropRole(this.childTinyDropRoleA);
             s2.setDropRole(this.childTinyDropRoleB);
             if (sw.isSpaceEmpty(s1) && sw.isSpaceEmpty(s2)) {
+                // Minis spawned from parent should signal to tinies that they are parent-spawned too
+                try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+                try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
                 sw.spawnEntity(s1);
                 sw.spawnEntity(s2);
                 spawned = true;
@@ -82,6 +101,7 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
                 spawn.refreshPositionAndAngles(ox, baseY, oz, this.getYaw(), this.getPitch());
                 if (i == 0) spawn.setDropRole(this.childTinyDropRoleA);
                 else spawn.setDropRole(this.childTinyDropRoleB);
+                try { spawn.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
                 sw.spawnEntity(spawn);
             }
         }

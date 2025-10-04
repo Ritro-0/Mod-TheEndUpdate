@@ -62,7 +62,7 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_TRAPDOOR, BlockRenderLayer.CUTOUT);
         // Quantum gateway uses glass-like rendering; translucent looks better for alpha
         BlockRenderLayerMap.putBlock(ModBlocks.QUANTUM_GATEWAY, BlockRenderLayer.TRANSLUCENT);
-        // Shadow altar uses cutout rendering for sharp edges
+        // Shadow altar uses cutout layer for spawner-like interior visibility
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_ALTAR, BlockRenderLayer.CUTOUT);
         // Entity Initialization
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);

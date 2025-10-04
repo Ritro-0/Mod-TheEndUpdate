@@ -464,14 +464,16 @@ public final class ModBlocks {
         )
     );
 
-    // Shadow Altar - simplified to standard block
+    // Shadow Altar - functional block with activation, particles, and cooldown
     public static final Block SHADOW_ALTAR = registerBlock(
         "shadow_altar",
-        key -> new Block(
+        key -> new com.theendupdate.block.ShadowAltarBlock(
             AbstractBlock.Settings
-                .copy(Blocks.STONE)
-                .strength(3.5f, 6.0f)
+                .copy(Blocks.NETHERITE_BLOCK) // netherite mining hardness and blast resistance
                 .requiresTool()
+                .strength(50.0F, 1200.0F)
+                .sounds(BlockSoundGroup.WOOD) // wooden-themed, but extremely tough
+                .nonOpaque()
                 .registryKey(key)
         )
     );

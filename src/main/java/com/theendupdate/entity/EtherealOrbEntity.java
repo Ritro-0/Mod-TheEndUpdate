@@ -373,6 +373,22 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
 		// Shearing a baby orb to remove bulb and stunt growth
 		ItemStack stack = player.getStackInHand(hand);
+		// Using the Ethereal Orb spawn egg on an adult should spawn a baby (vanilla parity)
+		if (stack != null && stack.isOf(com.theendupdate.registry.ModItems.ETHEREAL_ORB_SPAWN_EGG)) {
+			if (!this.isBaby()) {
+				if (!this.getWorld().isClient) {
+					if (this.getWorld() instanceof ServerWorld sw) {
+						this.spawnBaby(sw);
+					}
+					if (!player.getAbilities().creativeMode) {
+						stack.decrement(1);
+					}
+				}
+				return this.getWorld().isClient ? ActionResult.SUCCESS : ActionResult.CONSUME;
+			}
+			// If already a baby, do nothing special; let other handlers decide
+			return ActionResult.PASS;
+		}
         if (this.isBaby() && !this.isStunted() && stack != null && stack.isOf(Items.SHEARS)) {
 			if (!this.getWorld().isClient) {
 				this.setStunted(true);
@@ -400,6 +416,8 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 					stack.decrement(1);
 				}
 				this.setBulbPresent(true);
+				// Resume normal behavior immediately upon reattachment
+				this.setStunted(false);
 				this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.2f);
 				if (this.getWorld() instanceof ServerWorld sw) {
 					sw.spawnParticles(ParticleTypes.END_ROD, this.getX(), this.getY() + 0.9, this.getZ(), 8, 0.15, 0.15, 0.15, 0.0);
@@ -434,8 +452,8 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
 	private ActionResult theendupdate$handleFeed(PlayerEntity player, Hand hand) {
         ItemStack stack = player.getStackInHand(hand);
-		// Refuse all feeding when stunted
-		if (this.isStunted()) {
+		// Refuse feeding only when missing bulb
+		if (!this.hasBulb()) {
 			return ActionResult.PASS;
 		}
         // Feed voidstar block to initiate rotate animation and delayed baby spawn

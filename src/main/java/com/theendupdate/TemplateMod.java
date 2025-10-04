@@ -26,6 +26,7 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.entity.decoration.ArmorStandEntity;
 // entity attribute registry called from ModEntities
 // debug-related imports removed
 // (no server tick hooks used currently)
@@ -157,6 +158,7 @@ public class TemplateMod implements ModInitializer {
             for (ServerWorld world : server.getWorlds()) {
                 // Cadence ~6.7 Hz for elegant motion
                 boolean theendupdate$cadence = (world.getTime() % 3) == 0;
+                // Process players (existing behavior)
                 for (ServerPlayerEntity player : world.getPlayers()) {
                     if (!player.isAlive()) continue;
 
@@ -276,6 +278,132 @@ public class TemplateMod implements ModInitializer {
                         theendupdate$pullNearbyItems(world, player, gravititePieces);
                     }
                 }
+
+                // Armor stands: spawn the same spectral-trim END_ROD particles when wearing spectral-trimmed armor
+                // Collect nearby armor stands around players to limit processing to potentially visible entities
+                java.util.Set<ArmorStandEntity> theendupdate$stands = new java.util.HashSet<>();
+                for (ServerPlayerEntity player : world.getPlayers()) {
+                    if (!player.isAlive()) continue;
+                    // Use a moderate radius roughly matching typical view distance
+                    Box box = player.getBoundingBox().expand(64.0);
+                    java.util.List<ArmorStandEntity> found = world.getEntitiesByClass(ArmorStandEntity.class, box, e -> e != null && e.isAlive());
+                    if (!found.isEmpty()) theendupdate$stands.addAll(found);
+                }
+
+                if (!theendupdate$stands.isEmpty()) {
+                    boolean phase = ((world.getTime() / 20) % 2) == 0; // toggles ~every second
+                    for (ArmorStandEntity stand : theendupdate$stands) {
+                        if (stand == null || !stand.isAlive()) continue;
+                        // Skip marker stands (invisible hitbox, often decorative) to avoid odd visuals
+                        try { if (stand.isMarker()) continue; } catch (Throwable ignored) {}
+
+                        boolean hasHead = theendupdate$isSpectralTrim(stand.getEquippedStack(EquipmentSlot.HEAD));
+                        boolean hasChest = theendupdate$isSpectralTrim(stand.getEquippedStack(EquipmentSlot.CHEST));
+                        boolean hasLegs = theendupdate$isSpectralTrim(stand.getEquippedStack(EquipmentSlot.LEGS));
+                        boolean hasFeet = theendupdate$isSpectralTrim(stand.getEquippedStack(EquipmentSlot.FEET));
+
+                        int spectralPieces = 0;
+                        if (hasHead) spectralPieces++;
+                        if (hasChest) spectralPieces++;
+                        if (hasLegs) spectralPieces++;
+                        if (hasFeet) spectralPieces++;
+                        if (spectralPieces <= 0) continue;
+
+                        float spawnChance = switch (spectralPieces) {
+                            case 1 -> 0.5f;
+                            case 2 -> 0.7f;
+                            case 3 -> 0.85f;
+                            default -> 1.0f;
+                        };
+                        if (world.getRandom().nextFloat() > spawnChance) continue;
+
+                        // Orientation vectors based on armor stand body yaw (more accurate for stands)
+                        double yawRad;
+                        try { yawRad = Math.toRadians(stand.getBodyYaw()); } catch (Throwable t) { yawRad = Math.toRadians(stand.getYaw()); }
+                        double fwdX = -Math.sin(yawRad);
+                        double fwdZ =  Math.cos(yawRad);
+                        double rightX =  Math.cos(yawRad);
+                        double rightZ =  Math.sin(yawRad);
+
+                        // Scale offsets relative to player height (1.8) so small/large stands look proportional
+                        double heightScale;
+                        try { heightScale = Math.max(0.5, stand.getHeight() / 1.80); } catch (Throwable t) { heightScale = 1.0; }
+                        // Use entity width to keep particles outside the model silhouette
+                        double width;
+                        try { width = Math.max(0.45, stand.getWidth()); } catch (Throwable t) { width = 0.6; }
+                        double baseRadius = (width * 0.5) + 0.10; // push a little outside the legs/boots
+                        double jitterXY = 0.05 * heightScale;     // tighter jitter for crisp positioning
+
+                        if (hasChest) {
+                            double baseY = stand.getY() + 1.22 * heightScale;
+                            double fbMag = baseRadius * 1.20;
+                            double lrMag = baseRadius * 0.70;
+                            double yMag  = 0.10 * heightScale;
+                            double offX = (phase ? fwdX : -fwdX) * fbMag;
+                            double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
+                            boolean lateralLeft = world.getRandom().nextBoolean();
+                            double latScale = lrMag * (0.35 + 0.65 * world.getRandom().nextDouble());
+                            double latX = (lateralLeft ? -rightX : rightX) * latScale;
+                            double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
+                            double x = stand.getX() + offX + latX + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            double y = baseY + (world.getRandom().nextDouble() - 0.5) * yMag;
+                            double z = stand.getZ() + offZ + latZ + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            world.spawnParticles(ParticleTypes.END_ROD, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+                        }
+
+                        if (hasHead) {
+                            double baseY;
+                            try { baseY = stand.getEyeY(); } catch (Throwable t) { baseY = stand.getY() + 1.50 * heightScale; }
+                            double fbMag = baseRadius * 0.80;
+                            double lrMag = baseRadius * 0.50;
+                            double yMag  = 0.08 * heightScale;
+                            double offX = (phase ? fwdX : -fwdX) * fbMag;
+                            double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
+                            boolean lateralLeft = world.getRandom().nextBoolean();
+                            double latScale = lrMag * (0.35 + 0.65 * world.getRandom().nextDouble());
+                            double latX = (lateralLeft ? -rightX : rightX) * latScale;
+                            double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
+                            double x = stand.getX() + offX + latX + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            double y = baseY + (world.getRandom().nextDouble() - 0.5) * yMag;
+                            double z = stand.getZ() + offZ + latZ + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            world.spawnParticles(ParticleTypes.END_ROD, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+                        }
+
+                        if (hasLegs) {
+                            double baseY = stand.getY() + 0.90 * heightScale;
+                            double lrMag = baseRadius * 1.00;
+                            double fbMag = baseRadius * 0.60;
+                            double yMag  = 0.08 * heightScale;
+                            double offX = (phase ? rightX : -rightX) * lrMag;
+                            double offZ = (phase ? rightZ : -rightZ) * lrMag;
+                            boolean forwardSide = world.getRandom().nextBoolean();
+                            double swayScale = fbMag * (0.35 + 0.65 * world.getRandom().nextDouble());
+                            double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
+                            double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
+                            double x = stand.getX() + offX + swayX + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            double y = baseY + (world.getRandom().nextDouble() - 0.5) * yMag;
+                            double z = stand.getZ() + offZ + swayZ + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            world.spawnParticles(ParticleTypes.END_ROD, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+                        }
+
+                        if (hasFeet) {
+                            double baseY = stand.getY() + 0.20 * heightScale;
+                            double lrMag = baseRadius * 1.10;
+                            double fbMag = baseRadius * 0.50;
+                            double yMag  = 0.06 * heightScale;
+                            double offX = (phase ? rightX : -rightX) * lrMag;
+                            double offZ = (phase ? rightZ : -rightZ) * lrMag;
+                            boolean forwardSide = world.getRandom().nextBoolean();
+                            double swayScale = fbMag * (0.35 + 0.65 * world.getRandom().nextDouble());
+                            double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
+                            double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
+                            double x = stand.getX() + offX + swayX + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            double y = baseY + (world.getRandom().nextDouble() - 0.5) * yMag;
+                            double z = stand.getZ() + offZ + swayZ + (world.getRandom().nextDouble() - 0.5) * jitterXY;
+                            world.spawnParticles(ParticleTypes.END_ROD, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+                        }
+                    }
+                }
             }
         });
     }
@@ -322,6 +450,20 @@ public class TemplateMod implements ModInitializer {
     private static boolean theendupdate$isSpectralTrim(ServerPlayerEntity player, EquipmentSlot slot) {
         try {
             ItemStack armor = player.getEquippedStack(slot);
+            if (armor == null || armor.isEmpty()) return false;
+            ArmorTrim trim = armor.get(DataComponentTypes.TRIM);
+            if (trim == null) return false;
+            Identifier matId = trim.material().getKey().map(RegistryKey::getValue).orElse(null);
+            if (matId == null) return false;
+            String path = matId.getPath();
+            return "spectral".equals(path) || "spectral_cluster".equals(path);
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
+    // Server-side stack check (shared by armor stands)
+    private static boolean theendupdate$isSpectralTrim(ItemStack armor) {
+        try {
             if (armor == null || armor.isEmpty()) return false;
             ArmorTrim trim = armor.get(DataComponentTypes.TRIM);
             if (trim == null) return false;

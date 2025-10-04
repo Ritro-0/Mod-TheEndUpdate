@@ -64,18 +64,24 @@ public final class ModItems {
 
     public static final Item ICE_CREAM_CONE = registerItem(
         "ice_cream_cone",
-        key -> new Item(
+        key -> new com.theendupdate.item.IceCreamConeItem(
             new Item.Settings()
                 .registryKey(key)
                 .food(
                     new FoodComponent.Builder()
-                        .nutrition(10)
-                        .saturationModifier(0.6f)
+                        .nutrition(1)
+                        .saturationModifier(0.2f)
                         .alwaysEdible()
                         .build()
                 )
-                // Some systems in this project also read FOOD via data component
-                .component(DataComponentTypes.FOOD, new FoodComponent.Builder().nutrition(10).saturationModifier(0.6f).alwaysEdible().build())
+                .component(
+                    DataComponentTypes.FOOD,
+                    new FoodComponent.Builder()
+                        .nutrition(1)
+                        .saturationModifier(0.2f)
+                        .alwaysEdible()
+                        .build()
+                )
         ),
         ItemGroups.FOOD_AND_DRINK
     );

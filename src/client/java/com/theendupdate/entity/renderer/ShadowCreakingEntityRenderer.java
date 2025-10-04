@@ -60,10 +60,11 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 		try {
 			// Drive emerge progress from the entity's AnimationState time when POSE == EMERGING
 			float raw;
-			if (entity.getPose() == net.minecraft.entity.EntityPose.EMERGING) {
-				float ms = (float)entity.emergingAnimationState.getTimeInMilliseconds(entity.age);
-				raw = MathHelper.clamp(ms / 6700.0f, 0.0f, 1.0f);
-			} else {
+            if (entity.getPose() == net.minecraft.entity.EntityPose.EMERGING
+                && entity.age <= EMERGE_DURATION_TICKS) {
+                float ms = (float)entity.emergingAnimationState.getTimeInMilliseconds(entity.age);
+                raw = MathHelper.clamp(ms / 6700.0f, 0.0f, 1.0f);
+            } else {
 				raw = 1.0f;
 			}
 			// Remapped to surface earlier (~2s), hold mid-height until final rise (~0.70 raw),
@@ -94,23 +95,18 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			this.lastEmergeProgress = MathHelper.clamp(mapped, 0.0f, 1.0f);
 			if (this.getModel() instanceof ShadowCreakingPlantingModel m) {
 				m.setEmergeProgress(this.lastEmergeProgress);
-				if (entity.getPose() == net.minecraft.entity.EntityPose.EMERGING) {
+                if (entity.getPose() == net.minecraft.entity.EntityPose.EMERGING && entity.age <= EMERGE_DURATION_TICKS) {
 					m.beginEmerge((int)(entity.age + tickDelta));
 				} else {
 					m.endEmerge();
 				}
-				// Pass levitation state/time for head spin overlay. Use multiple signals to be robust:
-				boolean trackedLev = entity.isLevitating() || entity.levitatingAnimationState.isRunning();
-				boolean windowLev = (entity.getPose() != net.minecraft.entity.EntityPose.EMERGING)
-					&& (entity.age >= EMERGE_DURATION_TICKS)
-					&& (entity.age < EMERGE_DURATION_TICKS + LEVITATE_DURATION_TICKS);
-				boolean lev = trackedLev || windowLev;
+                // Pass levitation state/time for head spin overlay.
+                // Only drive levitation visuals when the server says we are levitating; do not infer by age window.
+                boolean lev = entity.isLevitating() || entity.levitatingAnimationState.isRunning();
 				// Compute phase: first 2s arms-out; after that is hover
 				float totalMs;
-				if (trackedLev) {
+                if (lev) {
 					totalMs = (float)entity.levitatingAnimationState.getTimeInMilliseconds(entity.age) + tickDelta * 50.0f;
-				} else if (windowLev) {
-					totalMs = Math.max(0.0f, ((entity.age + tickDelta) - EMERGE_DURATION_TICKS) * 50.0f);
 				} else {
 					totalMs = 0.0f;
 				}

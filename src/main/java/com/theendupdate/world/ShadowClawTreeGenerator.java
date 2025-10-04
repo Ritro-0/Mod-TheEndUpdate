@@ -72,7 +72,7 @@ public final class ShadowClawTreeGenerator {
                     sw.setBlockState(floor.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
                 }
             }
-            sw.setBlockState(floor, com.theendupdate.registry.ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
+			sw.setBlockState(floor, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
         }
     }
 
