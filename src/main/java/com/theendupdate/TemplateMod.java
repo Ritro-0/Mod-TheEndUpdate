@@ -51,6 +51,7 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModSounds.register();
         com.theendupdate.registry.ModEntities.registerModEntities();
         
+        
         // Entity attributes are registered inside ModEntities.registerModEntities()
         // Fuels: make ethereal wood a poor fuel source (~half normal wood burn time)
         FuelRegistryEvents.BUILD.register((builder, context) -> {

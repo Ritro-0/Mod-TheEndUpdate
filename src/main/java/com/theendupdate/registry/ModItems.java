@@ -1,6 +1,9 @@
 package com.theendupdate.registry;
 
 import com.theendupdate.TemplateMod;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.FoodComponent;
+// Food components are handled in custom item class for 1.21.8
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
@@ -61,7 +64,20 @@ public final class ModItems {
 
     public static final Item ICE_CREAM_CONE = registerItem(
         "ice_cream_cone",
-        key -> new Item(new Item.Settings().registryKey(key))
+        key -> new Item(
+            new Item.Settings()
+                .registryKey(key)
+                .food(
+                    new FoodComponent.Builder()
+                        .nutrition(10)
+                        .saturationModifier(0.6f)
+                        .alwaysEdible()
+                        .build()
+                )
+                // Some systems in this project also read FOOD via data component
+                .component(DataComponentTypes.FOOD, new FoodComponent.Builder().nutrition(10).saturationModifier(0.6f).alwaysEdible().build())
+        ),
+        ItemGroups.FOOD_AND_DRINK
     );
 
     // Gravitite materials
@@ -113,6 +129,16 @@ public final class ModItems {
         ),
         net.minecraft.item.ItemGroups.SPAWN_EGGS
     );
+
+    // Shadow Hunter's Map: locates nearest hollow shadow tree (altar)
+    public static final Item SHADOW_HUNTERS_MAP = registerItem(
+        "shadow_hunters_map",
+        key -> new Item(new Item.Settings().registryKey(key).maxCount(1)),
+        ItemGroups.TOOLS
+    );
+
+    // Shadow Altar as standalone item test
+    // Removed shadow_altar_test item - no longer needed
 
     @SafeVarargs
     private static Item registerItem(String name, java.util.function.Function<RegistryKey<Item>, Item> factory, net.minecraft.registry.RegistryKey<net.minecraft.item.ItemGroup>... groups) {

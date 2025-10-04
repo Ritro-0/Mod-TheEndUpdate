@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "theendupdate:block/shadow_altar_top",
+    "bottom": "theendupdate:block/shadow_altar_top",
+    "side": "theendupdate:block/shadow_altar_side"
+  }
+}
+
+

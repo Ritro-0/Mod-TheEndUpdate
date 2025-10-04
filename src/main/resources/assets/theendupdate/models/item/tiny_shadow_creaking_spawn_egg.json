@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "theendupdate:item/tiny_shadow_creaking_spawn_egg"
+  }
+}

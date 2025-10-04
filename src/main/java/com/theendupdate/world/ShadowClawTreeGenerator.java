@@ -32,11 +32,17 @@ public final class ShadowClawTreeGenerator {
         // Clear the sapling spot first
         world.setBlockState(startPos, net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
 
+        // Chance for hollow trunk with altar: 1 in 256
+        boolean hollow = (random.nextInt(256) == 0);
         // Build trunk (filled rugged discs) from ground level, thicker and more varied near the base
         BlockPos trunkBase = startPos;
         for (int y = 0; y < trunkHeight; y++) {
             int ringRadius = computeRingRadius(trunkRadius, y, trunkHeight, random);
-            placeRuggedDisc(world, trunkBase.up(y), ringRadius, random);
+            if (hollow && y <= Math.max(8, trunkHeight / 3)) {
+                placeHollowDisc(world, trunkBase.up(y), ringRadius, random);
+            } else {
+                placeRuggedDisc(world, trunkBase.up(y), ringRadius, random);
+            }
             // Add subtle buttress flares near the ground
             if (y <= 2) {
                 placeButtressFlares(world, trunkBase.up(y), ringRadius, random);
@@ -56,6 +62,18 @@ public final class ShadowClawTreeGenerator {
         buildUpwardBiasedFinger(world, crown, Direction.EAST, fingerLength, random);
         buildUpwardBiasedFinger(world, crown, Direction.WEST, fingerLength, random);
         buildUpwardFinger(world, crown.up(1), upFingerHeight, random);
+
+        // If hollow, place a Shadow Altar at the floor center
+        if (hollow && world instanceof net.minecraft.world.StructureWorldAccess sw) {
+            BlockPos floor = trunkBase;
+            // clear a 3x3 space
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    sw.setBlockState(floor.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+                }
+            }
+            sw.setBlockState(floor, com.theendupdate.registry.ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
+        }
     }
 
     private static boolean hasTrunkSpace(WorldAccess world, BlockPos base, int radius, int height) {
@@ -185,6 +203,23 @@ public final class ShadowClawTreeGenerator {
                     if (!inCircle && (adx == radius + 1 || adz == radius + 1)) {
                         if (random.nextInt(3) != 0) continue; // keep some but not all outliers
                     }
+                    placeLogIfReplaceable(world, center.add(dx, 0, dz), Direction.Axis.Y);
+                }
+            }
+        }
+    }
+
+    private static void placeHollowDisc(WorldAccess world, BlockPos center, int radius, Random random) {
+        int r2 = radius * radius;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                int dist2 = dx * dx + dz * dz;
+                if (dist2 > r2) continue;
+                // hollow out inner 2x2
+                if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) {
+                    // ensure empty interior
+                    world.setBlockState(center.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+                } else {
                     placeLogIfReplaceable(world, center.add(dx, 0, dz), Direction.Axis.Y);
                 }
             }

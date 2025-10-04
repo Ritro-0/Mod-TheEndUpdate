@@ -112,5 +112,8 @@
   "trim_material.theendupdate.spectral": "Spectral Material",
   "trim_material.theendupdate.spectral_cluster": "Spectral Cluster Material"
   ,
-  "subtitle.theendupdate.ethereal_orb.loses_bulb": "Ethereal orb loses its bulb"
+  "subtitle.theendupdate.ethereal_orb.loses_bulb": "Ethereal orb loses its bulb",
+  "block.theendupdate.shadow_altar": "Shadow Altar",
+  "item.theendupdate.shadow_altar": "Shadow Altar",
+  "item.theendupdate.shadow_hunters_map": "Shadow Hunter's Map"
 }

@@ -464,6 +464,18 @@ public final class ModBlocks {
         )
     );
 
+    // Shadow Altar - simplified to standard block
+    public static final Block SHADOW_ALTAR = registerBlock(
+        "shadow_altar",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.STONE)
+                .strength(3.5f, 6.0f)
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
     private static Block registerBlock(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);

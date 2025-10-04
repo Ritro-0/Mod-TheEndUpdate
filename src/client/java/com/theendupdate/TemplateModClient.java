@@ -41,6 +41,7 @@ public class TemplateModClient implements ClientModInitializer {
         // EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, EtherealOrbEntityRenderer::new);
         // EntityModelLayerRegistry.registerModelLayer(EtherealOrbEntityModel.ETHEREAL_ORB_LAYER, EtherealOrbEntityModel::getTexturedModelData);
         
+        
         // Register transparent blocks
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.ENDER_CHRYSANTHEMUM, BlockRenderLayer.CUTOUT);
@@ -61,6 +62,8 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_TRAPDOOR, BlockRenderLayer.CUTOUT);
         // Quantum gateway uses glass-like rendering; translucent looks better for alpha
         BlockRenderLayerMap.putBlock(ModBlocks.QUANTUM_GATEWAY, BlockRenderLayer.TRANSLUCENT);
+        // Shadow altar uses cutout rendering for sharp edges
+        BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_ALTAR, BlockRenderLayer.CUTOUT);
         // Entity Initialization
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));

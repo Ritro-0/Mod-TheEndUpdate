@@ -16,6 +16,8 @@ public final class ModBlockEntities {
             Identifier.of(TemplateMod.MOD_ID, "quantum_gateway"),
             net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder.<QuantumGatewayBlockEntity>create(QuantumGatewayBlockEntity::new, ModBlocks.QUANTUM_GATEWAY).build()
         );
+        
+        // Shadow altar removed - now using standard Block instead of BlockWithEntity
     }
 }
 

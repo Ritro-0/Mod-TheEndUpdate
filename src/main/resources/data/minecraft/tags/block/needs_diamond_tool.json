@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:gravitite_ore"
+    "theendupdate:gravitite_ore",
+    "theendupdate:shadow_altar"
   ]
 }
