@@ -1,0 +1,9 @@
+{
+  "type": "theendupdate:shadow_hollow_tree",
+  "biomes": "#theendupdate:has_hollow_trees",
+  "step": "vegetal_decoration",
+  "terrain_adaptation": "none",
+  "spawn_overrides": {}
+}
+
+

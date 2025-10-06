@@ -9,6 +9,7 @@ import net.minecraft.util.ActionResult;
 import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.particle.ParticleTypes;
@@ -48,10 +49,13 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModBlockEntities.register();
         com.theendupdate.registry.ModScreenHandlers.register();
+        com.theendupdate.registry.ModStructures.register();
+        com.theendupdate.registry.ModMapDecorations.register();
         com.theendupdate.registry.ModItems.registerModItems();
         com.theendupdate.registry.ModSounds.register();
         com.theendupdate.registry.ModEntities.registerModEntities();
         
+        // Shadow Hunter's Map no longer uses global use item event
         
         // Entity attributes are registered inside ModEntities.registerModEntities()
         // Fuels: make ethereal wood a poor fuel source (~half normal wood burn time)
@@ -153,6 +157,24 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.world.EtherealOrbOnCrystalsSpawner.init();
         LOGGER.info("[EndUpdate] onInitialize() completed");
         
+        // On player join, restore Shadow Hunter map icons from NBT so the marker persists across sessions
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            try {
+                ServerPlayerEntity player = handler.getPlayer();
+                if (player == null) return;
+                ServerWorld world = player.getWorld();
+                if (world == null) return;
+                var inv = player.getInventory();
+                for (int i = 0; i < inv.size(); i++) {
+                    ItemStack stack = inv.getStack(i);
+                    com.theendupdate.item.ShadowHuntersMapItem.restoreDecorationFromNbt(world, stack);
+                }
+                // Also check hands just in case
+                com.theendupdate.item.ShadowHuntersMapItem.restoreDecorationFromNbt(world, player.getMainHandStack());
+                com.theendupdate.item.ShadowHuntersMapItem.restoreDecorationFromNbt(world, player.getOffHandStack());
+            } catch (Throwable ignored) {}
+        });
+
         // Server tick: spawn subtle END_ROD particles around players wearing spectral trims
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
             for (ServerWorld world : server.getWorlds()) {
@@ -520,6 +542,8 @@ public class TemplateMod implements ModInitializer {
             }
         } catch (Throwable ignored) {}
     }
+    
+    // Removed registerShadowHuntersMapEvent()
 }
 
 

@@ -75,6 +75,10 @@ public class TemplateModClient implements ClientModInitializer {
         // Register custom screen for Quantum Gateway
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
 
+        // Register map decoration texture
+        com.theendupdate.registry.ModMapDecorations.register();
+
+
         // Visual-only top handled via model geometry extending into y+1 (no extra block used)
 
         // Client init complete

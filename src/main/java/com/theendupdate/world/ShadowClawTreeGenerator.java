@@ -32,7 +32,7 @@ public final class ShadowClawTreeGenerator {
         // Clear the sapling spot first
         world.setBlockState(startPos, net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
 
-        // Chance for hollow trunk with altar: 1 in 256
+        // Chance for hollow trunk with altar: 1 in 256 (feature placement)
         boolean hollow = (random.nextInt(256) == 0);
         // Build trunk (filled rugged discs) from ground level, thicker and more varied near the base
         BlockPos trunkBase = startPos;
@@ -73,6 +73,51 @@ public final class ShadowClawTreeGenerator {
                 }
             }
 			sw.setBlockState(floor, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
+        }
+    }
+
+    // Structure variant: always hollow
+    public static void generateForcedHollow(WorldAccess world, BlockPos startPos, Random random) {
+        // Basic parameters copied from generate
+        int trunkRadius = 3 + random.nextInt(2);
+        int trunkHeight = 28 + random.nextInt(11);
+        int fingerLength = 12 + random.nextInt(9);
+        int upFingerHeight = 14 + random.nextInt(9);
+
+        if (!hasTrunkSpace(world, startPos, trunkRadius, trunkHeight)) {
+            return;
+        }
+        world.setBlockState(startPos, net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+        boolean hollow = true;
+        BlockPos trunkBase = startPos;
+        for (int y = 0; y < trunkHeight; y++) {
+            int ringRadius = computeRingRadius(trunkRadius, y, trunkHeight, random);
+            if (hollow && y <= Math.max(8, trunkHeight / 3)) {
+                placeHollowDisc(world, trunkBase.up(y), ringRadius, random);
+            } else {
+                placeRuggedDisc(world, trunkBase.up(y), ringRadius, random);
+            }
+            if (y <= 2) {
+                placeButtressFlares(world, trunkBase.up(y), ringRadius, random);
+            }
+        }
+        BlockPos crown = trunkBase.up(trunkHeight - 1);
+        for (int dy = 0; dy <= 1; dy++) {
+            placeRuggedDisc(world, crown.up(dy), trunkRadius + 1, random);
+        }
+        buildUpwardBiasedFinger(world, crown, Direction.NORTH, fingerLength, random);
+        buildUpwardBiasedFinger(world, crown, Direction.SOUTH, fingerLength, random);
+        buildUpwardBiasedFinger(world, crown, Direction.EAST, fingerLength, random);
+        buildUpwardBiasedFinger(world, crown, Direction.WEST, fingerLength, random);
+        buildUpwardFinger(world, crown.up(1), upFingerHeight, random);
+        if (world instanceof net.minecraft.world.StructureWorldAccess sw) {
+            BlockPos floor = trunkBase;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    sw.setBlockState(floor.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+                }
+            }
+            sw.setBlockState(floor, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
         }
     }
 
