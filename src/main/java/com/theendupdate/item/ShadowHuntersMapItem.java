@@ -213,18 +213,8 @@ public class ShadowHuntersMapItem extends Item {
         // Create filled map centered near target
         int scale = 4;
         ItemStack filled = net.minecraft.item.FilledMapItem.createMap(serverWorld, target.getX(), target.getZ(), (byte) scale, true, true);
-        
-        // Convert to our custom filled map item for proper recipe remainder handling
-        ItemStack customFilled = new ItemStack(com.theendupdate.registry.ModItems.SHADOW_HUNTERS_FILLED_MAP);
-        // Copy the map ID from the vanilla filled map
-        try {
-            net.minecraft.component.type.MapIdComponent mapId = filled.get(net.minecraft.component.DataComponentTypes.MAP_ID);
-            if (mapId != null) {
-                customFilled.set(net.minecraft.component.DataComponentTypes.MAP_ID, mapId);
-            }
-        } catch (Throwable ignored) {}
 
-        // Add marker decoration
+        // Add marker decoration to the filled map
         MapState state = net.minecraft.item.FilledMapItem.getMapState(filled, serverWorld);
         if (state != null) {
             try {
@@ -234,25 +224,25 @@ public class ShadowHuntersMapItem extends Item {
             }
         }
 
-        // Tag as Shadow Hunter map for texture/icon purposes and persist target
+        // Tag as Shadow Hunter map and persist target on the filled map
         try {
-            net.minecraft.component.type.NbtComponent data = customFilled.getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA, net.minecraft.component.type.NbtComponent.DEFAULT);
+            net.minecraft.component.type.NbtComponent data = filled.getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA, net.minecraft.component.type.NbtComponent.DEFAULT);
             net.minecraft.nbt.NbtCompound tag = data.copyNbt();
             tag.putInt("theendupdate_sh_map", 1);
             tag.putInt("theendupdate_target_x", target.getX());
             tag.putInt("theendupdate_target_z", target.getZ());
             try { tag.putString("theendupdate_target_dim", serverWorld.getRegistryKey().getValue().toString()); } catch (Throwable ignoredDim) {}
-            customFilled.set(net.minecraft.component.DataComponentTypes.CUSTOM_DATA, net.minecraft.component.type.NbtComponent.of(tag));
+            filled.set(net.minecraft.component.DataComponentTypes.CUSTOM_DATA, net.minecraft.component.type.NbtComponent.of(tag));
         } catch (Throwable ignored) {}
 
         // Consume one empty map from player's hand and give the filled map back
         if (inHand.getCount() <= 1) {
             // Replace the held stack with the filled map so the player immediately sees it
-            player.setStackInHand(hand, customFilled);
+            player.setStackInHand(hand, filled);
         } else {
             inHand.decrement(1);
-            if (!player.getInventory().insertStack(customFilled)) {
-                player.dropItem(customFilled, false);
+            if (!player.getInventory().insertStack(filled)) {
+                player.dropItem(filled, false);
             }
         }
 

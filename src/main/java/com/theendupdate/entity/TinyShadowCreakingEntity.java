@@ -85,8 +85,8 @@ public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
         } else if (this.dropRole == DROP_ENCHANTED_PAGES) {
             dropItem = com.theendupdate.registry.ModItems.ENCHANTED_PAGES;
         } else if (this.dropRole == DROP_WOOD_CHIP) {
-            // Design change: tiny creakings drop a Wooden Cone instead of a Wood Chip
-            dropItem = com.theendupdate.registry.ModItems.WOODEN_CONE;
+			// Tiny creakings should drop a Wood Chip, not a Wooden Cone
+			dropItem = com.theendupdate.registry.ModItems.WOOD_CHIP;
         }
         if (dropItem != null) {
             this.dropStack(sw, new net.minecraft.item.ItemStack(dropItem));

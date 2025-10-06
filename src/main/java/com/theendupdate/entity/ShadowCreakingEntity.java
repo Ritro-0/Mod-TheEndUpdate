@@ -22,6 +22,8 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.RaycastContext;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.World;
 
 public class ShadowCreakingEntity extends CreakingEntity {
@@ -535,7 +537,47 @@ protected boolean isWeepingAngelActive() {
 		if (this.getPose() == EntityPose.EMERGING) return false;
 		if (this.isLevitating()) return false;
 		if (this.postLandFreezeTicks > 0) return false;
+		
+		// Check reach distance and line of sight
+		if (!canReachTarget(target)) {
+			return false;
+		}
+		
 		return super.tryAttack(world, target);
+	}
+	
+	/**
+	 * Check if the target is within reach distance and line of sight
+	 */
+	private boolean canReachTarget(Entity target) {
+		if (target == null) return false;
+		
+		// Calculate 3D distance
+		double dx = this.getX() - target.getX();
+		double dy = this.getY() - target.getY();
+		double dz = this.getZ() - target.getZ();
+		double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		
+		// Get attack reach distance (default is 2.0 blocks for most mobs)
+		double reachDistance = 2.0;
+		
+		// Check if target is within reach distance
+		if (distance > reachDistance) {
+			return false;
+		}
+		
+		// Check line of sight - ensure there are no solid blocks between attacker and target
+		Vec3d attackerPos = this.getEyePos();
+		Vec3d targetPos = target.getBoundingBox().getCenter();
+		
+		// Use world.raycast to check for obstructions
+		return this.getWorld().raycast(new RaycastContext(
+			attackerPos, 
+			targetPos, 
+			RaycastContext.ShapeType.COLLIDER, 
+			RaycastContext.FluidHandling.NONE, 
+			this
+		)).getType() == HitResult.Type.MISS;
 	}
 
 	@Override

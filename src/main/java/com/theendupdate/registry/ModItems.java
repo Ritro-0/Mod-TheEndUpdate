@@ -136,16 +136,10 @@ public final class ModItems {
         net.minecraft.item.ItemGroups.SPAWN_EGGS
     );
 
-    // Shadow Hunter's Map - basic item that works in recipes
+    // Shadow Hunter's Map - custom item that fills a vanilla map pointing to the nearest hollow tree
     public static final Item SHADOW_HUNTERS_MAP = registerItem(
         "shadow_hunters_map",
-        key -> new Item(new Item.Settings().registryKey(key))
-    );
-
-    // Shadow Hunter's Filled Map - using basic Item to work in recipes
-    public static final Item SHADOW_HUNTERS_FILLED_MAP = registerItem(
-        "shadow_hunters_filled_map",
-        key -> new Item(new Item.Settings().registryKey(key))
+        key -> new com.theendupdate.item.ShadowHuntersMapItem(new Item.Settings().registryKey(key))
     );
 
     // Shadow Altar as standalone item test
