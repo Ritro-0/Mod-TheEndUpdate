@@ -4,9 +4,6 @@
     "theendupdate:ethereal_sporocarp",
     "theendupdate:ethereal_pustule",
     "theendupdate:shadow_cryptomycota",
-    "theendupdate:shadow_umbracarp",
-    { "id": "theendupdate:ethereal_planks" },
-    { "id": "theendupdate:shadow_planks" }
+    "theendupdate:shadow_umbracarp"
   ]
 }
-

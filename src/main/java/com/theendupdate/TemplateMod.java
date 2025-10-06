@@ -73,18 +73,18 @@ public class TemplateMod implements ModInitializer {
             builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_BUTTON, context.baseSmeltTime() / 4); // very low
             builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PRESSURE_PLATE, ETHEREAL_FUEL_TICKS);
 
-            // Mirror fuel values for Shadow wood set
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_PLANKS, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.UMBRACARP, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_STAIRS, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_SLAB, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_FENCE, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_FENCE_GATE, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_DOOR, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_TRAPDOOR, ETHEREAL_FUEL_TICKS);
+            // Shadow wood set - full burn time like traditional logs
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_PLANKS, context.baseSmeltTime());
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA, context.baseSmeltTime());
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP, context.baseSmeltTime());
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_STAIRS, context.baseSmeltTime());
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_SLAB, context.baseSmeltTime() / 2);
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_FENCE, context.baseSmeltTime());
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_FENCE_GATE, context.baseSmeltTime());
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_DOOR, context.baseSmeltTime());
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_TRAPDOOR, context.baseSmeltTime());
             builder.add(com.theendupdate.registry.ModBlocks.SHADOW_BUTTON, context.baseSmeltTime() / 4);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_PRESSURE_PLATE, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_PRESSURE_PLATE, context.baseSmeltTime() / 2);
         });
 
         // Composting: mirror vanilla chances

@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "axis=x": { "model": "theendupdate:block/shadow_umbracarp" },
+    "axis=y": { "model": "theendupdate:block/shadow_umbracarp" },
+    "axis=z": { "model": "theendupdate:block/shadow_umbracarp" }
+  }
+}
+
+

@@ -253,8 +253,8 @@ public final class ModBlocks {
         )
     );
 
-    public static final Block UMBRACARP = registerBlock(
-        "umbracarp",
+    public static final Block SHADOW_UMBRACARP = registerBlock(
+        "shadow_umbracarp",
         key -> new com.theendupdate.block.EtherealPustuleBlock(
             AbstractBlock.Settings
                 .copy(Blocks.OAK_WOOD)

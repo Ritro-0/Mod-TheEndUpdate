@@ -2,7 +2,7 @@
   "parent": "block/cube_column",
   "textures": {
     "end": "theendupdate:block/ethereal_sporocarp_top",
-    "side": "theendupdate:block/ethereal_sporocarp"
+    "side": "theendupdate:block/ethereal_sporocarp_side"
   }
 }
 

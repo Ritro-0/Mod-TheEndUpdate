@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CCC",
+    "CMC",
+    "CCC"
+  ],
+  "key": {
+    "C": "theendupdate:shadow_claw",
+    "M": "minecraft:map"
+  },
+  "result": {
+    "id": "theendupdate:shadow_hunters_map",
+    "count": 1
+  }
+}

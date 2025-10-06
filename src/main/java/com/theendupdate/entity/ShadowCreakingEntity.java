@@ -61,6 +61,8 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	private double gazeLastX;
 	private double gazeLastZ;
 	private int forceRunOverlayTicks;
+	// Cooldown to prevent repeated jumping
+	private int jumpCooldownTicks;
 
 	public ShadowCreakingEntity(EntityType<? extends CreakingEntity> entityType, World world) {
 		super(entityType, world);
@@ -378,33 +380,65 @@ public class ShadowCreakingEntity extends CreakingEntity {
 			if (!this.isWeepingAngelActive()) {
 				try { this.setAiDisabled(false); } catch (Throwable ignored) {}
 				if (this.gazeOverrideAttackCooldownTicks > 0) this.gazeOverrideAttackCooldownTicks--;
+				if (this.jumpCooldownTicks > 0) this.jumpCooldownTicks--;
 				if (this.getPose() != EntityPose.EMERGING && !this.isLevitating() && this.postLandFreezeTicks <= 0) {
 					var tgt = this.getTarget();
 					if (tgt != null && tgt.isAlive()) {
 						double dx = tgt.getX() - this.getX();
 						double dz = tgt.getZ() - this.getZ();
 						double dd = Math.sqrt(dx * dx + dz * dz);
-						// Use path navigation to preserve animations where possible
+						
+						// Enhanced pathfinding with obstacle avoidance and jumping
 						if (!this.isNavigating()) {
 							this.getNavigation().startMovingTo(tgt, 1.0);
 						}
 						this.getLookControl().lookAt(tgt, 30.0f, 30.0f);
-						// Detect lack of progress and apply a brief self-propelled step with forced run overlay
+						
+						// Check if we need to jump to reach the target
+						boolean shouldJump = this.shouldJumpToReachTarget(tgt);
+						if (shouldJump && this.isOnGround() && this.jumpCooldownTicks <= 0) {
+							this.performJump();
+							this.jumpCooldownTicks = 20; // 1 second cooldown
+						}
+						
+						// Detect lack of progress and apply enhanced pathfinding
 						double moved = Math.hypot(this.getX() - this.gazeLastX, this.getZ() - this.gazeLastZ);
-						if (dd > 1.0 && moved < 0.01) {
+						if (dd > 1.0 && moved < 0.005) { // Reduced threshold for stuck detection
 							this.gazeNoProgressTicks++;
 						} else {
 							this.gazeNoProgressTicks = 0;
 						}
-						if (this.gazeNoProgressTicks >= 6 && dd > 1.0E-4) { // ~0.3s without progress
-							dx /= dd; dz /= dd;
+						
+						// Enhanced movement with obstacle avoidance
+						if (this.gazeNoProgressTicks >= 10 && dd > 1.0E-4) { // ~0.5s without progress
+							// First try direct path, only use alternative if blocked
+							dx /= dd; 
+							dz /= dd;
+							
+							// Only try alternative path if direct path is blocked
+							if (this.isBlockingPath(dx, dz)) {
+								Vec3d betterDirection = this.findBetterPathDirection(tgt);
+								if (betterDirection != null) {
+									dx = betterDirection.x;
+									dz = betterDirection.z;
+									dd = Math.sqrt(dx * dx + dz * dz);
+								}
+							}
+							
 							// Face the movement direction to avoid diagonal mismatch
 							float desiredYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
 							this.setYaw(desiredYaw);
 							this.setBodyYaw(desiredYaw);
-							// Small step forward; keep vertical unchanged
+							
+							// Enhanced movement with jumping capability
 							double base = this.getAttributeValue(EntityAttributes.MOVEMENT_SPEED);
 							double v = Math.max(0.12, base * 0.65);
+							
+							// Check if we need to jump over a block
+							if (this.isBlockingPath(dx, dz) && this.isOnGround()) {
+								this.performJump();
+							}
+							
 							this.setVelocity(dx * v, this.getVelocity().y, dz * v);
 							this.velocityDirty = true;
 							this.move(net.minecraft.entity.MovementType.SELF, new Vec3d(dx * v, 0.0, dz * v));
@@ -652,6 +686,267 @@ protected boolean isWeepingAngelActive() {
 		if (this instanceof com.theendupdate.entity.TinyShadowCreakingEntity) return 0.25f; // quarter of mini
 		if (this instanceof com.theendupdate.entity.MiniShadowCreakingEntity) return 0.5f;
 		return 1.0f;
+	}
+
+	/**
+	 * Check if the entity should jump to reach the target
+	 */
+	private boolean shouldJumpToReachTarget(Entity target) {
+		if (target == null) return false;
+		
+		Vec3d start = this.getPos();
+		Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
+		
+		// Check if target is higher and there's a block between us
+		double dy = target.getY() - this.getY();
+		if (dy > 0.3) { // Target is higher
+			double distance = start.distanceTo(end);
+			
+			if (distance > 0.5) {
+				Vec3d direction = end.subtract(start).normalize();
+				
+				// Check for blocking blocks in the path to target
+				for (double i = 0.5; i < Math.min(2.0, distance); i += 0.3) {
+					Vec3d checkPos = start.add(direction.multiply(i));
+					
+					// Check if there's a block at ground level
+					boolean hasBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+						checkPos.subtract(0.3, 0, 0.3), 
+						checkPos.add(0.3, 1, 0.3)
+					));
+					
+					if (hasBlock) {
+						// Check if there's space above the block to jump into
+						Vec3d abovePos = checkPos.add(0, 1, 0);
+						boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+							abovePos.subtract(0.3, 0, 0.3), 
+							abovePos.add(0.3, 2, 0.3)
+						));
+						
+						// Only jump if there's a block in the path AND space above it
+						return hasSpaceAbove;
+					}
+				}
+			}
+		}
+		
+		// Also check for blocks in a wider area around the entity (for sideways jumping)
+		// Check 8 directions around the entity for nearby blocks that can be jumped over
+		double[] angles = {0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4};
+		for (double angle : angles) {
+			Vec3d checkDirection = new Vec3d(Math.cos(angle), 0, Math.sin(angle));
+			Vec3d checkPos = start.add(checkDirection.multiply(1.0));
+			
+			// Check if there's a block nearby
+			boolean hasNearbyBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+				checkPos.subtract(0.3, 0, 0.3), 
+				checkPos.add(0.3, 1, 0.3)
+			));
+			
+			if (hasNearbyBlock) {
+				// Check if there's space above the block
+				Vec3d abovePos = checkPos.add(0, 1, 0);
+				boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+					abovePos.subtract(0.3, 0, 0.3), 
+					abovePos.add(0.3, 2, 0.3)
+				));
+				
+				// Check if jumping over this block would get us closer to the target
+				Vec3d jumpLandPos = checkPos.add(checkDirection.multiply(1.5));
+				double currentDist = start.distanceTo(end);
+				double jumpDist = jumpLandPos.distanceTo(end);
+				
+				if (hasSpaceAbove && jumpDist < currentDist) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Find a better path direction around obstacles
+	 */
+	private Vec3d findBetterPathDirection(Entity target) {
+		if (target == null) return null;
+		
+		Vec3d currentPos = this.getPos();
+		Vec3d targetPos = target.getPos();
+		Vec3d directDirection = targetPos.subtract(currentPos).normalize();
+		
+		// Try directions closer to the direct path first (45-degree increments)
+		double[] angles = {
+			Math.atan2(directDirection.z, directDirection.x), // Direct path
+			Math.atan2(directDirection.z, directDirection.x) + Math.PI/4, // 45 degrees right
+			Math.atan2(directDirection.z, directDirection.x) - Math.PI/4, // 45 degrees left
+			Math.atan2(directDirection.z, directDirection.x) + Math.PI/2, // 90 degrees right
+			Math.atan2(directDirection.z, directDirection.x) - Math.PI/2, // 90 degrees left
+			Math.atan2(directDirection.z, directDirection.x) + 3*Math.PI/4, // 135 degrees right
+			Math.atan2(directDirection.z, directDirection.x) - 3*Math.PI/4, // 135 degrees left
+			Math.atan2(directDirection.z, directDirection.x) + Math.PI // 180 degrees (back)
+		};
+		
+		Vec3d bestDirection = null;
+		double bestScore = Double.NEGATIVE_INFINITY;
+		
+		for (double angle : angles) {
+			Vec3d testDirection = new Vec3d(Math.cos(angle), 0, Math.sin(angle));
+			
+			// Try multiple distances to find the best path
+			for (double distance : new double[]{1.5, 2.5, 3.5}) {
+				Vec3d testPos = currentPos.add(testDirection.multiply(distance));
+				
+				// Check if this direction is clear
+				if (this.getWorld().isSpaceEmpty(this, new Box(testPos.subtract(0.3, 0, 0.3), testPos.add(0.3, 2, 0.3)))) {
+					// Calculate score: prioritize directions that are both clear and closer to target
+					double currentDist = currentPos.distanceTo(targetPos);
+					double testDist = testPos.distanceTo(targetPos);
+					double distanceImprovement = currentDist - testDist;
+					
+					// Prefer directions closer to the direct path (lower angle difference)
+					double angleDiff = Math.abs(angle - Math.atan2(directDirection.z, directDirection.x));
+					if (angleDiff > Math.PI) angleDiff = 2*Math.PI - angleDiff;
+					double angleScore = 1.0 - (angleDiff / Math.PI); // 1.0 for direct, 0.0 for opposite
+					
+					// Bonus for longer clear paths
+					double pathLengthBonus = distance * 0.1;
+					
+					// Combined score: distance improvement + angle preference + path length
+					double score = distanceImprovement * 0.6 + angleScore * 0.3 + pathLengthBonus * 0.1;
+					
+					if (score > bestScore) {
+						bestScore = score;
+						bestDirection = testDirection;
+					}
+				}
+			}
+		}
+		
+		return bestDirection;
+	}
+	
+	/**
+	 * Check if there's a blocking block in the path
+	 */
+	private boolean isBlockingPath(double dx, double dz) {
+		Vec3d currentPos = this.getPos();
+		Vec3d checkPos = currentPos.add(dx * 1.5, 0, dz * 1.5);
+		
+		// Check for solid blocks in the path
+		return !this.getWorld().isSpaceEmpty(this, new Box(checkPos.subtract(0.3, 0, 0.3), checkPos.add(0.3, 2, 0.3)));
+	}
+	
+	/**
+	 * Make the entity jump with forward momentum toward target
+	 */
+	private void performJump() {
+		if (this.isOnGround()) {
+			// Always calculate forward momentum toward target when jumping
+			var target = this.getTarget();
+			double vx = 0;
+			double vz = 0;
+			
+			if (target != null) {
+				// Find the best direction to jump toward the target
+				Vec3d start = this.getPos();
+				Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
+				double distance = start.distanceTo(end);
+				
+				if (distance > 0.1) {
+					// Try direct path first
+					Vec3d directDirection = end.subtract(start).normalize();
+					
+					// Check if direct path is blocked
+					boolean directBlocked = false;
+					for (double i = 0.5; i < Math.min(1.5, distance); i += 0.3) {
+						Vec3d checkPos = start.add(directDirection.multiply(i));
+						if (!this.getWorld().isSpaceEmpty(this, new Box(checkPos.subtract(0.3, 0, 0.3), checkPos.add(0.3, 2, 0.3)))) {
+							directBlocked = true;
+							break;
+						}
+					}
+					
+					if (!directBlocked) {
+						// Use direct path
+						double speed = 0.4;
+						vx = directDirection.x * speed;
+						vz = directDirection.z * speed;
+					} else {
+						// Find best alternative direction
+						Vec3d bestDirection = findBestJumpDirection(target);
+						if (bestDirection != null) {
+							double speed = 0.4;
+							vx = bestDirection.x * speed;
+							vz = bestDirection.z * speed;
+						}
+					}
+				}
+			}
+			
+			// Higher jump velocity to clear blocks
+			this.setVelocity(vx, 0.5, vz);
+			this.velocityDirty = true;
+		}
+	}
+	
+	/**
+	 * Find the best direction to jump toward the target
+	 */
+	private Vec3d findBestJumpDirection(Entity target) {
+		if (target == null) return null;
+		
+		Vec3d start = this.getPos();
+		Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
+		Vec3d directDirection = end.subtract(start).normalize();
+		
+		// Try 8 directions around the target
+		double[] angles = {0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4};
+		
+		Vec3d bestDirection = null;
+		double bestScore = Double.NEGATIVE_INFINITY;
+		
+		for (double angle : angles) {
+			Vec3d testDirection = new Vec3d(Math.cos(angle), 0, Math.sin(angle));
+			Vec3d checkPos = start.add(testDirection.multiply(1.0));
+			
+			// Check if there's a block nearby that we can jump over
+			boolean hasBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+				checkPos.subtract(0.3, 0, 0.3), 
+				checkPos.add(0.3, 1, 0.3)
+			));
+			
+			if (hasBlock) {
+				// Check if there's space above the block
+				Vec3d abovePos = checkPos.add(0, 1, 0);
+				boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+					abovePos.subtract(0.3, 0, 0.3), 
+					abovePos.add(0.3, 2, 0.3)
+				));
+				
+				if (hasSpaceAbove) {
+					// Calculate how much this direction gets us closer to target
+					Vec3d jumpLandPos = checkPos.add(testDirection.multiply(1.5));
+					double currentDist = start.distanceTo(end);
+					double jumpDist = jumpLandPos.distanceTo(end);
+					double distanceImprovement = currentDist - jumpDist;
+					
+					// Prefer directions closer to the direct path
+					double angleDiff = Math.abs(angle - Math.atan2(directDirection.z, directDirection.x));
+					if (angleDiff > Math.PI) angleDiff = 2*Math.PI - angleDiff;
+					double angleScore = 1.0 - (angleDiff / Math.PI);
+					
+					double score = distanceImprovement * 0.7 + angleScore * 0.3;
+					
+					if (score > bestScore) {
+						bestScore = score;
+						bestDirection = testDirection;
+					}
+				}
+			}
+		}
+		
+		return bestDirection;
 	}
 
 	private void spawnSoulBurstAndDamage() {
