@@ -78,6 +78,12 @@ public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
     public void onDeath(net.minecraft.entity.damage.DamageSource damageSource) {
         super.onDeath(damageSource);
         if (!(this.getWorld() instanceof net.minecraft.server.world.ServerWorld sw)) return;
+        
+        // Handle boss bar cleanup
+        if (this.bossBarManager != null) {
+            this.bossBarManager.removeEntity(this.getUuid());
+        }
+        
         // Apply the deterministic drop based on assigned role
         net.minecraft.item.Item dropItem = null;
         if (this.dropRole == DROP_ENCHANTED_BOOK_COVER) {

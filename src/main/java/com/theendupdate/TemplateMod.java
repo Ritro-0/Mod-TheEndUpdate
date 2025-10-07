@@ -197,6 +197,8 @@ public class TemplateMod implements ModInitializer {
         // Server tick: spawn subtle END_ROD particles around players wearing spectral trims
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
             for (ServerWorld world : server.getWorlds()) {
+                // Update all active Shadow Creaking boss bars
+                com.theendupdate.entity.ShadowCreakingBossBarRegistry.tickAll(world);
                 // Cadence ~6.7 Hz for elegant motion
                 boolean theendupdate$cadence = (world.getTime() % 3) == 0;
                 // Process players (existing behavior)

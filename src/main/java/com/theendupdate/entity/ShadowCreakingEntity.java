@@ -65,6 +65,10 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	private boolean isJumping;
 	// Timeout to prevent infinite jumping state
 	private int jumpStateTicks;
+	
+	// Boss bar management
+	protected ShadowCreakingBossBarManager bossBarManager;
+	protected boolean isMainEntity = true; // Only true for the original entity, false for spawned children
 
 	public ShadowCreakingEntity(EntityType<? extends CreakingEntity> entityType, World world) {
 		super(entityType, world);
@@ -108,6 +112,12 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	public void onDeath(DamageSource damageSource) {
 		super.onDeath(damageSource);
 		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		
+		// Handle boss bar cleanup for all entities
+		if (this.bossBarManager != null) {
+			this.bossBarManager.removeEntity(this.getUuid());
+		}
+		
 		if (!this.shouldSpawnOnDeath()) return;
 		if (wasKilledByPlayer(damageSource)) {
 			// Pre-assign tiny drop roles: one cover, one pages, two wood chips
@@ -125,6 +135,18 @@ public class ShadowCreakingEntity extends CreakingEntity {
 			s2.setChildTinyDropRoles(roles[2], roles[3]);
 			try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
 			try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+			
+			// Set up boss bar for spawned mini entities
+			if (this.bossBarManager != null) {
+				s1.bossBarManager = this.bossBarManager;
+				s2.bossBarManager = this.bossBarManager;
+				s1.isMainEntity = false;
+				s2.isMainEntity = false;
+				
+				// Add mini entities to boss bar tracking
+				this.bossBarManager.addMiniEntity(s1);
+				this.bossBarManager.addMiniEntity(s2);
+			}
 			
 			// Find valid spawn positions and spawn entities
 			java.util.List<com.theendupdate.entity.ShadowCreakingEntity> toSpawn = new java.util.ArrayList<>();
@@ -312,6 +334,22 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	@Override
 	public void tick() {
 		super.tick();
+		
+		// Handle boss bar initialization and updates for main entity
+		if (!this.getWorld().isClient && this.isMainEntity) {
+			// Initialize boss bar if not already done (fallback for any spawn method)
+			if (this.bossBarManager == null && this.age <= 5) {
+				boolean isEmerging = this.getPose() == EntityPose.EMERGING;
+				com.theendupdate.TemplateMod.LOGGER.info("Initializing boss bar at age {}, pose: {}, emerging: {}", 
+					this.age, this.getPose(), isEmerging);
+				this.initializeBossBar(isEmerging);
+			}
+			
+			// Update boss bar
+			if (this.bossBarManager != null) {
+				this.bossBarManager.tick((ServerWorld) this.getWorld());
+			}
+		}
 
 		// Restore persisted one-time state on fresh loads so rejoin does not replay cinematics
 		if (!this.getWorld().isClient) {
@@ -687,6 +725,35 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	// Hook: whether this entity should spawn children on death if killed by player
 	protected boolean shouldSpawnOnDeath() {
 		return true;
+	}
+	
+	/**
+	 * Initializes the boss bar for this entity
+	 */
+	protected void initializeBossBar(boolean isEmergingFromAltar) {
+		if (!this.isMainEntity || this.bossBarManager != null) return;
+		
+		try {
+			this.bossBarManager = ShadowCreakingBossBarRegistry.createBossBar(this, isEmergingFromAltar);
+			com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking boss bar initialized for entity {} (emerging: {})", 
+				this.getUuid(), isEmergingFromAltar);
+		} catch (Exception e) {
+			com.theendupdate.TemplateMod.LOGGER.error("Failed to initialize Shadow Creaking boss bar", e);
+		}
+	}
+	
+	/**
+	 * Sets whether this entity is the main entity (affects boss bar management)
+	 */
+	public void setMainEntity(boolean isMainEntity) {
+		this.isMainEntity = isMainEntity;
+	}
+	
+	/**
+	 * Gets the boss bar manager for this entity
+	 */
+	public ShadowCreakingBossBarManager getBossBarManager() {
+		return this.bossBarManager;
 	}
 
 	protected static boolean wasKilledByPlayer(DamageSource source) {

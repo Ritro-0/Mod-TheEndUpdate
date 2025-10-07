@@ -59,6 +59,12 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
     public void onDeath(DamageSource damageSource) {
         super.onDeath(damageSource);
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
+        
+        // Handle boss bar cleanup
+        if (this.bossBarManager != null) {
+            this.bossBarManager.removeEntity(this.getUuid());
+        }
+        
         // Spawn tiny children if killed by player, or if roles were preset from a parent
         boolean allowSpawn = wasKilledByPlayer(damageSource) ||
             (this.childTinyDropRoleA != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE || this.childTinyDropRoleB != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE);
@@ -71,6 +77,18 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
         s2.setDropRole(this.childTinyDropRoleB);
         try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
         try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+        
+        // Set up boss bar for spawned tiny entities
+        if (this.bossBarManager != null) {
+            s1.bossBarManager = this.bossBarManager;
+            s2.bossBarManager = this.bossBarManager;
+            s1.isMainEntity = false;
+            s2.isMainEntity = false;
+            
+            // Add tiny entities to boss bar tracking
+            this.bossBarManager.addTinyEntity(s1);
+            this.bossBarManager.addTinyEntity(s2);
+        }
         
         // Find valid spawn positions and spawn entities
         java.util.List<ShadowCreakingEntity> toSpawn = new java.util.ArrayList<>();
