@@ -34,10 +34,42 @@ public class ShadowCreakingBossBarRegistry {
     }
     
     /**
+     * Creates a new boss bar manager that starts charging when the altar is lit.
+     * This is called before the entity spawns.
+     */
+    public static ShadowCreakingBossBarManager createChargingBossBar(UUID entityUuid, ServerWorld world) {
+        // Remove any existing boss bar for this entity (shouldn't happen, but safety check)
+        ShadowCreakingBossBarManager existing = activeBossBars.remove(entityUuid);
+        if (existing != null) {
+            existing.endBossFight();
+        }
+        
+        // Create new boss bar manager
+        ShadowCreakingBossBarManager manager = new ShadowCreakingBossBarManager(entityUuid);
+        activeBossBars.put(entityUuid, manager);
+        
+        // Start the charging phase
+        manager.startChargingFromAltar(world);
+        
+        return manager;
+    }
+    
+    /**
      * Gets the boss bar manager for a specific main entity UUID
      */
     public static ShadowCreakingBossBarManager getBossBar(UUID mainEntityUuid) {
         return activeBossBars.get(mainEntityUuid);
+    }
+    
+    /**
+     * Transfers a boss bar from one UUID to another (used when entity spawns after charging)
+     */
+    public static void transferBossBar(UUID oldUuid, UUID newUuid) {
+        ShadowCreakingBossBarManager manager = activeBossBars.remove(oldUuid);
+        if (manager != null) {
+            activeBossBars.put(newUuid, manager);
+            com.theendupdate.TemplateMod.LOGGER.info("Transferred boss bar from UUID {} to {}", oldUuid, newUuid);
+        }
     }
     
     /**
@@ -50,22 +82,48 @@ public class ShadowCreakingBossBarRegistry {
         }
     }
     
+    // Track which server tick we last updated on to avoid duplicate ticks per server tick
+    private static long lastTickTime = -1;
+    
     /**
-     * Ticks all active boss bars
+     * Ticks all active boss bars. Call this once per server tick.
+     * If called multiple times in the same server tick (e.g., once per world),
+     * only the first call will actually tick the managers.
      */
     public static void tickAll(ServerWorld world) {
+        // Safety check: ensure world is valid
+        if (world == null) return;
+        
+        // Get current server tick time to avoid duplicate ticks
+        long currentTickTime = world.getTime();
+        
+        // Skip if we already ticked this server tick (prevents ticking once per dimension)
+        if (currentTickTime == lastTickTime) {
+            return;
+        }
+        lastTickTime = currentTickTime;
+        
         Iterator<Map.Entry<UUID, ShadowCreakingBossBarManager>> iterator = activeBossBars.entrySet().iterator();
         
         while (iterator.hasNext()) {
-            Map.Entry<UUID, ShadowCreakingBossBarManager> entry = iterator.next();
-            ShadowCreakingBossBarManager manager = entry.getValue();
-            
-            if (manager.isActive()) {
-                manager.tick(world);
-            } else {
-                // Clean up inactive managers
+            try {
+                Map.Entry<UUID, ShadowCreakingBossBarManager> entry = iterator.next();
+                ShadowCreakingBossBarManager manager = entry.getValue();
+                
+                if (manager != null && manager.isActive()) {
+                    manager.tick(world);
+                } else {
+                    // Clean up inactive managers
+                    com.theendupdate.TemplateMod.LOGGER.info("Cleaning up inactive boss bar manager - active: {}", manager != null ? manager.isActive() : "null");
+                    iterator.remove();
+                    if (manager != null) {
+                        manager.endBossFight();
+                    }
+                }
+            } catch (Exception e) {
+                // Log error and remove the problematic manager
+                com.theendupdate.TemplateMod.LOGGER.error("Error ticking Shadow Creaking boss bar", e);
                 iterator.remove();
-                manager.endBossFight();
             }
         }
     }

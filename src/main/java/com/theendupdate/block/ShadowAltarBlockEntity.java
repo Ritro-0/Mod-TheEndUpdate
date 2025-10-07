@@ -1,6 +1,7 @@
 package com.theendupdate.block;
 
 import com.theendupdate.registry.ModEntities;
+import com.theendupdate.entity.ShadowCreakingBossBarRegistry;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.EntityType;
@@ -13,6 +14,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
+import java.util.UUID;
 
 public class ShadowAltarBlockEntity extends BlockEntity {
 	private static final int ACTIVE_DURATION_TICKS = 15 * 20; // 15 seconds
@@ -24,6 +26,7 @@ public class ShadowAltarBlockEntity extends BlockEntity {
 	private int activeTicksRemaining;
 	private int cooldownTicksRemaining;
 	private BlockPos targetPos;
+	private UUID pendingEntityUuid; // UUID for the entity that will spawn
 
 	public ShadowAltarBlockEntity(BlockPos pos, BlockState state) {
 		super(com.theendupdate.registry.ModBlockEntities.SHADOW_ALTAR, pos, state);
@@ -39,6 +42,11 @@ public class ShadowAltarBlockEntity extends BlockEntity {
 		if (found == null) return false;
 		this.targetPos = found;
 		this.activeTicksRemaining = ACTIVE_DURATION_TICKS;
+		
+		// Generate UUID for the entity that will spawn and start boss bar charging
+		this.pendingEntityUuid = UUID.randomUUID();
+		ShadowCreakingBossBarRegistry.createChargingBossBar(this.pendingEntityUuid, world);
+		
 		markDirty();
 		return true;
 	}
@@ -66,9 +74,34 @@ public class ShadowAltarBlockEntity extends BlockEntity {
 					var spawned = type.spawn(server, null, altar.targetPos, SpawnReason.TRIGGERED, true, false);
 					if (spawned instanceof com.theendupdate.entity.ShadowCreakingEntity sce) {
 						try { sce.addCommandTag("theendupdate:spawned_by_altar"); } catch (Throwable ignored) {}
+						
+					// Continue using the existing charging boss bar and add the entity to it
+					if (altar.pendingEntityUuid != null) {
+						com.theendupdate.entity.ShadowCreakingBossBarManager chargingManager = 
+							com.theendupdate.entity.ShadowCreakingBossBarRegistry.getBossBar(altar.pendingEntityUuid);
+						if (chargingManager != null) {
+							// Transfer the charging boss bar to the entity and start tracking it
+							sce.bossBarManager = chargingManager;
+							chargingManager.startBossFight(sce, true);
+							
+							// Update the registry to track this boss bar under the entity's UUID instead
+							com.theendupdate.entity.ShadowCreakingBossBarRegistry.transferBossBar(altar.pendingEntityUuid, sce.getUuid());
+							
+							com.theendupdate.TemplateMod.LOGGER.info("Transferred charging boss bar to spawned entity {} with {} charging ticks", 
+								sce.getUuid(), chargingManager.chargingTicks);
+						} else {
+							// Fallback: charging manager not found, create a new one
+							com.theendupdate.TemplateMod.LOGGER.warn("Charging boss bar not found for UUID {}, creating new one", altar.pendingEntityUuid);
+							sce.initializeBossBar(true);
+						}
+					} else {
+						// Fallback: no pending UUID, create a new boss bar
+						sce.initializeBossBar(true);
+					}
 					}
 				}
 				altar.targetPos = null;
+				altar.pendingEntityUuid = null;
 				altar.cooldownTicksRemaining = COOLDOWN_TICKS;
 			}
 		}

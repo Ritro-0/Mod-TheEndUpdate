@@ -198,7 +198,9 @@ public class TemplateMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
             for (ServerWorld world : server.getWorlds()) {
                 // Update all active Shadow Creaking boss bars
-                com.theendupdate.entity.ShadowCreakingBossBarRegistry.tickAll(world);
+                if (world != null) {
+                    com.theendupdate.entity.ShadowCreakingBossBarRegistry.tickAll(world);
+                }
                 // Cadence ~6.7 Hz for elegant motion
                 boolean theendupdate$cadence = (world.getTime() % 3) == 0;
                 // Process players (existing behavior)

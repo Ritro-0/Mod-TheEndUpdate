@@ -67,7 +67,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	private int jumpStateTicks;
 	
 	// Boss bar management
-	protected ShadowCreakingBossBarManager bossBarManager;
+	public ShadowCreakingBossBarManager bossBarManager;
 	protected boolean isMainEntity = true; // Only true for the original entity, false for spawned children
 
 	public ShadowCreakingEntity(EntityType<? extends CreakingEntity> entityType, World world) {
@@ -335,7 +335,8 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	public void tick() {
 		super.tick();
 		
-		// Handle boss bar initialization and updates for main entity
+		// Handle boss bar initialization for main entity
+		// Note: Boss bar ticking is handled by ShadowCreakingBossBarRegistry, not here
 		if (!this.getWorld().isClient && this.isMainEntity) {
 			// Initialize boss bar if not already done (fallback for any spawn method)
 			if (this.bossBarManager == null && this.age <= 5) {
@@ -343,11 +344,6 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				com.theendupdate.TemplateMod.LOGGER.info("Initializing boss bar at age {}, pose: {}, emerging: {}", 
 					this.age, this.getPose(), isEmerging);
 				this.initializeBossBar(isEmerging);
-			}
-			
-			// Update boss bar
-			if (this.bossBarManager != null) {
-				this.bossBarManager.tick((ServerWorld) this.getWorld());
 			}
 		}
 
@@ -730,7 +726,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	/**
 	 * Initializes the boss bar for this entity
 	 */
-	protected void initializeBossBar(boolean isEmergingFromAltar) {
+	public void initializeBossBar(boolean isEmergingFromAltar) {
 		if (!this.isMainEntity || this.bossBarManager != null) return;
 		
 		try {
