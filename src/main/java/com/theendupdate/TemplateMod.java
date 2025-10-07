@@ -20,6 +20,12 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.entity.EquipmentSlot;
 import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
+import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
+import net.minecraft.loot.LootPool;
+import net.minecraft.loot.entry.ItemEntry;
+import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
+import net.minecraft.loot.function.SetCountLootFunction;
+import net.minecraft.loot.LootTables;
 // Explosion blast immunity for certain item entities is implemented via different API versions.
 // For now, remove Fabric ExplosionEvents usage due to missing module in this env.
 // import net.fabricmc.fabric.api.event.world.ExplosionEvents;
@@ -151,6 +157,19 @@ public class TemplateMod implements ModInitializer {
 
         // Worldgen registration
         com.theendupdate.registry.ModWorldgen.registerAll();
+        
+        // Add shadow hunters map to end city loot
+        LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
+            if (LootTables.END_CITY_TREASURE_CHEST.equals(key)) {
+                LootPool.Builder poolBuilder = LootPool.builder()
+                    .rolls(ConstantLootNumberProvider.create(1))
+                    .with(ItemEntry.builder(com.theendupdate.registry.ModItems.SHADOW_HUNTERS_MAP)
+                        .weight(1) // Weight of 1 - as rare as enchanted books, ender pearls, and chorus fruit
+                        .apply(SetCountLootFunction.builder(ConstantLootNumberProvider.create(1))));
+                tableBuilder.pool(poolBuilder);
+            }
+        });
+        
         // Commands
         try { com.theendupdate.debug.DebugCommands.register(); } catch (Throwable ignored) {}
         // Post-gen spawners

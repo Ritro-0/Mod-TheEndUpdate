@@ -30,5 +30,3 @@ public final class GatewayCompassContext {
         return tag.contains("gx") && tag.contains("gy") && tag.contains("gz") && tag.contains("gd");
     }
 }
-
-

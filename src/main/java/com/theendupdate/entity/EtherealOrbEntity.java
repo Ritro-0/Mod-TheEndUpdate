@@ -554,16 +554,69 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
     private void spawnBaby(ServerWorld world) {
         EtherealOrbEntity baby = new EtherealOrbEntity(ModEntities.ETHEREAL_ORB, world);
-        double ox = this.getX() + (this.getRandom().nextDouble() - 0.5) * 0.6;
-        double oy = this.getY() + 0.5;
-        double oz = this.getZ() + (this.getRandom().nextDouble() - 0.5) * 0.6;
-        baby.refreshPositionAndAngles(ox, oy, oz, this.getYaw(), this.getPitch());
+        
+        // Find a safe spawn position to avoid suffocation
+        Vec3d safePos = findSafeSpawnPosition(world);
+        baby.refreshPositionAndAngles(safePos.x, safePos.y, safePos.z, this.getYaw(), this.getPitch());
         baby.setBabyTicks(-BABY_GROW_TICKS);
         baby.dataTracker.set(BABY, Boolean.TRUE);
         baby.dataTracker.set(GROWING_AGE, -BABY_GROW_TICKS);
         world.spawnEntity(baby);
-        world.spawnParticles(ParticleTypes.END_ROD, ox, oy + 0.4, oz, 10, 0.2, 0.2, 0.2, 0.0);
+        world.spawnParticles(ParticleTypes.END_ROD, safePos.x, safePos.y + 0.4, safePos.z, 10, 0.2, 0.2, 0.2, 0.0);
         this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.0f);
+    }
+    
+    /**
+     * Find a safe position to spawn a baby orb, ensuring it won't be inside blocks.
+     * Tries positions near the parent, progressively searching farther if needed.
+     */
+    private Vec3d findSafeSpawnPosition(ServerWorld world) {
+        // Baby dimensions when scaled (0.6 scale factor from renderer)
+        float babyWidth = 0.4375f * 0.6f;
+        float babyHeight = 0.6875f * 0.6f;
+        
+        // Try positions in expanding radius
+        double[][] offsets = {
+            // First try slightly above and to the side
+            {0.0, 1.0, 0.0},
+            {0.3, 1.0, 0.0},
+            {-0.3, 1.0, 0.0},
+            {0.0, 1.0, 0.3},
+            {0.0, 1.0, -0.3},
+            // Try farther positions
+            {0.5, 1.2, 0.0},
+            {-0.5, 1.2, 0.0},
+            {0.0, 1.2, 0.5},
+            {0.0, 1.2, -0.5},
+            // Try positions at parent level
+            {0.5, 0.0, 0.0},
+            {-0.5, 0.0, 0.0},
+            {0.0, 0.0, 0.5},
+            {0.0, 0.0, -0.5},
+            // Last resort: directly above parent
+            {0.0, 2.0, 0.0},
+            {0.0, 3.0, 0.0}
+        };
+        
+        for (double[] offset : offsets) {
+            double testX = this.getX() + offset[0];
+            double testY = this.getY() + offset[1];
+            double testZ = this.getZ() + offset[2];
+            
+            // Create a bounding box for the baby at this position
+            Box testBox = new Box(
+                testX - babyWidth / 2, testY, testZ - babyWidth / 2,
+                testX + babyWidth / 2, testY + babyHeight, testZ + babyWidth / 2
+            );
+            
+            // Check if this position is safe (no block collisions)
+            if (world.isSpaceEmpty(testBox)) {
+                return new Vec3d(testX, testY, testZ);
+            }
+        }
+        
+        // Fallback: spawn at parent position + upward offset (better than suffocating)
+        return new Vec3d(this.getX(), this.getY() + 1.0, this.getZ());
     }
 
     private boolean isRotatingForSpawn() {

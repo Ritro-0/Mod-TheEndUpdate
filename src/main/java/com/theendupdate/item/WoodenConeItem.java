@@ -36,6 +36,20 @@ public class WoodenConeItem extends Item {
             return ActionResult.PASS;
         }
 
+        // Prevent rapid-fire consumption during right-click hold
+        long lastUsed = custom != null ? custom.copyNbt().getLong("theendupdate_last_used").orElse(0L) : 0L;
+        if ((world.getTime() - lastUsed) < 10L) { // 0.5 second cooldown
+            return ActionResult.PASS;
+        }
+
+        // Set the last used timestamp to prevent rapid-fire usage
+        NbtCompound newTag = new NbtCompound();
+        if (custom != null) {
+            newTag = custom.copyNbt();
+        }
+        newTag.putLong("theendupdate_last_used", world.getTime());
+        stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(newTag));
+
         boolean creative = user.getAbilities().creativeMode;
         ItemStack iceCream = new ItemStack(com.theendupdate.registry.ModItems.ICE_CREAM_CONE);
         if (!creative) {

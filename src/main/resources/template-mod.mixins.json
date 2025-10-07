@@ -23,7 +23,8 @@
 		"MobEntitySetAiMixin",
 		"EntityNavigationStopMixin",
 		"PlayerEntityMiningSpeedMixin",
-		"ItemStackMiningSpeedMixin"
+		"ItemStackMiningSpeedMixin",
+		"FenceBlockConnectivityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

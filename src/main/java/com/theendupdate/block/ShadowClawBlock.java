@@ -51,19 +51,18 @@ public class ShadowClawBlock extends PlantBlock implements Fertilizable {
 
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
-        // Deterministic per-position variant to avoid client/server desync flicker on placement
-        long seed = ctx.getBlockPos().asLong() * 25214903917L + 11L;
+        // Use world time + position for deterministic but varied random seed
+        // This ensures client and server pick the same variant without stuttering
+        long worldTime = ctx.getWorld().getTime();
+        long seed = (worldTime + ctx.getBlockPos().asLong()) * 25214903917L + 11L;
         int variant = (int) (Long.rotateRight(seed, 16) & 3L);
         return this.getDefaultState().with(VARIANT, variant);
     }
 
     @Override
     public void onPlaced(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack itemStack) {
-        // Server-only: choose a truly random variant per placement, so re-placing at same coords can differ
-        if (!world.isClient) {
-            int variant = world.getRandom().nextInt(4);
-            world.setBlockState(pos, state.with(VARIANT, variant), Block.NOTIFY_LISTENERS);
-        }
+        // Use the same deterministic variant as client to prevent stuttering
+        // The variant is already set correctly in getPlacementState()
         super.onPlaced(world, pos, state, placer, itemStack);
     }
 

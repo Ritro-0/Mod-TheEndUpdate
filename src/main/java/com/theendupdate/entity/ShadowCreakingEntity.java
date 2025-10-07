@@ -41,8 +41,6 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	public final AnimationState diggingAnimationState = new AnimationState();
 	public final AnimationState levitatingAnimationState = new AnimationState();
 
-	private boolean playedSpawnLevitation;
-	private boolean hasSpawnEmerged;
 	private int levitateTicksRemaining;
 	private boolean waitingForPostLandFreeze;
 	private int postLandFreezeTicks;
@@ -63,10 +61,15 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	private int forceRunOverlayTicks;
 	// Cooldown to prevent repeated jumping
 	private int jumpCooldownTicks;
+	// Track if entity is currently jumping to preserve momentum
+	private boolean isJumping;
+	// Timeout to prevent infinite jumping state
+	private int jumpStateTicks;
 
 	public ShadowCreakingEntity(EntityType<? extends CreakingEntity> entityType, World world) {
 		super(entityType, world);
 		this.experiencePoints = 7;
+		this.setPersistent();
 	}
 
 	public static DefaultAttributeContainer.Builder createShadowCreakingAttributes() {
@@ -114,50 +117,177 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				com.theendupdate.entity.TinyShadowCreakingEntity.DROP_WOOD_CHIP,
 				com.theendupdate.entity.TinyShadowCreakingEntity.DROP_WOOD_CHIP
 			};
-			// Spawn two minis with guaranteed horizontal separation so they don't overlap
-			double baseX = this.getX();
-			double baseY = this.getY();
-			double baseZ = this.getZ();
-			double separation = 1.25; // half-distance; results in 2.5 blocks between centers
-			double angle = this.random.nextDouble() * Math.PI * 2.0;
-			boolean spawned = false;
-			for (int attempt = 0; attempt < 8 && !spawned; attempt++) {
-				double a = angle + attempt * (Math.PI / 4.0);
-				double dirX = Math.cos(a);
-				double dirZ = Math.sin(a);
-				double x1 = baseX - dirX * separation;
-				double z1 = baseZ - dirZ * separation;
-				double x2 = baseX + dirX * separation;
-				double z2 = baseZ + dirZ * separation;
-				com.theendupdate.entity.MiniShadowCreakingEntity s1 = new com.theendupdate.entity.MiniShadowCreakingEntity(com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING, sw);
-				com.theendupdate.entity.MiniShadowCreakingEntity s2 = new com.theendupdate.entity.MiniShadowCreakingEntity(com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING, sw);
-				s1.refreshPositionAndAngles(x1, baseY, z1, this.getYaw(), this.getPitch());
-				s2.refreshPositionAndAngles(x2, baseY, z2, this.getYaw(), this.getPitch());
-				// Assign each mini a pair of tiny drop roles
-				s1.setChildTinyDropRoles(roles[0], roles[1]);
-				s2.setChildTinyDropRoles(roles[2], roles[3]);
-				try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
-				try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
-				if (sw.isSpaceEmpty(s1) && sw.isSpaceEmpty(s2)) {
-					sw.spawnEntity(s1);
-					sw.spawnEntity(s2);
-					spawned = true;
-				}
-			}
-			// If all attempts fail, fall back to slight random jitter to avoid hard failure
-			if (!spawned) {
-				int[][] pairs = new int[][] { { roles[0], roles[1] }, { roles[2], roles[3] } };
-				for (int i = 0; i < 2; i++) {
-					com.theendupdate.entity.MiniShadowCreakingEntity spawn = new com.theendupdate.entity.MiniShadowCreakingEntity(com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING, sw);
-					double ox = baseX + (this.random.nextDouble() - 0.5) * 1.2;
-					double oz = baseZ + (this.random.nextDouble() - 0.5) * 1.2;
-					spawn.refreshPositionAndAngles(ox, baseY, oz, this.getYaw(), this.getPitch());
-					spawn.setChildTinyDropRoles(pairs[i][0], pairs[i][1]);
-					try { spawn.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
-					sw.spawnEntity(spawn);
+			
+			// Create the two mini entities to spawn
+			com.theendupdate.entity.MiniShadowCreakingEntity s1 = new com.theendupdate.entity.MiniShadowCreakingEntity(com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING, sw);
+			com.theendupdate.entity.MiniShadowCreakingEntity s2 = new com.theendupdate.entity.MiniShadowCreakingEntity(com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING, sw);
+			s1.setChildTinyDropRoles(roles[0], roles[1]);
+			s2.setChildTinyDropRoles(roles[2], roles[3]);
+			try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+			try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+			
+			// Find valid spawn positions and spawn entities
+			java.util.List<com.theendupdate.entity.ShadowCreakingEntity> toSpawn = new java.util.ArrayList<>();
+			toSpawn.add(s1);
+			toSpawn.add(s2);
+			spawnEntitiesWithValidPositions(sw, toSpawn, this.getX(), this.getY(), this.getZ());
+		}
+	}
+
+	/**
+	 * Helper method to find valid spawn positions within 5 blocks and spawn entities.
+	 * If only one valid position is found, all entities spawn there.
+	 * If multiple positions are found, entities are distributed across them.
+	 */
+	protected void spawnEntitiesWithValidPositions(ServerWorld sw, java.util.List<ShadowCreakingEntity> entities, double baseX, double baseY, double baseZ) {
+		if (entities.isEmpty()) return;
+		
+		// Get the entity dimensions for collision checking
+		ShadowCreakingEntity sampleEntity = entities.get(0);
+		float width = sampleEntity.getWidth();
+		float height = sampleEntity.getHeight();
+		
+		// Search for valid positions within 5 blocks, starting at minimum distance of 1 block
+		java.util.List<Vec3d> validPositions = new java.util.ArrayList<>();
+		int searchRadius = 5;
+		int neededPositions = entities.size(); // Try to find one position per entity
+		
+		// Start with positions at least 1 block away from death location, spiraling outward
+		for (double radius = 1.0; radius <= searchRadius && validPositions.size() < neededPositions; radius += 0.5) {
+			int angleSteps = Math.max(8, (int)(radius * 8)); // More angles for larger radii
+			for (int i = 0; i < angleSteps && validPositions.size() < neededPositions; i++) {
+				double angle = (2.0 * Math.PI * i) / angleSteps;
+				double offsetX = Math.cos(angle) * radius;
+				double offsetZ = Math.sin(angle) * radius;
+				
+				// Check positions at different heights (same level, slightly above, slightly below)
+				for (double yOffset = -1.0; yOffset <= 1.0 && validPositions.size() < neededPositions; yOffset += 0.5) {
+					double testX = baseX + offsetX;
+					double testY = baseY + yOffset;
+					double testZ = baseZ + offsetZ;
+					
+					// Create a bounding box at this position to test for collisions
+					Box testBox = new Box(
+						testX - width / 2, testY, testZ - width / 2,
+						testX + width / 2, testY + height, testZ + width / 2
+					);
+					
+					// Check if the position is valid (no collisions, on solid ground or close to it)
+					if (sw.isSpaceEmpty(testBox) && isValidSpawnPosition(sw, testBox, testY)) {
+						// Make sure this position isn't too close to already found positions
+						// (at least 1 block apart to ensure separate spawns)
+						boolean tooClose = false;
+						for (Vec3d existing : validPositions) {
+							double dist = Math.sqrt(
+								Math.pow(testX - existing.x, 2) + 
+								Math.pow(testZ - existing.z, 2)
+							);
+							if (dist < 1.0) { // Less than 1 block apart horizontally
+								tooClose = true;
+								break;
+							}
+						}
+						
+						if (!tooClose) {
+							validPositions.add(new Vec3d(testX, testY, testZ));
+						}
+					}
 				}
 			}
 		}
+		
+		// If we still need more positions and haven't found enough, relax the distance requirement
+		if (validPositions.size() < neededPositions) {
+			for (double radius = 1.0; radius <= searchRadius && validPositions.size() < neededPositions; radius += 0.5) {
+				int angleSteps = Math.max(8, (int)(radius * 8));
+				for (int i = 0; i < angleSteps && validPositions.size() < neededPositions; i++) {
+					double angle = (2.0 * Math.PI * i) / angleSteps;
+					double offsetX = Math.cos(angle) * radius;
+					double offsetZ = Math.sin(angle) * radius;
+					
+					for (double yOffset = -1.0; yOffset <= 1.0 && validPositions.size() < neededPositions; yOffset += 0.5) {
+						double testX = baseX + offsetX;
+						double testY = baseY + yOffset;
+						double testZ = baseZ + offsetZ;
+						
+						Box testBox = new Box(
+							testX - width / 2, testY, testZ - width / 2,
+							testX + width / 2, testY + height, testZ + width / 2
+						);
+						
+						// Check if already added
+						boolean alreadyAdded = false;
+						for (Vec3d existing : validPositions) {
+							if (existing.x == testX && existing.y == testY && existing.z == testZ) {
+								alreadyAdded = true;
+								break;
+							}
+						}
+						
+						if (!alreadyAdded && sw.isSpaceEmpty(testBox) && isValidSpawnPosition(sw, testBox, testY)) {
+							validPositions.add(new Vec3d(testX, testY, testZ));
+						}
+					}
+				}
+			}
+		}
+		
+		// If no valid positions found after searching, try the immediate area (0.5 block radius)
+		if (validPositions.isEmpty()) {
+			for (int i = 0; i < 8; i++) {
+				double angle = (2.0 * Math.PI * i) / 8.0;
+				double testX = baseX + Math.cos(angle) * 0.5;
+				double testZ = baseZ + Math.sin(angle) * 0.5;
+				
+				Box testBox = new Box(
+					testX - width / 2, baseY, testZ - width / 2,
+					testX + width / 2, baseY + height, testZ + width / 2
+				);
+				
+				if (sw.isSpaceEmpty(testBox)) {
+					validPositions.add(new Vec3d(testX, baseY, testZ));
+					if (validPositions.size() >= neededPositions) break;
+				}
+			}
+		}
+		
+		// Last resort: spawn at parent's position if still no valid position found
+		if (validPositions.isEmpty()) {
+			validPositions.add(new Vec3d(baseX, baseY, baseZ));
+		}
+		
+		// Distribute entities across valid positions
+		// Each entity gets its own position if possible, or they share if only one position available
+		for (int i = 0; i < entities.size(); i++) {
+			ShadowCreakingEntity entity = entities.get(i);
+			// Use different positions for each entity, wrapping around if we have fewer positions than entities
+			Vec3d spawnPos = validPositions.get(i % validPositions.size());
+			entity.refreshPositionAndAngles(spawnPos.x, spawnPos.y, spawnPos.z, this.getYaw(), this.getPitch());
+			sw.spawnEntity(entity);
+		}
+	}
+	
+	/**
+	 * Check if a position is suitable for spawning (entity should be on ground or close to it)
+	 */
+	private boolean isValidSpawnPosition(ServerWorld sw, Box entityBox, double yPos) {
+		// Check if there's ground within 2 blocks below this position
+		Box groundCheckBox = new Box(
+			entityBox.minX, yPos - 2.0, entityBox.minZ,
+			entityBox.maxX, yPos, entityBox.maxZ
+		);
+		
+		// There should be solid ground below (not all air)
+		boolean hasGroundBelow = !sw.isSpaceEmpty(groundCheckBox);
+		
+		// Also check that the space directly below isn't too far (void check)
+		Box immediateGroundBox = new Box(
+			entityBox.minX, yPos - 0.5, entityBox.minZ,
+			entityBox.maxX, yPos, entityBox.maxZ
+		);
+		boolean hasImmediateGround = !sw.isSpaceEmpty(immediateGroundBox);
+		
+		return hasGroundBelow || hasImmediateGround;
 	}
 
 	// Slow down hand swing so attack animation matches vanilla pacing better
@@ -192,6 +322,12 @@ public class ShadowCreakingEntity extends CreakingEntity {
                         this.dataTracker.set(SPAWN_EMERGED, Boolean.TRUE);
                         if (this.getPose() == EntityPose.EMERGING) this.setPose(EntityPose.STANDING);
                     }
+                    if (tags != null && tags.contains("theendupdate:levitation_intro_played") && !this.dataTracker.get(LEVITATION_INTRO_PLAYED)) {
+                        this.dataTracker.set(LEVITATION_INTRO_PLAYED, Boolean.TRUE);
+                    }
+                    if (tags != null && tags.contains("theendupdate:half_health_levitation_triggered")) {
+                        this.halfHealthLevitationTriggered = true;
+                    }
                 }
             } catch (Throwable ignored) {}
 		}
@@ -206,7 +342,6 @@ public class ShadowCreakingEntity extends CreakingEntity {
 					if (this.getPose() == EntityPose.EMERGING) this.setPose(EntityPose.STANDING);
 					this.dataTracker.set(SPAWN_EMERGED, Boolean.TRUE);
 					this.dataTracker.set(LEVITATION_INTRO_PLAYED, Boolean.TRUE);
-					this.playedSpawnLevitation = true;
 				}
 			} catch (Throwable ignored) {}
 		}
@@ -228,11 +363,11 @@ public class ShadowCreakingEntity extends CreakingEntity {
                     boolean fromParent = tags != null && tags.contains("theendupdate:spawned_by_parent");
                     if ((fromAltar || fromParent) && !this.dataTracker.get(LEVITATION_INTRO_PLAYED)) {
                         this.dataTracker.set(LEVITATION_INTRO_PLAYED, Boolean.TRUE);
-                        this.playedSpawnLevitation = true;
                         this.levitateTicksRemaining = LEVITATE_DURATION_TICKS;
                         this.setLevitating(true);
                         this.setNoGravity(true);
                         this.setInvulnerable(true);
+                        try { this.addCommandTag("theendupdate:levitation_intro_played"); } catch (Throwable ignored2) {}
                     }
                 } catch (Throwable ignored) {}
             }
@@ -284,6 +419,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				this.setLevitating(true);
 				this.setNoGravity(true);
 				this.setInvulnerable(true);
+				try { this.addCommandTag("theendupdate:half_health_levitation_triggered"); } catch (Throwable ignored) {}
 			}
 
             if (this.isLevitating()) {
@@ -381,6 +517,18 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				try { this.setAiDisabled(false); } catch (Throwable ignored) {}
 				if (this.gazeOverrideAttackCooldownTicks > 0) this.gazeOverrideAttackCooldownTicks--;
 				if (this.jumpCooldownTicks > 0) this.jumpCooldownTicks--;
+				
+				// Detect landing after jump to reset jump state
+				if (this.isJumping) {
+					this.jumpStateTicks++;
+					// Reset jump state if: landed on ground, or timeout (20 ticks = 1 second), or velocity is very low
+					if (this.isOnGround() || this.jumpStateTicks > 20 || 
+					    (Math.abs(this.getVelocity().y) < 0.1 && this.jumpStateTicks > 5)) {
+						this.isJumping = false;
+						this.jumpStateTicks = 0;
+					}
+				}
+				
 				if (this.getPose() != EntityPose.EMERGING && !this.isLevitating() && this.postLandFreezeTicks <= 0) {
 					var tgt = this.getTarget();
 					if (tgt != null && tgt.isAlive()) {
@@ -396,57 +544,61 @@ public class ShadowCreakingEntity extends CreakingEntity {
 						
 						// Check if we need to jump to reach the target
 						boolean shouldJump = this.shouldJumpToReachTarget(tgt);
-						if (shouldJump && this.isOnGround() && this.jumpCooldownTicks <= 0) {
+						if (shouldJump && this.isOnGround() && this.jumpCooldownTicks <= 0 && !this.isJumping) {
 							this.performJump();
 							this.jumpCooldownTicks = 20; // 1 second cooldown
 						}
 						
-						// Detect lack of progress and apply enhanced pathfinding
-						double moved = Math.hypot(this.getX() - this.gazeLastX, this.getZ() - this.gazeLastZ);
-						if (dd > 1.0 && moved < 0.005) { // Reduced threshold for stuck detection
-							this.gazeNoProgressTicks++;
-						} else {
-							this.gazeNoProgressTicks = 0;
+						// Only apply stuck detection and movement override if not jumping
+						if (!this.isJumping) {
+							// Detect lack of progress and apply enhanced pathfinding
+							double moved = Math.hypot(this.getX() - this.gazeLastX, this.getZ() - this.gazeLastZ);
+							if (dd > 1.0 && moved < 0.005) { // Reduced threshold for stuck detection
+								this.gazeNoProgressTicks++;
+							} else {
+								this.gazeNoProgressTicks = 0;
+							}
+							
+							// Enhanced movement with obstacle avoidance
+							if (this.gazeNoProgressTicks >= 10 && dd > 1.0E-4) { // ~0.5s without progress
+								// First try direct path, only use alternative if blocked
+								dx /= dd; 
+								dz /= dd;
+								
+								// Only try alternative path if direct path is blocked
+								if (this.isBlockingPath(dx, dz)) {
+									Vec3d betterDirection = this.findBetterPathDirection(tgt);
+									if (betterDirection != null) {
+										dx = betterDirection.x;
+										dz = betterDirection.z;
+										dd = Math.sqrt(dx * dx + dz * dz);
+									}
+								}
+								
+								// Face the movement direction to avoid diagonal mismatch
+								float desiredYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+								this.setYaw(desiredYaw);
+								this.setBodyYaw(desiredYaw);
+								
+								// Enhanced movement with jumping capability
+								double base = this.getAttributeValue(EntityAttributes.MOVEMENT_SPEED);
+								double v = Math.max(0.12, base * 0.65);
+								
+								// Check if we need to jump over a block
+								if (this.isBlockingPath(dx, dz) && this.isOnGround()) {
+									this.performJump();
+								}
+								
+								this.setVelocity(dx * v, this.getVelocity().y, dz * v);
+								this.velocityDirty = true;
+								this.move(net.minecraft.entity.MovementType.SELF, new Vec3d(dx * v, 0.0, dz * v));
+								this.setSprinting(true);
+								this.gazeNoProgressTicks = 0;
+								// Trigger short client-side run overlay
+								this.forceRunOverlayTicks = 8; // ~0.4s
+							}
 						}
 						
-						// Enhanced movement with obstacle avoidance
-						if (this.gazeNoProgressTicks >= 10 && dd > 1.0E-4) { // ~0.5s without progress
-							// First try direct path, only use alternative if blocked
-							dx /= dd; 
-							dz /= dd;
-							
-							// Only try alternative path if direct path is blocked
-							if (this.isBlockingPath(dx, dz)) {
-								Vec3d betterDirection = this.findBetterPathDirection(tgt);
-								if (betterDirection != null) {
-									dx = betterDirection.x;
-									dz = betterDirection.z;
-									dd = Math.sqrt(dx * dx + dz * dz);
-								}
-							}
-							
-							// Face the movement direction to avoid diagonal mismatch
-							float desiredYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
-							this.setYaw(desiredYaw);
-							this.setBodyYaw(desiredYaw);
-							
-							// Enhanced movement with jumping capability
-							double base = this.getAttributeValue(EntityAttributes.MOVEMENT_SPEED);
-							double v = Math.max(0.12, base * 0.65);
-							
-							// Check if we need to jump over a block
-							if (this.isBlockingPath(dx, dz) && this.isOnGround()) {
-								this.performJump();
-							}
-							
-							this.setVelocity(dx * v, this.getVelocity().y, dz * v);
-							this.velocityDirty = true;
-							this.move(net.minecraft.entity.MovementType.SELF, new Vec3d(dx * v, 0.0, dz * v));
-							this.setSprinting(true);
-							this.gazeNoProgressTicks = 0;
-							// Trigger short client-side run overlay
-							this.forceRunOverlayTicks = 8; // ~0.4s
-						}
 						this.gazeLastX = this.getX();
 						this.gazeLastZ = this.getZ();
 						// Manual attack only as a fallback, with a cooldown matching typical melee pacing
@@ -486,8 +638,6 @@ public class ShadowCreakingEntity extends CreakingEntity {
 			}
 		}
 	}
-
-    // Removed NBT overrides; use age-based gating and booleans during runtime instead
 
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	private void removePotentialGazeFreezeGoals() {
@@ -696,69 +846,77 @@ protected boolean isWeepingAngelActive() {
 		
 		Vec3d start = this.getPos();
 		Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
+		Vec3d direction = end.subtract(start).normalize();
+		double distance = start.distanceTo(end);
 		
-		// Check if target is higher and there's a block between us
+		// Only consider jumping if target is at least 0.5 blocks away
+		if (distance < 0.5) return false;
+		
+		// Check vertical distance to target
 		double dy = target.getY() - this.getY();
-		if (dy > 0.3) { // Target is higher
-			double distance = start.distanceTo(end);
-			
-			if (distance > 0.5) {
-				Vec3d direction = end.subtract(start).normalize();
+		
+		// Check if target is higher - definitely need to jump
+		if (dy > 0.3) { // Target is higher (even slightly)
+			// Check if there's a block blocking the direct path
+			for (double i = 0.5; i < Math.min(2.5, distance); i += 0.4) {
+				Vec3d checkPos = start.add(direction.multiply(i));
 				
-				// Check for blocking blocks in the path to target
-				for (double i = 0.5; i < Math.min(2.0, distance); i += 0.3) {
-					Vec3d checkPos = start.add(direction.multiply(i));
-					
-					// Check if there's a block at ground level
+				// Check for blocking blocks at various heights
+				for (double yOffset = 0; yOffset <= 1.5; yOffset += 0.5) {
+					Vec3d testPos = checkPos.add(0, yOffset, 0);
 					boolean hasBlock = !this.getWorld().isSpaceEmpty(this, new Box(
-						checkPos.subtract(0.3, 0, 0.3), 
-						checkPos.add(0.3, 1, 0.3)
+						testPos.subtract(0.3, 0, 0.3), 
+						testPos.add(0.3, 0.5, 0.3)
 					));
 					
 					if (hasBlock) {
-						// Check if there's space above the block to jump into
-						Vec3d abovePos = checkPos.add(0, 1, 0);
+						// Check if there's space above to jump through
+						Vec3d abovePos = testPos.add(0, 1.5, 0);
 						boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
 							abovePos.subtract(0.3, 0, 0.3), 
-							abovePos.add(0.3, 2, 0.3)
+							abovePos.add(0.3, 1.5, 0.3)
 						));
 						
-						// Only jump if there's a block in the path AND space above it
-						return hasSpaceAbove;
+						if (hasSpaceAbove) {
+							return true;
+						}
 					}
 				}
 			}
 		}
 		
-		// Also check for blocks in a wider area around the entity (for sideways jumping)
-		// Check 8 directions around the entity for nearby blocks that can be jumped over
-		double[] angles = {0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4};
-		for (double angle : angles) {
-			Vec3d checkDirection = new Vec3d(Math.cos(angle), 0, Math.sin(angle));
-			Vec3d checkPos = start.add(checkDirection.multiply(1.0));
-			
-			// Check if there's a block nearby
-			boolean hasNearbyBlock = !this.getWorld().isSpaceEmpty(this, new Box(
-				checkPos.subtract(0.3, 0, 0.3), 
-				checkPos.add(0.3, 1, 0.3)
+		// Check for blocks directly in front that need to be jumped over (works for climbing and horizontal)
+		Vec3d frontCheckPos = start.add(direction.multiply(0.8));
+		boolean hasBlockAhead = !this.getWorld().isSpaceEmpty(this, new Box(
+			frontCheckPos.subtract(0.3, 0, 0.3), 
+			frontCheckPos.add(0.3, 1.0, 0.3)
+		));
+		
+		if (hasBlockAhead) {
+			// Check if there's space above the block
+			Vec3d abovePos = frontCheckPos.add(0, 1.0, 0);
+			boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+				abovePos.subtract(0.3, 0, 0.3), 
+				abovePos.add(0.3, 1.5, 0.3)
 			));
 			
-			if (hasNearbyBlock) {
-				// Check if there's space above the block
-				Vec3d abovePos = checkPos.add(0, 1, 0);
-				boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
-					abovePos.subtract(0.3, 0, 0.3), 
-					abovePos.add(0.3, 2, 0.3)
-				));
-				
-				// Check if jumping over this block would get us closer to the target
-				Vec3d jumpLandPos = checkPos.add(checkDirection.multiply(1.5));
-				double currentDist = start.distanceTo(end);
-				double jumpDist = jumpLandPos.distanceTo(end);
-				
-				if (hasSpaceAbove && jumpDist < currentDist) {
-					return true;
-				}
+			if (hasSpaceAbove) {
+				return true;
+			}
+		}
+		
+		// If entity hasn't made progress recently, consider jumping to break the cycle
+		// Reduced from 15 to 10 ticks to be more responsive
+		if (this.gazeNoProgressTicks >= 10) { // Stuck for ~0.5 seconds
+			// Check if jumping would help (could be descending or just getting unstuck)
+			Vec3d jumpLandPos = start.add(direction.multiply(1.5));
+			boolean landingClear = this.getWorld().isSpaceEmpty(this, new Box(
+				jumpLandPos.subtract(0.3, 0, 0.3), 
+				jumpLandPos.add(0.3, 2, 0.3)
+			));
+			
+			if (landingClear) {
+				return true;
 			}
 		}
 		
@@ -842,6 +1000,10 @@ protected boolean isWeepingAngelActive() {
 	 */
 	private void performJump() {
 		if (this.isOnGround()) {
+			// Mark as jumping and reset the timer
+			this.isJumping = true;
+			this.jumpStateTicks = 0;
+			
 			// Always calculate forward momentum toward target when jumping
 			var target = this.getTarget();
 			double vx = 0;
@@ -868,24 +1030,34 @@ protected boolean isWeepingAngelActive() {
 					}
 					
 					if (!directBlocked) {
-						// Use direct path
-						double speed = 0.4;
+						// Use direct path with stronger momentum
+						// Scale speed based on distance - jump further toward distant targets
+						double baseSpeed = 0.5; // Increased from 0.4
+						double distanceBonus = Math.min(distance * 0.1, 0.3); // Up to 0.3 extra speed for distant targets
+						double speed = baseSpeed + distanceBonus;
 						vx = directDirection.x * speed;
 						vz = directDirection.z * speed;
 					} else {
-						// Find best alternative direction
+						// Find best alternative direction with stronger momentum
 						Vec3d bestDirection = findBestJumpDirection(target);
 						if (bestDirection != null) {
-							double speed = 0.4;
+							double baseSpeed = 0.5;
+							double distanceBonus = Math.min(distance * 0.1, 0.3);
+							double speed = baseSpeed + distanceBonus;
 							vx = bestDirection.x * speed;
 							vz = bestDirection.z * speed;
+						} else {
+							// If no good direction found, jump straight up and slightly forward
+							vx = directDirection.x * 0.3;
+							vz = directDirection.z * 0.3;
 						}
 					}
 				}
 			}
 			
-			// Higher jump velocity to clear blocks
-			this.setVelocity(vx, 0.5, vz);
+			// Higher jump velocity to clear blocks more easily
+			// Vertical velocity increased from 0.5 to 0.6 for better block clearing
+			this.setVelocity(vx, 0.6, vz);
 			this.velocityDirty = true;
 		}
 	}
@@ -899,49 +1071,69 @@ protected boolean isWeepingAngelActive() {
 		Vec3d start = this.getPos();
 		Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
 		Vec3d directDirection = end.subtract(start).normalize();
+		double directAngle = Math.atan2(directDirection.z, directDirection.x);
 		
-		// Try 8 directions around the target
-		double[] angles = {0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4};
+		// Try multiple angles with preference for directions closer to the target
+		// Start with smaller deviations from direct path
+		double[] angleOffsets = {0, Math.PI/6, -Math.PI/6, Math.PI/4, -Math.PI/4, Math.PI/3, -Math.PI/3, 
+		                         Math.PI/2, -Math.PI/2, 2*Math.PI/3, -2*Math.PI/3, 3*Math.PI/4, -3*Math.PI/4};
 		
 		Vec3d bestDirection = null;
 		double bestScore = Double.NEGATIVE_INFINITY;
 		
-		for (double angle : angles) {
+		for (double angleOffset : angleOffsets) {
+			double angle = directAngle + angleOffset;
 			Vec3d testDirection = new Vec3d(Math.cos(angle), 0, Math.sin(angle));
-			Vec3d checkPos = start.add(testDirection.multiply(1.0));
 			
-			// Check if there's a block nearby that we can jump over
-			boolean hasBlock = !this.getWorld().isSpaceEmpty(this, new Box(
-				checkPos.subtract(0.3, 0, 0.3), 
-				checkPos.add(0.3, 1, 0.3)
-			));
-			
-			if (hasBlock) {
-				// Check if there's space above the block
-				Vec3d abovePos = checkPos.add(0, 1, 0);
-				boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
-					abovePos.subtract(0.3, 0, 0.3), 
-					abovePos.add(0.3, 2, 0.3)
+			// Test multiple jump distances to find the best landing spot
+			for (double jumpDist = 1.5; jumpDist <= 3.0; jumpDist += 0.5) {
+				Vec3d landingPos = start.add(testDirection.multiply(jumpDist));
+				
+				// Check if landing area is clear
+				boolean landingClear = this.getWorld().isSpaceEmpty(this, new Box(
+					landingPos.subtract(0.3, 0, 0.3), 
+					landingPos.add(0.3, 2, 0.3)
 				));
 				
-				if (hasSpaceAbove) {
-					// Calculate how much this direction gets us closer to target
-					Vec3d jumpLandPos = checkPos.add(testDirection.multiply(1.5));
-					double currentDist = start.distanceTo(end);
-					double jumpDist = jumpLandPos.distanceTo(end);
-					double distanceImprovement = currentDist - jumpDist;
-					
-					// Prefer directions closer to the direct path
-					double angleDiff = Math.abs(angle - Math.atan2(directDirection.z, directDirection.x));
-					if (angleDiff > Math.PI) angleDiff = 2*Math.PI - angleDiff;
-					double angleScore = 1.0 - (angleDiff / Math.PI);
-					
-					double score = distanceImprovement * 0.7 + angleScore * 0.3;
-					
-					if (score > bestScore) {
-						bestScore = score;
-						bestDirection = testDirection;
+				if (!landingClear) continue;
+				
+				// Check if there's ground to land on (within 2 blocks down)
+				boolean hasGround = false;
+				for (double checkDown = 0; checkDown <= 2.0; checkDown += 0.5) {
+					Vec3d groundCheck = landingPos.subtract(0, checkDown, 0);
+					boolean groundExists = !this.getWorld().isSpaceEmpty(this, new Box(
+						groundCheck.subtract(0.3, -0.1, 0.3), 
+						groundCheck.add(0.3, 0, 0.3)
+					));
+					if (groundExists) {
+						hasGround = true;
+						break;
 					}
+				}
+				
+				if (!hasGround) continue;
+				
+				// Calculate score based on multiple factors
+				double targetDist = landingPos.distanceTo(end);
+				double currentDist = start.distanceTo(end);
+				double distanceImprovement = currentDist - targetDist;
+				
+				// Prefer directions closer to direct path
+				double angleDiff = Math.abs(angleOffset);
+				double angleScore = 1.0 - (angleDiff / Math.PI);
+				
+				// Prefer longer jumps (more momentum)
+				double jumpDistScore = jumpDist / 3.0;
+				
+				// Avoid landing in previously visited spots by adding slight randomness
+				double randomFactor = this.getRandom().nextDouble() * 0.1;
+				
+				// Combined score: heavily weight distance improvement, then angle, then jump distance
+				double score = distanceImprovement * 0.5 + angleScore * 0.25 + jumpDistScore * 0.15 + randomFactor * 0.1;
+				
+				if (score > bestScore) {
+					bestScore = score;
+					bestDirection = testDirection;
 				}
 			}
 		}

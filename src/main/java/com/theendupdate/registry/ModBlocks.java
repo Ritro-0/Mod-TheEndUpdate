@@ -196,7 +196,7 @@ public final class ModBlocks {
 
     public static final Block ETHEREAL_FENCE = registerBlock(
         "ethereal_fence",
-        key -> new net.minecraft.block.FenceBlock(
+        key -> new com.theendupdate.block.EtherealFenceBlock(
             AbstractBlock.Settings.copy(Blocks.OAK_FENCE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
@@ -309,7 +309,7 @@ public final class ModBlocks {
 
     public static final Block SHADOW_FENCE = registerBlock(
         "shadow_fence",
-        key -> new net.minecraft.block.FenceBlock(
+        key -> new com.theendupdate.block.ShadowFenceBlock(
             AbstractBlock.Settings.copy(Blocks.OAK_FENCE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );

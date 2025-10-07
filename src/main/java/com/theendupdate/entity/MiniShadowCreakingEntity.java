@@ -63,48 +63,20 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
         boolean allowSpawn = wasKilledByPlayer(damageSource) ||
             (this.childTinyDropRoleA != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE || this.childTinyDropRoleB != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE);
         if (!allowSpawn) return;
-        double baseX = this.getX();
-        double baseY = this.getY();
-        double baseZ = this.getZ();
-        double separation = 1.0; // 2.0 blocks between centers for tinies
-        double angle = this.random.nextDouble() * Math.PI * 2.0;
-        boolean spawned = false;
-        for (int attempt = 0; attempt < 8 && !spawned; attempt++) {
-            double a = angle + attempt * (Math.PI / 4.0);
-            double dirX = Math.cos(a);
-            double dirZ = Math.sin(a);
-            double x1 = baseX - dirX * separation;
-            double z1 = baseZ - dirZ * separation;
-            double x2 = baseX + dirX * separation;
-            double z2 = baseZ + dirZ * separation;
-            TinyShadowCreakingEntity s1 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
-            TinyShadowCreakingEntity s2 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
-            s1.refreshPositionAndAngles(x1, baseY, z1, this.getYaw(), this.getPitch());
-            s2.refreshPositionAndAngles(x2, baseY, z2, this.getYaw(), this.getPitch());
-            // Apply preassigned drop roles to tinies
-            s1.setDropRole(this.childTinyDropRoleA);
-            s2.setDropRole(this.childTinyDropRoleB);
-            if (sw.isSpaceEmpty(s1) && sw.isSpaceEmpty(s2)) {
-                // Minis spawned from parent should signal to tinies that they are parent-spawned too
-                try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
-                try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
-                sw.spawnEntity(s1);
-                sw.spawnEntity(s2);
-                spawned = true;
-            }
-        }
-        if (!spawned) {
-            for (int i = 0; i < 2; i++) {
-                TinyShadowCreakingEntity spawn = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
-                double ox = baseX + (this.random.nextDouble() - 0.5) * 1.0;
-                double oz = baseZ + (this.random.nextDouble() - 0.5) * 1.0;
-                spawn.refreshPositionAndAngles(ox, baseY, oz, this.getYaw(), this.getPitch());
-                if (i == 0) spawn.setDropRole(this.childTinyDropRoleA);
-                else spawn.setDropRole(this.childTinyDropRoleB);
-                try { spawn.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
-                sw.spawnEntity(spawn);
-            }
-        }
+        
+        // Create the two tiny entities to spawn
+        TinyShadowCreakingEntity s1 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
+        TinyShadowCreakingEntity s2 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);
+        s1.setDropRole(this.childTinyDropRoleA);
+        s2.setDropRole(this.childTinyDropRoleB);
+        try { s1.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+        try { s2.addCommandTag("theendupdate:spawned_by_parent"); } catch (Throwable ignored) {}
+        
+        // Find valid spawn positions and spawn entities
+        java.util.List<ShadowCreakingEntity> toSpawn = new java.util.ArrayList<>();
+        toSpawn.add(s1);
+        toSpawn.add(s2);
+        spawnEntitiesWithValidPositions(sw, toSpawn, this.getX(), this.getY(), this.getZ());
     }
 
     @Override

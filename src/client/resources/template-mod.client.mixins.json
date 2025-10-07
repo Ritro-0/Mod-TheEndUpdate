@@ -5,8 +5,6 @@
 	"client": [
 		"TheEndUpdateClientMixin",
 		"BeaconBlockEntityRendererMixin",
-		"DrawContextMixin",
-		"ItemRendererMixin",
 		"CompassPropertyContextMixin",
 		"PlayerEntityGetDeathPosMixin",
 		"EntityRendererHasLabelMixin"
