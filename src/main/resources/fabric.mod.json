@@ -32,6 +32,17 @@
 			"environment": "client"
 		}
 	],
+	"custom": {
+		"modmenu": {
+			"badges": [ "library" ]
+		},
+		"fabric-resource-loader-v0:resource_packs": [
+			{
+				"id": "theendupdate:default",
+				"enabled_by_default": true
+			}
+		]
+	},
 	"depends": {
 		"fabricloader": ">=0.17.2",
 		"minecraft": "~1.21.8",

@@ -66,18 +66,56 @@ public final class ShadowClawTreeGenerator {
         // If hollow, place a Shadow Altar at the floor center
         if (hollow && world instanceof net.minecraft.world.StructureWorldAccess sw) {
             BlockPos floor = trunkBase;
-            // clear a 3x3 space
+            
+            // Ensure the floor and surrounding area is End Murk
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    BlockPos floorPos = floor.add(dx, 0, dz);
+                    BlockState currentState = sw.getBlockState(floorPos);
+                    // Replace any non-shadow blocks with End Murk for the floor area
+                    if (!currentState.isOf(ModBlocks.END_MURK) && !currentState.isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                        sw.setBlockState(floorPos, ModBlocks.END_MURK.getDefaultState(), 3);
+                    }
+                }
+            }
+            
+            // clear a 3x3 space for the altar room
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     sw.setBlockState(floor.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
                 }
             }
-			sw.setBlockState(floor, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
+            sw.setBlockState(floor, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
+            
+            // Ensure walls around the altar room are Shadow Cryptomycota
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int dy = 1; dy <= 8; dy++) { // Check up to 8 blocks high
+                        BlockPos wallPos = floor.add(dx, dy, dz);
+                        // Only replace if it's not already shadow cryptomycota and not air
+                        BlockState wallState = sw.getBlockState(wallPos);
+                        if (!wallState.isAir() && !wallState.isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                            // Determine the appropriate axis based on position
+                            Direction.Axis axis = Direction.Axis.Y;
+                            if (Math.abs(dx) == 2 || Math.abs(dz) == 2) {
+                                // Outer wall positions - use horizontal axis
+                                axis = Math.abs(dx) > Math.abs(dz) ? Direction.Axis.X : Direction.Axis.Z;
+                            }
+                            sw.setBlockState(wallPos, ModBlocks.SHADOW_CRYPTOMYCOTA.getDefaultState().with(EtherealSporocarpBlock.AXIS, axis), 3);
+                        }
+                    }
+                }
+            }
         }
     }
 
     // Structure variant: always hollow
     public static void generateForcedHollow(WorldAccess world, BlockPos startPos, Random random) {
+        generateForcedHollowWithAltarAt(world, startPos, random, startPos);
+    }
+
+    // Structure variant: always hollow, with altar at specific position
+    public static void generateForcedHollowWithAltarAt(WorldAccess world, BlockPos startPos, Random random, BlockPos altarPos) {
         // Basic parameters copied from generate
         int trunkRadius = 3 + random.nextInt(2);
         int trunkHeight = 28 + random.nextInt(11);
@@ -111,13 +149,46 @@ public final class ShadowClawTreeGenerator {
         buildUpwardBiasedFinger(world, crown, Direction.WEST, fingerLength, random);
         buildUpwardFinger(world, crown.up(1), upFingerHeight, random);
         if (world instanceof net.minecraft.world.StructureWorldAccess sw) {
-            BlockPos floor = trunkBase;
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    sw.setBlockState(floor.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+            // Ensure the floor and surrounding area is End Murk
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    BlockPos floorPos = altarPos.add(dx, 0, dz);
+                    BlockState currentState = sw.getBlockState(floorPos);
+                    // Replace any non-shadow blocks with End Murk for the floor area
+                    if (!currentState.isOf(ModBlocks.END_MURK) && !currentState.isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                        sw.setBlockState(floorPos, ModBlocks.END_MURK.getDefaultState(), 3);
+                    }
                 }
             }
-            sw.setBlockState(floor, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
+            
+            // Clear a 3x3 space around the altar position
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    sw.setBlockState(altarPos.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+                }
+            }
+            // Place altar at the specified position
+            sw.setBlockState(altarPos, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
+            
+            // Ensure walls around the altar room are Shadow Cryptomycota
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int dy = 1; dy <= 8; dy++) { // Check up to 8 blocks high
+                        BlockPos wallPos = altarPos.add(dx, dy, dz);
+                        // Only replace if it's not already shadow cryptomycota and not air
+                        BlockState wallState = sw.getBlockState(wallPos);
+                        if (!wallState.isAir() && !wallState.isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                            // Determine the appropriate axis based on position
+                            Direction.Axis axis = Direction.Axis.Y;
+                            if (Math.abs(dx) == 2 || Math.abs(dz) == 2) {
+                                // Outer wall positions - use horizontal axis
+                                axis = Math.abs(dx) > Math.abs(dz) ? Direction.Axis.X : Direction.Axis.Z;
+                            }
+                            sw.setBlockState(wallPos, ModBlocks.SHADOW_CRYPTOMYCOTA.getDefaultState().with(EtherealSporocarpBlock.AXIS, axis), 3);
+                        }
+                    }
+                }
+            }
         }
     }
 

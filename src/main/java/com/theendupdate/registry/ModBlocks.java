@@ -17,6 +17,7 @@ import net.minecraft.block.FenceGateBlock;
 import net.minecraft.block.WoodType;
 import net.minecraft.block.PlantBlock;
 import net.minecraft.block.TallPlantBlock;
+import net.minecraft.block.FlowerPotBlock;
 
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -65,6 +66,13 @@ public final class ModBlocks {
                 .registryKey(key)
         )
     );
+    public static final Block POTTED_VOID_BLOOM = registerBlockNoItem(
+        "potted_void_bloom",
+        key -> new FlowerPotBlock(
+            VOID_BLOOM,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
+        )
+    );
 
     public static final Block ENDER_CHRYSANTHEMUM = registerBlock(
         "ender_chrysanthemum",
@@ -74,6 +82,13 @@ public final class ModBlocks {
                 .offset(AbstractBlock.OffsetType.NONE)
                 .nonOpaque()
                 .registryKey(key)
+        )
+    );
+    public static final Block POTTED_ENDER_CHRYSANTHEMUM = registerBlockNoItem(
+        "potted_ender_chrysanthemum",
+        key -> new FlowerPotBlock(
+            ENDER_CHRYSANTHEMUM,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
         )
     );
 
@@ -100,6 +115,13 @@ public final class ModBlocks {
                 .registryKey(key)
         )
     );
+    public static final Block POTTED_TENDRIL_SPROUT = registerBlockNoItem(
+        "potted_tendril_sprout",
+        key -> new FlowerPotBlock(
+            TENDRIL_SPROUT,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
+        )
+    );
 
     public static final Block TENDRIL_THREAD = registerBlock(
         "tendril_thread",
@@ -110,6 +132,13 @@ public final class ModBlocks {
                 .ticksRandomly()
                 .sounds(BlockSoundGroup.GRASS)
                 .registryKey(key)
+        )
+    );
+    public static final Block POTTED_TENDRIL_THREAD = registerBlockNoItem(
+        "potted_tendril_thread",
+        key -> new FlowerPotBlock(
+            TENDRIL_THREAD,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
         )
     );
 
@@ -123,6 +152,13 @@ public final class ModBlocks {
                 .sounds(BlockSoundGroup.GRASS)
                 .strength(1.0F, 2.0F) // Slightly stronger than normal plants
                 .registryKey(key)
+        )
+    );
+    public static final Block POTTED_TENDRIL_CORE = registerBlockNoItem(
+        "potted_tendril_core",
+        key -> new FlowerPotBlock(
+            TENDRIL_CORE,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
         )
     );
 
@@ -351,6 +387,15 @@ public final class ModBlocks {
         )
     );
 
+    // Potted variant (no item). Texture/model added in resources.
+    public static final Block POTTED_SHADOW_CLAW = registerBlockNoItem(
+        "potted_shadow_claw",
+        key -> new FlowerPotBlock(
+            SHADOW_CLAW,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
+        )
+    );
+
     public static final Block MOLD_CRAWL = registerBlock(
         "mold_crawl",
         key -> new com.theendupdate.block.MoldcrawlBlock(
@@ -373,6 +418,13 @@ public final class ModBlocks {
                 .sounds(BlockSoundGroup.NETHER_WART)
                 .offset(AbstractBlock.OffsetType.XZ)
                 .registryKey(key)
+        )
+    );
+    public static final Block POTTED_MOLD_SPORE = registerBlockNoItem(
+        "potted_mold_spore",
+        key -> new FlowerPotBlock(
+            MOLD_SPORE,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
         )
     );
 
@@ -500,6 +552,15 @@ public final class ModBlocks {
         } else {
             ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
         }
+        return block;
+    }
+
+    // Registers a block without creating a BlockItem (for potted plants, etc.)
+    private static Block registerBlockNoItem(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
+        Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
+        RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
+        Block block = factory.apply(key);
+        Registry.register(Registries.BLOCK, id, block);
         return block;
     }
 

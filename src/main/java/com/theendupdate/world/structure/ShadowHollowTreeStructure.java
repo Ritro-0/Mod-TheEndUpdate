@@ -24,6 +24,7 @@ public class ShadowHollowTreeStructure extends Structure {
         int cx = chunkPos.getStartX() + 8;
         int cz = chunkPos.getStartZ() + 8;
         BlockPos pivot = new BlockPos(cx, 0, cz);
+        
         return Optional.of(new StructurePosition(pivot, collector -> {
             collector.addPiece(new com.theendupdate.world.structure.piece.ShadowHollowTreePiece(pivot));
         }));

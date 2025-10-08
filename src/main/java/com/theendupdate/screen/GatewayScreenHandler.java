@@ -272,6 +272,10 @@ public class GatewayScreenHandler extends ScreenHandler {
                 out.set(DataComponentTypes.CUSTOM_NAME, Text.literal(name));
                 // Mark as EPIC rarity (pink like Heavy Core)
                 out.set(DataComponentTypes.RARITY, net.minecraft.util.Rarity.EPIC);
+                // Add tooltip
+                var loreText = net.minecraft.text.Text.literal("Shift+Right-Click to teleport to bound Quantum Gateway.")
+                    .styled(style -> style.withItalic(true).withColor(net.minecraft.util.Formatting.GRAY));
+                out.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(java.util.List.of(loreText)));
                 inventory.setStack(2, out);
             }
         } else {

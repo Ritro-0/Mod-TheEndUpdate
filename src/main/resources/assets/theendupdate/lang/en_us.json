@@ -55,7 +55,14 @@
   "block.theendupdate.shadow_button": "Shadow Button",
   "block.theendupdate.shadow_pressure_plate": "Shadow Pressure Plate",
   "block.theendupdate.shadow_claw": "Shadow Claw",
+  "block.theendupdate.potted_shadow_claw": "Potted Shadow Claw",
   "block.theendupdate.mold_crawl": "Mold Crawl",
+  "block.theendupdate.potted_mold_spore": "Potted Mold Spore",
+  "block.theendupdate.potted_tendril_sprout": "Potted Tendril Sprout",
+  "block.theendupdate.potted_tendril_thread": "Potted Tendril Thread",
+  "block.theendupdate.potted_tendril_core": "Potted Tendril Core",
+  "block.theendupdate.potted_ender_chrysanthemum": "Potted Ender Chrysanthemum",
+  "block.theendupdate.potted_void_bloom": "Potted Void Bloom",
   "block.theendupdate.mold_spore": "Mold Spore",
   "block.theendupdate.mold_spore_tuft": "Mold Spore Tuft",
   "block.theendupdate.mold_spore_sprout": "Mold Spore Sprout",
@@ -119,5 +126,11 @@
   "subtitle.theendupdate.ethereal_orb.loses_bulb": "Ethereal orb loses its bulb",
   "block.theendupdate.shadow_altar": "Shadow Altar",
   "item.theendupdate.shadow_altar": "Shadow Altar",
-  "item.theendupdate.shadow_hunters_map": "Shadow Hunter's Map"
+  "item.theendupdate.shadow_hunters_tracker": "Shadow Hunter's Tracker",
+  "item.theendupdate.shadow_hunters_tracker.no_tree": "No hollow shadow tree found nearby",
+  "item.theendupdate.shadow_hunters_tracker.found_tree": "Located hollow shadow tree at %d, %d, %d",
+  "item.theendupdate.shadow_hunters_tracker.pointing_to": "Shadow Hunter's Tracker is pointing to hollow shadow tree at %d, %d, %d",
+  "item.theendupdate.shadow_hunters_tracker.precise_mode": "Now pointing to Shadow Altar at %d, %d, %d",
+  "item.theendupdate.shadow_hunters_tracker.structure_mode": "Now pointing to structure at %d, %d, %d",
+  "item.theendupdate.shadow_hunters_tracker.no_altar_nearby": "No Shadow Altar found within range"
 }

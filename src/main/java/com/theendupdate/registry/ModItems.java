@@ -97,7 +97,6 @@ public final class ModItems {
         key -> new Item(new Item.Settings().registryKey(key).fireproof())
     );
 
-    // Removed custom bound recovery compass; vanilla recovery compass will be used
     
     // Spawn eggs
     public static final Item ETHEREAL_ORB_SPAWN_EGG = registerItem(
@@ -136,11 +135,7 @@ public final class ModItems {
         net.minecraft.item.ItemGroups.SPAWN_EGGS
     );
 
-    // Shadow Hunter's Map - custom item that fills a vanilla map pointing to the nearest hollow tree
-    public static final Item SHADOW_HUNTERS_MAP = registerItem(
-        "shadow_hunters_map",
-        key -> new com.theendupdate.item.ShadowHuntersMapItem(new Item.Settings().registryKey(key))
-    );
+    // Shadow Hunter's Map is now a regular filled_map with special NBT - no custom item needed
 
     // Shadow Altar as standalone item test
     // Removed shadow_altar_test item - no longer needed

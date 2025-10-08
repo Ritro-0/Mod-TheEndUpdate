@@ -1,0 +1,15 @@
+{
+  "sources": [
+    {
+      "type": "directory",
+      "source": "map/decorations",
+      "prefix": "map/decorations/"
+    },
+    {
+      "type": "single",
+      "resource": "theendupdate:map/decorations/shadow_hunter",
+      "sprite": "map/decorations/shadow_hunter"
+    }
+  ]
+}
+

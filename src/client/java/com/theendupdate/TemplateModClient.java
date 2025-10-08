@@ -32,11 +32,12 @@ import net.minecraft.registry.RegistryKey;
 
 @Environment(EnvType.CLIENT)  
 public class TemplateModClient implements ClientModInitializer {
+    
     public static final EntityModelLayer MODEL_ETHEREAL_ORB_LAYER = new EntityModelLayer(Identifier.of(TemplateMod.MOD_ID, "ethereal_orb"), "main");
 
     @Override
-    public void onInitializeClient() 
-    {
+    public void onInitializeClient() {
+        com.theendupdate.TemplateMod.LOGGER.info("[DEBUG] TemplateModClient onInitializeClient starting");
         // TODO: Add entity renderer when implementing custom renderer for 1.21.8
         // EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, EtherealOrbEntityRenderer::new);
         // EntityModelLayerRegistry.registerModelLayer(EtherealOrbEntityModel.ETHEREAL_ORB_LAYER, EtherealOrbEntityModel::getTexturedModelData);
@@ -46,6 +47,14 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.ENDER_CHRYSANTHEMUM, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_SAP, BlockRenderLayer.CUTOUT);
+        // Potted variants must also be cutout
+        BlockRenderLayerMap.putBlock(ModBlocks.POTTED_SHADOW_CLAW, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.POTTED_VOID_BLOOM, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.POTTED_ENDER_CHRYSANTHEMUM, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.POTTED_TENDRIL_SPROUT, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.POTTED_TENDRIL_THREAD, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.POTTED_TENDRIL_CORE, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.POTTED_MOLD_SPORE, BlockRenderLayer.CUTOUT);
         // Tendril plants (crossed planes)
         BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_SPROUT, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.TENDRIL_THREAD, BlockRenderLayer.CUTOUT);
@@ -75,8 +84,6 @@ public class TemplateModClient implements ClientModInitializer {
         // Register custom screen for Quantum Gateway
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
 
-        // Register map decoration texture
-        com.theendupdate.registry.ModMapDecorations.register();
 
 
         // Visual-only top handled via model geometry extending into y+1 (no extra block used)

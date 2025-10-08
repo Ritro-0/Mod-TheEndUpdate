@@ -29,4 +29,12 @@ public final class GatewayCompassContext {
         var tag = custom.copyNbt();
         return tag.contains("gx") && tag.contains("gy") && tag.contains("gz") && tag.contains("gd");
     }
+
+    public static boolean isShadowHuntersTracker(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || !stack.isOf(Items.RECOVERY_COMPASS)) return false;
+        NbtComponent custom = stack.get(DataComponentTypes.CUSTOM_DATA);
+        if (custom == null) return false;
+        var tag = custom.copyNbt();
+        return tag.contains("shadow_hunter_tracker") && tag.getBoolean("shadow_hunter_tracker").orElse(false);
+    }
 }
