@@ -34,6 +34,7 @@ public class TemplateMod implements ModInitializer {
         LOGGER.info("[EndUpdate] onInitialize() starting");
         
         // Initialize mod content
+        com.theendupdate.registry.ModItemGroups.register();
         com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModBlockEntities.register();
         com.theendupdate.registry.ModScreenHandlers.register();
@@ -77,6 +78,10 @@ public class TemplateMod implements ModInitializer {
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS.asItem(), 0.85f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SPOROCARP.asItem(), 0.85f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PUSTULE.asItem(), 0.85f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_BLOCK.asItem(), 0.65f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ENDER_CHRYSANTHEMUM.asItem(), 0.65f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.VOID_BLOOM.asItem(), 0.65f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_CRAWL.asItem(), 0.50f);
 
         // Global hooks to ensure mold_crawl reacts even if vanilla neighbor updates are skipped by renderer state:
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {

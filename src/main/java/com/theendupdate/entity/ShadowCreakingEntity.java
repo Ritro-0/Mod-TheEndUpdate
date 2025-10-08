@@ -65,6 +65,18 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	private boolean isJumping;
 	// Timeout to prevent infinite jumping state
 	private int jumpStateTicks;
+	// Stuck/teleport tracking
+	private int stuckTeleportNoProgressTicks;
+	private int stuckTeleportNoApproachTicks;
+	private double prevDistanceToTarget;
+	private int teleportCooldownTicks;
+	// Ranged attack (beam) tracking
+	private int chaseNoHitTicks; // counts while chasing and not stuck
+	private int rangedBeamCooldownTicks; // cooldown after firing
+	private int rangedBeamTravelTicks; // frames remaining for the beam to travel
+	private Vec3d rangedBeamStart;
+	private Vec3d rangedBeamEnd;
+	private double rangedBeamSpeedPerTick; // blocks per tick
 	
 	// Boss bar management
 	public ShadowCreakingBossBarManager bossBarManager;
@@ -596,14 +608,34 @@ public class ShadowCreakingEntity extends CreakingEntity {
 						}
 						
 						// Only apply stuck detection and movement override if not jumping
-						if (!this.isJumping) {
-							// Detect lack of progress and apply enhanced pathfinding
+				if (!this.isJumping) {
+					// Detect lack of progress and apply enhanced pathfinding
 							double moved = Math.hypot(this.getX() - this.gazeLastX, this.getZ() - this.gazeLastZ);
 							if (dd > 1.0 && moved < 0.005) { // Reduced threshold for stuck detection
 								this.gazeNoProgressTicks++;
 							} else {
 								this.gazeNoProgressTicks = 0;
 							}
+
+					// Track deeper stuck conditions for teleport using 3D distance and reachability
+					double d3 = this.getPos().distanceTo(tgt.getPos());
+					boolean outOfReachNow = !canReachTarget(tgt);
+					// No movement while out of reach
+					if (outOfReachNow && moved < 0.003) {
+						this.stuckTeleportNoProgressTicks++;
+					} else {
+						this.stuckTeleportNoProgressTicks = 0;
+					}
+					// No approach while out of reach (distance not decreasing meaningfully)
+					if (outOfReachNow) {
+						if (this.prevDistanceToTarget - d3 > 0.02) {
+							this.stuckTeleportNoApproachTicks = 0;
+						} else {
+							this.stuckTeleportNoApproachTicks++;
+						}
+					} else {
+						this.stuckTeleportNoApproachTicks = 0;
+					}
 							
 							// Enhanced movement with obstacle avoidance
 							if (this.gazeNoProgressTicks >= 10 && dd > 1.0E-4) { // ~0.5s without progress
@@ -645,14 +677,38 @@ public class ShadowCreakingEntity extends CreakingEntity {
 							}
 						}
 						
-						this.gazeLastX = this.getX();
-						this.gazeLastZ = this.getZ();
+					this.gazeLastX = this.getX();
+					this.gazeLastZ = this.getZ();
+					this.prevDistanceToTarget = this.getPos().distanceTo(tgt.getPos());
 						// Manual attack only as a fallback, with a cooldown matching typical melee pacing
 						if (dd <= 2.6 && this.gazeOverrideAttackCooldownTicks <= 0 && this.getWorld() instanceof ServerWorld swClose) {
 							if (this.tryAttack(swClose, tgt)) {
 								this.gazeOverrideAttackCooldownTicks = 20; // ~1s between swings
 							}
 						}
+
+					// Teleport if stuck for >10s and target is out of reach
+					if (this.teleportCooldownTicks > 0) this.teleportCooldownTicks--;
+					boolean outOfReach = !canReachTarget(tgt);
+					boolean stuckLong = (this.stuckTeleportNoProgressTicks >= 200) || (this.stuckTeleportNoApproachTicks >= 200);
+					if (outOfReach && stuckLong && this.teleportCooldownTicks <= 0 && !this.isLevitating() && this.postLandFreezeTicks <= 0 && this.getPose() != EntityPose.EMERGING) {
+						this.tryBlinkTeleportToTarget(tgt);
+					}
+
+					// Ranged attack trigger: if chasing target for >15s while not stuck and out of melee reach
+					if (this.rangedBeamCooldownTicks > 0) this.rangedBeamCooldownTicks--;
+					boolean notStuck = (this.stuckTeleportNoProgressTicks < 20) && (this.stuckTeleportNoApproachTicks < 20);
+					boolean outOfMelee = this.getPos().distanceTo(tgt.getPos()) > 6.0; // outside close combat
+					if (notStuck && outOfMelee && this.rangedBeamCooldownTicks <= 0) {
+						this.chaseNoHitTicks++;
+					} else {
+						this.chaseNoHitTicks = 0;
+					}
+					// Fire after 15s (300 ticks) of sustained chase
+					if (this.chaseNoHitTicks >= 300) {
+						this.startRangedBeamAttack(tgt);
+						this.chaseNoHitTicks = 0;
+					}
 					}
 				}
 			}
@@ -664,6 +720,39 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				this.dataTracker.set(FORCE_RUNNING, Boolean.FALSE);
 			}
 		}
+
+			// When weeping is active (base variant > 50% HP), navigation is disabled by vanilla gaze logic.
+			// Still allow blink-teleport if stuck for prolonged time while target is out of reach.
+			if (this.isWeepingAngelActive()) {
+				var tgt2 = this.getTarget();
+				if (tgt2 != null && tgt2.isAlive() && this.getPose() != EntityPose.EMERGING && !this.isLevitating() && this.postLandFreezeTicks <= 0) {
+					double moved2 = Math.hypot(this.getX() - this.gazeLastX, this.getZ() - this.gazeLastZ);
+					boolean outOfReach2 = !canReachTarget(tgt2);
+					double dist3 = this.getPos().distanceTo(tgt2.getPos());
+					if (outOfReach2 && moved2 < 0.003) {
+						this.stuckTeleportNoProgressTicks++;
+					} else {
+						this.stuckTeleportNoProgressTicks = 0;
+					}
+					if (outOfReach2) {
+						if (this.prevDistanceToTarget - dist3 > 0.02) {
+							this.stuckTeleportNoApproachTicks = 0;
+						} else {
+							this.stuckTeleportNoApproachTicks++;
+						}
+					} else {
+						this.stuckTeleportNoApproachTicks = 0;
+					}
+					this.gazeLastX = this.getX();
+					this.gazeLastZ = this.getZ();
+					this.prevDistanceToTarget = dist3;
+					if (this.teleportCooldownTicks > 0) this.teleportCooldownTicks--;
+					boolean stuckLong2 = (this.stuckTeleportNoProgressTicks >= 200) || (this.stuckTeleportNoApproachTicks >= 200);
+					if (outOfReach2 && stuckLong2 && this.teleportCooldownTicks <= 0) {
+						this.tryBlinkTeleportToTarget(tgt2);
+					}
+				}
+			}
 
 		// Client-side particles: soul swirl while EMERGING/DIGGING and during post-spawn levitation
 		if (this.getWorld().isClient) {
@@ -681,6 +770,13 @@ public class ShadowCreakingEntity extends CreakingEntity {
 			}
 			if (this.isLevitating()) {
 				this.addSoulSwirlParticles(this.levitatingAnimationState, 1.2f, 0.75f, 12, 0.055f);
+			}
+		}
+
+		// Server: advance any active ranged beam
+		if (!this.getWorld().isClient) {
+			if (this.rangedBeamTravelTicks > 0 && this.rangedBeamStart != null && this.rangedBeamEnd != null) {
+				advanceRangedBeam();
 			}
 		}
 	}
@@ -1251,6 +1347,167 @@ protected boolean isWeepingAngelActive() {
 			if (len > 1.0E-4) {
 				dx /= len; dz /= len;
 				float kb = 1.0f + (float)(Math.max(0.0, radius - len) / radius) * 0.8f;
+				e.takeKnockback(kb, dx, dz);
+			}
+		}
+	}
+
+	private void tryBlinkTeleportToTarget(Entity target) {
+		if (target == null) return;
+		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		if (!target.isAlive()) return;
+		// Snapshot origin before moving
+		double ox = this.getX();
+		double oy = this.getY();
+		double oz = this.getZ();
+
+		// Origin VFX + AoE
+		spawnSoulBurstAndDamage();
+		spawnExplosionVfx(sw, ox, oy + 1.0, oz);
+		// Sound omitted for compatibility across mappings; particles provide VFX
+
+		// Find safe destination near the target
+		Vec3d dest = findSafeTeleportPosNear(sw, target);
+		if (dest == null) {
+			// Fallback: directly on the player's feet position
+			dest = new Vec3d(target.getX(), target.getY(), target.getZ());
+		}
+
+		// Face the target upon arrival
+		double dx = target.getX() - dest.x;
+		double dz = target.getZ() - dest.z;
+		float yaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+
+		// Teleport
+		this.refreshPositionAndAngles(dest.x, dest.y, dest.z, yaw, this.getPitch());
+		this.setVelocity(0.0, 0.0, 0.0);
+		this.velocityDirty = true;
+		this.fallDistance = 0.0F;
+
+		// Destination VFX + AoE
+		spawnSoulBurstAndDamage();
+		spawnExplosionVfx(sw, dest.x, dest.y + 1.0, dest.z);
+		// Sound omitted for compatibility across mappings; particles provide VFX
+
+		// Reset counters and set cooldown (~6s)
+		this.stuckTeleportNoProgressTicks = 0;
+		this.stuckTeleportNoApproachTicks = 0;
+		this.teleportCooldownTicks = 120;
+	}
+
+	private Vec3d findSafeTeleportPosNear(ServerWorld sw, Entity target) {
+		float width = this.getWidth();
+		float height = this.getHeight();
+		double baseX = target.getX();
+		double baseY = target.getY();
+		double baseZ = target.getZ();
+
+		// Try exact player position first
+		Box box = new Box(
+			baseX - width / 2, baseY, baseZ - width / 2,
+			baseX + width / 2, baseY + height, baseZ + width / 2
+		);
+		if (sw.isSpaceEmpty(box) && isValidSpawnPosition(sw, box, baseY)) {
+			return new Vec3d(baseX, baseY, baseZ);
+		}
+
+		// Spiral search around player within ~1.5 blocks and small vertical offsets
+		for (double radius = 0.6; radius <= 1.6; radius += 0.2) {
+			int steps = Math.max(8, (int)(radius * 16));
+			for (int i = 0; i < steps; i++) {
+				double ang = (2.0 * Math.PI * i) / steps;
+				double tx = baseX + Math.cos(ang) * radius;
+				double tz = baseZ + Math.sin(ang) * radius;
+				for (double yOff = -0.5; yOff <= 0.75; yOff += 0.25) {
+					double ty = baseY + yOff;
+					Box tryBox = new Box(
+						tx - width / 2, ty, tz - width / 2,
+						tx + width / 2, ty + height, tz + width / 2
+					);
+					if (sw.isSpaceEmpty(tryBox) && isValidSpawnPosition(sw, tryBox, ty)) {
+						return new Vec3d(tx, ty, tz);
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	private void spawnExplosionVfx(ServerWorld sw, double x, double y, double z) {
+		// Visual-only explosion: brief burst at the specified location
+		sw.spawnParticles(ParticleTypes.EXPLOSION, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+		sw.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+		// Light smoke ring
+		sw.spawnParticles(ParticleTypes.POOF, x, y, z, 10, 0.6, 0.4, 0.6, 0.02);
+	}
+
+	private void startRangedBeamAttack(Entity target) {
+		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		if (target == null || !target.isAlive()) return;
+		if (this.isLevitating() || this.getPose() == EntityPose.EMERGING || this.postLandFreezeTicks > 0) return;
+		// Snapshot start and end (end is player's current position) so the player can dodge
+		this.rangedBeamStart = this.getPos().add(0.0, this.getStandingEyeHeight(), 0.0);
+		this.rangedBeamEnd = target.getPos().add(0.0, target.getStandingEyeHeight() * 0.5, 0.0);
+		// Speed so that typical 20-30 block distance reaches in ~0.6-0.9s
+		this.rangedBeamSpeedPerTick = 40.0 / 60.0; // ~0.666 blocks/tick
+		double distance = this.rangedBeamStart.distanceTo(this.rangedBeamEnd);
+		this.rangedBeamTravelTicks = Math.max(1, (int)Math.ceil(distance / this.rangedBeamSpeedPerTick));
+		this.rangedBeamCooldownTicks = 140; // ~7s cooldown
+	}
+
+	private void advanceRangedBeam() {
+		if (!(this.getWorld() instanceof ServerWorld sw)) { this.rangedBeamTravelTicks = 0; return; }
+		if (this.rangedBeamStart == null || this.rangedBeamEnd == null) { this.rangedBeamTravelTicks = 0; return; }
+		int total = this.rangedBeamTravelTicks;
+		// Compute current head position along the path from end of total-remaining perspective
+		double totalDistance = this.rangedBeamStart.distanceTo(this.rangedBeamEnd);
+		if (totalDistance < 1.0E-6) { this.rangedBeamTravelTicks = 0; return; }
+		Vec3d dir = this.rangedBeamEnd.subtract(this.rangedBeamStart).normalize();
+		int ticksRemaining = this.rangedBeamTravelTicks;
+		int ticksElapsed = Math.max(0, (int)Math.ceil(totalDistance / this.rangedBeamSpeedPerTick) - ticksRemaining);
+		double headDistance = Math.min(totalDistance, ticksElapsed * this.rangedBeamSpeedPerTick);
+		Vec3d head = this.rangedBeamStart.add(dir.multiply(headDistance));
+		// Spawn a short segment of particles forward from the last step
+		int segmentPoints = 6;
+		for (int i = 0; i < segmentPoints; i++) {
+			double offset = (i / (double)segmentPoints) * this.rangedBeamSpeedPerTick;
+			Vec3d p = head.add(dir.multiply(offset));
+			sw.spawnParticles(ParticleTypes.SOUL, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
+			// trailing wisp
+			sw.spawnParticles(ParticleTypes.SOUL, p.x, p.y, p.z, 0, dir.x * 0.15, dir.y * 0.15, dir.z * 0.15, 0.0);
+		}
+		this.rangedBeamTravelTicks--;
+		if (this.rangedBeamTravelTicks <= 0) {
+			// Detonate at the precomputed end with 2.5x AoE strength
+			spawnSoulBurstAndDamageAt(this.rangedBeamEnd.x, this.rangedBeamEnd.y, this.rangedBeamEnd.z, 14.0f * 2.5f, 4.25 * 1.1);
+			spawnExplosionVfx(sw, this.rangedBeamEnd.x, this.rangedBeamEnd.y, this.rangedBeamEnd.z);
+			this.rangedBeamStart = null;
+			this.rangedBeamEnd = null;
+			this.rangedBeamSpeedPerTick = 0.0;
+		}
+	}
+
+	private void spawnSoulBurstAndDamageAt(double cx, double cy, double cz, float damage, double radius) {
+		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		Random r = this.getRandom();
+		for (int i = 0; i < 240; i++) {
+			double theta = r.nextDouble() * Math.PI * 2.0;
+			double phi = Math.acos(2.0 * r.nextDouble() - 1.0);
+			double rr = 1.0 + r.nextDouble() * 0.7;
+			double sx = cx + rr * Math.sin(phi) * Math.cos(theta);
+			double sy = cy + rr * Math.cos(phi);
+			double sz = cz + rr * Math.sin(phi) * Math.sin(theta);
+			sw.spawnParticles(ParticleTypes.SOUL, sx, sy, sz, 1, 0.0, 0.0, 0.0, 0.0);
+		}
+		Box box = new Box(cx - radius, cy - 1.5, cz - radius, cx + radius, cy + 3.5, cz + radius);
+		for (PlayerEntity e : sw.getEntitiesByClass(PlayerEntity.class, box, (pe) -> pe.isAlive())) {
+			e.damage(sw, sw.getDamageSources().mobAttack(this), damage);
+			double dx = e.getX() - cx;
+			double dz = e.getZ() - cz;
+			double len = Math.sqrt(dx * dx + dz * dz);
+			if (len > 1.0E-4) {
+				dx /= len; dz /= len;
+				float kb = 1.2f + (float)(Math.max(0.0, radius - len) / radius) * 1.1f;
 				e.takeKnockback(kb, dx, dz);
 			}
 		}

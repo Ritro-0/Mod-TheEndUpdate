@@ -66,27 +66,27 @@ public final class ShadowClawTreeGenerator {
         // If hollow, place a Shadow Altar at the floor center
         if (hollow && world instanceof net.minecraft.world.StructureWorldAccess sw) {
             BlockPos floor = trunkBase;
-            
-            // Ensure the floor and surrounding area is End Murk
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    BlockPos floorPos = floor.add(dx, 0, dz);
+
+            // Build a compact End Murk floor (3x3) directly UNDER the altar position
+            BlockPos murkFloorY = floor.down();
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    BlockPos floorPos = murkFloorY.add(dx, 0, dz);
                     BlockState currentState = sw.getBlockState(floorPos);
-                    // Replace any non-shadow blocks with End Murk for the floor area
-                    if (!currentState.isOf(ModBlocks.END_MURK) && !currentState.isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                    if (!currentState.isOf(ModBlocks.END_MURK)) {
                         sw.setBlockState(floorPos, ModBlocks.END_MURK.getDefaultState(), 3);
                     }
                 }
             }
-            
-            // clear a 3x3 space for the altar room
+
+            // Clear a 3x3 space for the altar room at altar height, then place the altar
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     sw.setBlockState(floor.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
                 }
             }
             sw.setBlockState(floor, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
-            
+
             // Ensure walls around the altar room are Shadow Cryptomycota
             for (int dx = -2; dx <= 2; dx++) {
                 for (int dz = -2; dz <= 2; dz++) {
@@ -149,19 +149,19 @@ public final class ShadowClawTreeGenerator {
         buildUpwardBiasedFinger(world, crown, Direction.WEST, fingerLength, random);
         buildUpwardFinger(world, crown.up(1), upFingerHeight, random);
         if (world instanceof net.minecraft.world.StructureWorldAccess sw) {
-            // Ensure the floor and surrounding area is End Murk
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    BlockPos floorPos = altarPos.add(dx, 0, dz);
+            // Build a compact End Murk floor (3x3) directly UNDER the altar position
+            BlockPos murkFloorY = altarPos.down();
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    BlockPos floorPos = murkFloorY.add(dx, 0, dz);
                     BlockState currentState = sw.getBlockState(floorPos);
-                    // Replace any non-shadow blocks with End Murk for the floor area
-                    if (!currentState.isOf(ModBlocks.END_MURK) && !currentState.isOf(ModBlocks.SHADOW_CRYPTOMYCOTA)) {
+                    if (!currentState.isOf(ModBlocks.END_MURK)) {
                         sw.setBlockState(floorPos, ModBlocks.END_MURK.getDefaultState(), 3);
                     }
                 }
             }
-            
-            // Clear a 3x3 space around the altar position
+
+            // Clear a 3x3 space around the altar position at altar height, then place the altar
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     sw.setBlockState(altarPos.add(dx, 0, dz), net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
@@ -169,7 +169,7 @@ public final class ShadowClawTreeGenerator {
             }
             // Place altar at the specified position
             sw.setBlockState(altarPos, ModBlocks.SHADOW_ALTAR.getDefaultState(), 3);
-            
+
             // Ensure walls around the altar room are Shadow Cryptomycota
             for (int dx = -2; dx <= 2; dx++) {
                 for (int dz = -2; dz <= 2; dz++) {

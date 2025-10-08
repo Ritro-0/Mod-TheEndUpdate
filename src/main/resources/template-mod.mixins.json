@@ -24,7 +24,8 @@
 		"EntityNavigationStopMixin",
 		"PlayerEntityMiningSpeedMixin",
 		"ItemStackMiningSpeedMixin",
-		"FenceBlockConnectivityMixin"
+		"FenceBlockConnectivityMixin",
+		"LeashKnotEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

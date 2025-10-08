@@ -41,13 +41,54 @@ public class ShadowHollowTreePiece extends StructurePiece {
 
     @Override
     public void generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox box, ChunkPos chunkPos, BlockPos pivotPos) {
-        BlockPos surface = world.getTopPosition(net.minecraft.world.Heightmap.Type.WORLD_SURFACE_WG, new BlockPos(pivot.getX(), 0, pivot.getZ())).down();
-        if (surface.getY() <= world.getBottomY()) return;
-        if (!(world.getBlockState(surface).isOf(ModBlocks.END_MURK) || world.getBlockState(surface).isOf(net.minecraft.block.Blocks.END_STONE))) return;
-        if (world.getBlockState(surface).isOf(net.minecraft.block.Blocks.END_STONE)) {
-            world.setBlockState(surface, ModBlocks.END_MURK.getDefaultState(), 3);
+        // Search a 9x9 area around the chunk center for a suitable anchor to prevent floating/ghost placements
+        BlockPos bestSurface = null;
+        int bestScore = Integer.MIN_VALUE;
+
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                int x = pivot.getX() + dx;
+                int z = pivot.getZ() + dz;
+                BlockPos colTop = world.getTopPosition(net.minecraft.world.Heightmap.Type.WORLD_SURFACE_WG, new BlockPos(x, 0, z)).down();
+                if (colTop.getY() <= world.getBottomY()) continue;
+
+                // Require ground to be END_STONE or END_MURK
+                var groundState = world.getBlockState(colTop);
+                boolean validGround = groundState.isOf(ModBlocks.END_MURK) || groundState.isOf(net.minecraft.block.Blocks.END_STONE);
+                if (!validGround) continue;
+
+                // Compute local flatness score: count how many neighbors at same Y within 2-block radius
+                int y = colTop.getY();
+                int flatScore = 0;
+                for (int nx = -2; nx <= 2; nx++) {
+                    for (int nz = -2; nz <= 2; nz++) {
+                        if (Math.abs(nx) + Math.abs(nz) > 3) continue; // diamond neighborhood
+                        BlockPos nTop = world.getTopPosition(net.minecraft.world.Heightmap.Type.WORLD_SURFACE_WG, new BlockPos(x + nx, 0, z + nz)).down();
+                        if (nTop.getY() == y) flatScore++;
+                    }
+                }
+
+                // Prefer positions with air above for trunk base
+                int score = flatScore;
+                if (world.isAir(colTop.up())) score += 4;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestSurface = colTop;
+                }
+            }
         }
-        BlockPos trunkBase = surface.up();
+
+        if (bestSurface == null) return; // No viable anchor in this chunk area
+
+        // Normalize ground to End Murk at the exact surface spot to match biome visuals
+        if (world.getBlockState(bestSurface).isOf(net.minecraft.block.Blocks.END_STONE)) {
+            world.setBlockState(bestSurface, ModBlocks.END_MURK.getDefaultState(), 3);
+        }
+
+        BlockPos trunkBase = bestSurface.up();
+        if (!world.isAir(trunkBase)) return; // avoid generating into obstructions
+
         ShadowClawTreeGenerator.generateForcedHollow(world, trunkBase, random);
     }
 }

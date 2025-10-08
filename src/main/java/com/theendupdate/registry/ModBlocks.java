@@ -551,6 +551,19 @@ public final class ModBlocks {
         } else {
             ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
         }
+        // Special placements
+        Identifier blockId = Registries.BLOCK.getId(block);
+        if (blockId != null && TemplateMod.MOD_ID.equals(blockId.getNamespace())) {
+            String path = blockId.getPath();
+            if ("mold_crawl".equals(path)) {
+                // Ensure mold crawl appears under NATURAL (and not building)
+                ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
+            }
+            if ("mold_block".equals(path)) {
+                // Keep default BUILDING placement, and also add to NATURAL
+                ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
+            }
+        }
         return block;
     }
 
