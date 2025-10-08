@@ -12,19 +12,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Globally gate setAiDisabled(true) for our Shadow Creaking variants so they do not freeze from gaze
  * when below half health (base) or at all (mini/tiny).
+ * UNLESS they were explicitly spawned with NoAI via commands.
  */
 @Mixin(MobEntity.class)
 public abstract class MobEntitySetAiMixin {
 
     @Inject(method = "setAiDisabled", at = @At("HEAD"), cancellable = true)
     private void theendupdate$blockAiDisable(boolean disabled, CallbackInfo ci) {
-        if (!disabled) return; // allow enabling AI
-        Object self = this;
+        MobEntity self = (MobEntity) (Object) this;
         if (self instanceof ShadowCreakingEntity sc) {
-            boolean isMiniOrTiny = (sc instanceof MiniShadowCreakingEntity) || (sc instanceof TinyShadowCreakingEntity);
-            boolean allowFreeze = !isMiniOrTiny && sc.getHealth() > sc.getMaxHealth() * 0.5f;
-            if (!allowFreeze) {
-                ci.cancel();
+            // If trying to enable AI (disabled=false), check if entity has underlying NoAI flag
+            if (!disabled && self.isAiDisabled()) {
+                return; // Don't enable AI if entity has NoAI flag
+            }
+            // If trying to disable AI (disabled=true)
+            if (disabled) {
+                boolean isMiniOrTiny = (sc instanceof MiniShadowCreakingEntity) || (sc instanceof TinyShadowCreakingEntity);
+                boolean allowFreeze = !isMiniOrTiny && sc.getHealth() > sc.getMaxHealth() * 0.5f;
+                if (!allowFreeze) {
+                    ci.cancel();
+                }
             }
         }
     }

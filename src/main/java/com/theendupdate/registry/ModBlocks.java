@@ -10,7 +10,6 @@ import net.minecraft.block.StairsBlock;
 import net.minecraft.block.ButtonBlock;
 import net.minecraft.block.PressurePlateBlock;
 import net.minecraft.block.BlockSetType;
-// import removed: WallMountedBlock
 import net.minecraft.block.DoorBlock;
 import net.minecraft.block.TrapdoorBlock;
 import net.minecraft.block.FenceGateBlock;

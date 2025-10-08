@@ -25,13 +25,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.item.Items;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
 /**
  * Moldcrawl - a horizontal vine-like plant that extends sideways.
@@ -88,14 +82,20 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         if (!this.canPlaceAt(state, world, pos)) {
             // Attempt chain-wide reattachment before breaking
             BlockState reattached = tryReattachChain(state, world, pos);
-            if (reattached == null) {
-                // Mirror twisting vines: break this segment; neighbors will schedule and cascade.
-                // For cascades and natural breaks, enforce 33% drop chance regardless of the root tool.
-                if (!world.isClient) {
-                    dropWithNaturalChance(world, pos);
-                    world.breakBlock(pos, false);
-                }
-            }
+			if (reattached == null) {
+				boolean drop = world.random.nextFloat() < 0.33f;
+				world.breakBlock(pos, drop);
+				// Explicitly schedule neighbors to guarantee horizontal cascade
+				Direction f = state.get(FACING);
+				BlockPos forwardPos = pos.offset(f);
+				BlockPos backPos = pos.offset(f.getOpposite());
+				if (world.getBlockState(forwardPos).isOf(this)) {
+					world.scheduleBlockTick(forwardPos, this, 1);
+				}
+				if (world.getBlockState(backPos).isOf(this)) {
+					world.scheduleBlockTick(backPos, this, 1);
+				}
+			}
             return;
         }
         // Only the tip grows, unless stunted or fully matured
@@ -158,14 +158,6 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         Direction side = ctx.getSide();
         Direction facing = side.getAxis().isHorizontal() ? side : ctx.getHorizontalPlayerFacing();
-        // If the attachment surface is another moldcrawl with a mismatched facing, disallow placement
-        BlockPos supportPos = ctx.getBlockPos().offset(facing.getOpposite());
-        BlockState support = ctx.getWorld().getBlockState(supportPos);
-        if (support.getBlock() instanceof MoldcrawlBlock) {
-            if (support.getOrEmpty(FACING).map(f -> f != facing).orElse(true)) {
-                return null; // cancel placement
-            }
-        }
         // Draw a per-chain natural cap according to target weights:
         // Baseline caps at 1,2,3 are roughly equal with a slight nudge to 3 overall.
         // Then small tails for 4 (~3%) and 5 (~1%).
@@ -179,20 +171,16 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         return this.getDefaultState().with(FACING, facing).with(NATURAL_CAP, cap);
     }
 
-    @Override
-    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        // Require support from the back (opposite facing). Allow chaining ONLY when the back segment has the same facing.
-        Direction facing = state.get(FACING);
-        Direction back = facing.getOpposite();
-        BlockPos supportPos = pos.offset(back);
-        BlockState support = world.getBlockState(supportPos);
-        if (support.isOf(this)) {
-            // Only valid if the back segment faces the same direction (true inline chain)
-            return support.getOrEmpty(FACING).map(f -> f == facing).orElse(false);
-        }
-        // Otherwise require a solid face towards us
-        return support.isSideSolidFullSquare(world, supportPos, facing);
-    }
+	@Override
+	public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
+		// Require support from the back (opposite facing). Allow stacking on itself.
+		Direction back = state.get(FACING).getOpposite();
+		BlockPos supportPos = pos.offset(back);
+		BlockState support = world.getBlockState(supportPos);
+		if (support.isOf(this)) return true;
+		boolean solid = support.isSideSolidFullSquare(world, supportPos, back.getOpposite());
+		return solid;
+	}
 
     // Interaction: allow right-click with bonemeal to pass through to Fertilizable handler
     // Do not annotate with @Override to be compatible across mappings/signatures
@@ -298,172 +286,123 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         updateChainTipFlags(world, origin);
     }
 
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, net.minecraft.world.WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-        // Do not replace with AIR here to avoid pre-empting loot drops on player breaks.
-        // Attempt immediate reattachment (mutates world if successful).
-        if (!this.canPlaceAt(state, world, pos)) {
-            BlockState reattached = tryReattachChain(state, world, pos);
-            if (reattached == null) {
-                if (world instanceof net.minecraft.server.world.ServerWorld sw) {
-                    // Immediately drop with natural 33% chance and remove, so Silk Touch on root doesn't force 100% here
-                    dropWithNaturalChance(sw, pos);
-                    ((net.minecraft.world.World) world).breakBlock(pos, false);
-                }
-                // Return current world state (likely air) below
-            }
-        }
-        // Schedule a survival check to handle horizontal reattachment/breaking reliably
-        if (world instanceof net.minecraft.server.world.ServerWorld serverWorld) {
-            serverWorld.scheduleBlockTick(pos, this, 1);
-        }
+	public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, net.minecraft.world.WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+		// Do not replace with AIR here to avoid pre-empting loot drops on player breaks.
+		// Attempt immediate reattachment (mutates world if successful).
+		if (!this.canPlaceAt(state, world, pos)) {
+			tryReattachChain(state, world, pos);
+			// Even if reattach fails, defer actual breaking to scheduledTick to avoid racing with player drops.
+		}
+		// Schedule a survival check to handle horizontal reattachment/breaking reliably
+		if (world instanceof net.minecraft.server.world.ServerWorld serverWorld) {
+			serverWorld.scheduleBlockTick(pos, this, 1);
+		}
 
-        // Recompute chain tip flags on ANY neighbor change to reflect new base-candidate conditions
-        if (world instanceof net.minecraft.world.World w && !w.isClient) {
-            
-            // Fast-path: if the forward neighbor of this block changed, immediately recompute this block's tip/vines flags
-            try {
-                Direction f = state.get(FACING);
-                // Always recompute the real chain tip from this segment both directions (robust against long chains)
-                BlockPos left = pos;
-                while (w.getBlockState(left.offset(f.getOpposite())).isOf(this)) {
-                    left = left.offset(f.getOpposite());
-                }
-                BlockPos tipPos = left;
-                while (w.getBlockState(tipPos.offset(f)).isOf(this)) {
-                    tipPos = tipPos.offset(f);
-                }
-        BlockPos forwardPos = tipPos.offset(f);
-                BlockState forwardState = w.getBlockState(forwardPos);
-                boolean forwardIsAir = forwardState.isAir();
-                boolean forwardHasFluid = !forwardState.getFluidState().isEmpty();
-        boolean newTipVines = forwardIsAir || forwardHasFluid;
-        // If we're not looking at the real tip (e.g., if the chain extended after cached base), correct it
-        if (!w.getBlockState(tipPos).getOrEmpty(TIP).orElse(false)) {
-            // Mark only the resolved tip as TIP, all others as body on this pass
-            BlockPos scan = left;
-            while (true) {
-                BlockState cs = w.getBlockState(scan);
-                if (!cs.isOf(this)) break;
-                boolean isRealTip = scan.equals(tipPos);
-                BlockState ns = cs.with(TIP, isRealTip).with(TIP_VINES, isRealTip && newTipVines);
-                if (!ns.equals(cs)) {
-                    w.setBlockState(scan, ns, Block.NOTIFY_ALL);
-                }
-                if (scan.equals(tipPos)) break;
-                scan = scan.offset(f);
-            }
-        }
-                BlockState tipStateNow = w.getBlockState(tipPos);
-                BlockState updatedTip = tipStateNow.with(TIP, true).with(TIP_VINES, newTipVines);
-                if (!updatedTip.equals(tipStateNow)) {
-                    w.setBlockState(tipPos, updatedTip, Block.NOTIFY_ALL);
-                    w.updateNeighbors(tipPos, this);
-                } else {
-                    // no change
-                }
-                // Also schedule a survival/visual tick at the resolved tip to guarantee reevaluation next tick
-                if (world instanceof net.minecraft.server.world.ServerWorld sw) {
-                    sw.scheduleBlockTick(tipPos, this, 1);
-                }
-            } catch (Throwable ignored) {}
+		// Recompute chain tip flags on ANY neighbor change to reflect new base-candidate conditions
+		if (world instanceof net.minecraft.world.World w && !w.isClient) {
+			try {
+				com.theendupdate.TemplateMod.LOGGER.info(
+					"MoldCrawl neighborUpdate ENTER: pos={} neighborPos={} dir={} thisFacing={} isClient={} stateTip={} stateTipVines={}",
+					pos.toShortString(), neighborPos.toShortString(), direction, state.get(FACING), false,
+					state.getOrEmpty(TIP).orElse(false), state.getOrEmpty(TIP_VINES).orElse(false)
+				);
+				com.theendupdate.TemplateMod.LOGGER.info(
+					"MoldCrawl neighborUpdate neighborBlock={}",
+					net.minecraft.registry.Registries.BLOCK.getId(neighborState.getBlock())
+				);
+			} catch (Throwable ignored) {}
+			// Fast-path: if the forward neighbor of this block changed, immediately recompute this block's tip/vines flags
+			try {
+				Direction f = state.get(FACING);
+				// Always recompute the real chain tip from this segment both directions (robust against long chains)
+				BlockPos left = pos;
+				while (w.getBlockState(left.offset(f.getOpposite())).isOf(this)) {
+					left = left.offset(f.getOpposite());
+				}
+				BlockPos tipPos = left;
+				while (w.getBlockState(tipPos.offset(f)).isOf(this)) {
+					tipPos = tipPos.offset(f);
+				}
+		BlockPos forwardPos = tipPos.offset(f);
+				BlockState forwardState = w.getBlockState(forwardPos);
+				boolean forwardIsAir = forwardState.isAir();
+				boolean forwardHasFluid = !forwardState.getFluidState().isEmpty();
+		boolean newTipVines = forwardIsAir || forwardHasFluid;
+		// If we're not looking at the real tip (e.g., if the chain extended after cached base), correct it
+		if (!w.getBlockState(tipPos).getOrEmpty(TIP).orElse(false)) {
+				// Mark only the resolved tip as TIP, all others as body on this pass
+				BlockPos scan = left;
+				while (true) {
+					BlockState cs = w.getBlockState(scan);
+					if (!cs.isOf(this)) break;
+					boolean isRealTip = scan.equals(tipPos);
+					BlockState ns = cs.with(TIP, isRealTip).with(TIP_VINES, isRealTip && newTipVines);
+					if (!ns.equals(cs)) {
+						w.setBlockState(scan, ns, Block.NOTIFY_ALL);
+					}
+					if (scan.equals(tipPos)) break;
+					scan = scan.offset(f);
+				}
+			}
+				BlockState tipStateNow = w.getBlockState(tipPos);
+				BlockState updatedTip = tipStateNow.with(TIP, true).with(TIP_VINES, newTipVines);
+				if (!updatedTip.equals(tipStateNow)) {
+					w.setBlockState(tipPos, updatedTip, Block.NOTIFY_ALL);
+					w.updateNeighbors(tipPos, this);
+				} else {
+					// no change
+				}
+				// Also schedule a survival/visual tick at the resolved tip to guarantee reevaluation next tick
+				if (world instanceof net.minecraft.server.world.ServerWorld sw) {
+					sw.scheduleBlockTick(tipPos, this, 1);
+				}
+			} catch (Throwable ignored) {}
 
-            updateChainTipFlags(w, pos);
-            w.updateNeighbors(pos, this);
-            // Return the freshly updated state from world (ensures we don't return a stale 'state')
-            BlockState after = w.getBlockState(pos);
-            return after;
-        }
-        return state;
-    }
+			updateChainTipFlags(w, pos);
+			w.updateNeighbors(pos, this);
+			// Return the freshly updated state from world (ensures we don't return a stale 'state')
+			BlockState after = w.getBlockState(pos);
+			return after;
+		}
+		return state;
+	}
 
     // Survival tick: break when unsupported (matches vines behavior of disappearing without drops)
-    @Override
-    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (this.canPlaceAt(state, world, pos)) {
-            // Even when supported, recompute tip flags to react to neighbor placements (base-candidate texture rule)
-            updateChainTipFlags(world, pos);
-            return;
-        }
-        
-        BlockState reattached = tryReattachChain(state, world, pos);
-        if (reattached != null) {
-            return;
-        }
-        // No reattachment possible; mirror twisting vines: break this segment; neighbors cascade.
-        // Enforce 33% drop chance for cascades regardless of the root tool used.
-        if (!world.isClient) {
-            dropWithNaturalChance(world, pos);
-            world.breakBlock(pos, false);
-        }
-        // Explicitly schedule the forward neighbor to ensure cascade in horizontal chains
-        Direction f = state.get(FACING);
-        BlockPos forwardPos = pos.offset(f);
-        if (world.getBlockState(forwardPos).isOf(this)) {
-            world.scheduleBlockTick(forwardPos, this, 1);
-        }
-    }
+	@Override
+	public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+		if (this.canPlaceAt(state, world, pos)) {
+			// Even when supported, recompute tip flags to react to neighbor placements (base-candidate texture rule)
+			updateChainTipFlags(world, pos);
+			return;
+		}
+		com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick unsupported at {} facing {}", pos.toShortString(), state.get(FACING));
+		BlockState reattached = tryReattachChain(state, world, pos);
+		if (reattached != null) {
+			com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick reattached at {} new facing {}", pos.toShortString(), reattached.get(FACING));
+			return;
+		}
+		// No reattachment possible; break with chance like vines (loot table's random_chance doesn't run here)
+		boolean drop = world.random.nextFloat() < 0.33f;
+		world.breakBlock(pos, drop);
+		// Explicitly schedule neighbors to guarantee horizontal cascade
+		Direction f = state.get(FACING);
+		BlockPos forwardPos = pos.offset(f);
+		BlockPos backPos = pos.offset(f.getOpposite());
+		if (world.getBlockState(forwardPos).isOf(this)) {
+			world.scheduleBlockTick(forwardPos, this, 1);
+		}
+		if (world.getBlockState(backPos).isOf(this)) {
+			world.scheduleBlockTick(backPos, this, 1);
+		}
+	}
 
-    private void dropWithNaturalChance(ServerWorld world, BlockPos pos) {
-        if (world.random.nextFloat() < 0.33F) {
-            Block.dropStack(world, pos, new ItemStack(this.asItem()));
-        }
-    }
+	// Removed custom natural drop helper; drop rate now handled via breakBlock(pos, drop)
 
-    @Override
-    public void afterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
-        if (!world.isClient) {
-            boolean hasSilkTouch = false;
-            try {
-                ItemEnchantmentsComponent ench = tool.get(DataComponentTypes.ENCHANTMENTS);
-                if (ench != null) {
-                    // Portable check across mappings
-                    hasSilkTouch = ench.toString().contains("minecraft:silk_touch");
-                }
-            } catch (Throwable ignored) {}
-
-            if (hasSilkTouch) {
-                Block.dropStack((ServerWorld) world, pos, new ItemStack(this.asItem()));
-            } else {
-                int fortuneLevel = getFortuneLevelFromTool(tool);
-                float chance = 0.33f;
-                if (fortuneLevel == 1) chance = 0.55f;
-                else if (fortuneLevel == 2) chance = 0.77f;
-                else if (fortuneLevel >= 3) chance = 1.0f;
-                if (((ServerWorld) world).random.nextFloat() < chance) {
-                    Block.dropStack((ServerWorld) world, pos, new ItemStack(this.asItem()));
-                }
-            }
-            ((ServerWorld) world).emitGameEvent(player, net.minecraft.world.event.GameEvent.BLOCK_DESTROY, pos);
-        }
-        // Do not call super.afterBreak to avoid default loot-table drops (prevents 100% drop by hand)
-    }
-
-    private static final Pattern FORTUNE_LEVEL_PATTERN = Pattern.compile("minecraft:fortune\\D*(\\d+)");
-
-    private int getFortuneLevelFromTool(ItemStack tool) {
-        int level = 0;
-        try {
-            ItemEnchantmentsComponent ench = tool.get(DataComponentTypes.ENCHANTMENTS);
-            if (ench != null) {
-                String asString = ench.toString();
-                Matcher matcher = FORTUNE_LEVEL_PATTERN.matcher(asString);
-                if (matcher.find()) {
-                    try {
-                        level = Integer.parseInt(matcher.group(1));
-                    } catch (NumberFormatException ignore) {}
-                }
-            }
-        } catch (Throwable ignored) {}
-        if (level < 0) level = 0;
-        if (level > 3) level = 3;
-        return level;
-    }
-
-    // removed bulk chain breaker: we now cascade per-segment like twisting vines
+    // Intentionally no custom afterBreak; rely on loot table and scheduled ticks like the previous build
 
     // Intentionally no low-level neighborUpdate override; we handle visuals via getStateForNeighborUpdate
 
-    private BlockState tryReattachChain(BlockState state, net.minecraft.world.WorldAccess world, BlockPos pos) {
+	private BlockState tryReattachChain(BlockState state, net.minecraft.world.WorldAccess world, BlockPos pos) {
         Direction facing = state.get(FACING);
         Direction back = facing.getOpposite();
 
@@ -477,20 +416,19 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
             tip = tip.offset(facing);
         }
 
-        // Is there support if we flip and attach at the current forward side of the tip?
-        BlockPos forwardPos = tip.offset(facing);
-        BlockState forward = world.getBlockState(forwardPos);
-        boolean forwardSupportBackFace = forward.isSideSolidFullSquare(world, forwardPos, back);
-        boolean forwardSupportFacingFace = forward.isSideSolidFullSquare(world, forwardPos, facing);
-        
-        boolean forwardSupport = forwardSupportBackFace || forwardSupportFacingFace;
-        if (!forwardSupport) {
-            return null;
-        }
+		// Is there support if we flip and attach at the current forward side of the tip?
+		BlockPos forwardPos = tip.offset(facing);
+		BlockState forward = world.getBlockState(forwardPos);
+		boolean forwardSupportBackFace = forward.isSideSolidFullSquare(world, forwardPos, back);
+		boolean forwardSupportFacingFace = forward.isSideSolidFullSquare(world, forwardPos, facing);
+		boolean forwardSupport = forwardSupportBackFace || forwardSupportFacingFace;
+		if (!forwardSupport) {
+			return null;
+		}
 
-        // Flip entire chain to face opposite (newFacing), new tip is at former base
-        Direction newFacing = facing.getOpposite();
-        BlockPos current = base;
+		// Flip entire chain to face opposite (newFacing), new tip is at former base
+		Direction newFacing = facing.getOpposite();
+		BlockPos current = base;
         while (true) {
             BlockState currentState = world.getBlockState(current);
             int age = currentState.getOrEmpty(AGE).orElse(0);
@@ -560,6 +498,8 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         }
     }
 
+	// Removed alternate onStateReplaced signature to match working version
+
     // Low-level neighborUpdate overrides differ across mappings in 1.21.x; rely on getStateForNeighborUpdate instead.
     // Add mapping-safe neighborUpdate variants to ensure we see immediate updates across environments.
     public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos neighborPos, boolean moved) {
@@ -573,34 +513,35 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         handleNeighborChange(world, pos, state, neighborPos);
     }
 
-    private void handleNeighborChange(World world, BlockPos pos, BlockState state, BlockPos neighborPos) {
-        if (world.isClient) return;
-        // Resolve true base and tip, then apply the same immediate tip rule
-        Direction f = state.get(FACING);
-        BlockPos base = pos;
-        while (world.getBlockState(base.offset(f.getOpposite())).isOf(this)) {
-            base = base.offset(f.getOpposite());
-        }
-        BlockPos tipPos = base;
-        while (world.getBlockState(tipPos.offset(f)).isOf(this)) {
-            tipPos = tipPos.offset(f);
-        }
-        BlockPos forwardPos = tipPos.offset(f);
-        BlockState forwardState = world.getBlockState(forwardPos);
-        boolean forwardIsAir = forwardState.isAir();
-        boolean forwardHasFluid = !forwardState.getFluidState().isEmpty();
-        boolean newTipVines = forwardIsAir || forwardHasFluid;
-        BlockState tipStateNow = world.getBlockState(tipPos);
-        BlockState updatedTip = tipStateNow.with(TIP, true).with(TIP_VINES, newTipVines);
-        if (!updatedTip.equals(tipStateNow)) {
-            world.setBlockState(tipPos, updatedTip, Block.NOTIFY_ALL);
-            world.updateNeighbors(tipPos, this);
-        } else {
-            
-        }
-        // Also run chain-wide flags for consistency
-        updateChainTipFlags(world, pos);
-    }
+	private void handleNeighborChange(World world, BlockPos pos, BlockState state, BlockPos neighborPos) {
+		if (world.isClient) return;
+		// Resolve true base and tip, then apply the same immediate tip rule as before
+		Direction f = state.get(FACING);
+		BlockPos base = pos;
+		while (world.getBlockState(base.offset(f.getOpposite())).isOf(this)) {
+			base = base.offset(f.getOpposite());
+		}
+		BlockPos tipPos = base;
+		while (world.getBlockState(tipPos.offset(f)).isOf(this)) {
+			tipPos = tipPos.offset(f);
+		}
+		BlockPos forwardPos = tipPos.offset(f);
+		BlockState forwardState = world.getBlockState(forwardPos);
+		boolean forwardIsAir = forwardState.isAir();
+		boolean forwardHasFluid = !forwardState.getFluidState().isEmpty();
+		boolean newTipVines = forwardIsAir || forwardHasFluid;
+		BlockState tipStateNow = world.getBlockState(tipPos);
+		BlockState updatedTip = tipStateNow.with(TIP, true).with(TIP_VINES, newTipVines);
+		if (!updatedTip.equals(tipStateNow)) {
+			world.setBlockState(tipPos, updatedTip, Block.NOTIFY_ALL);
+			world.updateNeighbors(tipPos, this);
+		}
+		// Also run chain-wide flags for consistency
+		updateChainTipFlags(world, pos);
+		if (world instanceof ServerWorld sw) {
+			sw.scheduleBlockTick(pos, this, 1);
+		}
+	}
 
     // External hook: called by global events when any nearby block changes
     public static void reactToExternalChange(World world, BlockPos changedPos) {

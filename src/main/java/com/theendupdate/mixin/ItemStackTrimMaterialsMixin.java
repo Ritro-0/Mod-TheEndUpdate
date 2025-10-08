@@ -1,6 +1,5 @@
 package com.theendupdate.mixin;
 
-import com.theendupdate.registry.ModItems;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.Identifier;

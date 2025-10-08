@@ -1,6 +1,5 @@
 package com.theendupdate.mixin;
 
-import com.theendupdate.TemplateMod;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;

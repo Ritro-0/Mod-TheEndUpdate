@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Prevent vanilla Creaking gaze freeze (AI disable) for our variants when not desired.
  * - Base ShadowCreaking: only allow gaze freeze above half health
  * - Mini/Tiny: never allow gaze freeze
+ * UNLESS they were explicitly spawned with NoAI via commands.
  */
 @Mixin(CreakingEntity.class)
 public abstract class ShadowCreakingGazeMixin {
@@ -22,6 +23,10 @@ public abstract class ShadowCreakingGazeMixin {
     private void theendupdate$gateGazeFreeze(CallbackInfo ci) {
         CreakingEntity self = (CreakingEntity) (Object) this;
         if (!(self instanceof ShadowCreakingEntity sc)) return;
+        // If entity has NoAI flag set, don't interfere
+        if (sc.isAiDisabled()) {
+            return; // Don't interfere with NoAI entities
+        }
         // Only unfreeze when weeping should not be active: mini/tiny always, base at <=50% hp
         boolean isMiniOrTiny = (sc instanceof MiniShadowCreakingEntity) || (sc instanceof TinyShadowCreakingEntity);
         boolean weepingActive = !isMiniOrTiny && sc.getHealth() > sc.getMaxHealth() * 0.5f;

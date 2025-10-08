@@ -327,12 +327,24 @@ public class ShadowCreakingEntity extends CreakingEntity {
 
 	@Override
 	public boolean isAiDisabled() {
+		// Check the actual underlying NoAI flag first
+		boolean actualNoAi = super.isAiDisabled();
+		// If entity was spawned with NoAI flag via commands, always respect it
+		if (actualNoAi) {
+			return true;
+		}
 		// If weeping is not active for this variant/phase, force AI to remain enabled
-		return this.isWeepingAngelActive() ? super.isAiDisabled() : false;
+		return this.isWeepingAngelActive() ? false : false;
 	}
 
 	@Override
 	public void tick() {
+		// If entity has NoAI flag set, skip all custom behavior
+		if (super.isAiDisabled()) {
+			super.tick();
+			return;
+		}
+		
 		super.tick();
 		
 		// Handle boss bar initialization for main entity

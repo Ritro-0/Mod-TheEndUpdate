@@ -13,6 +13,7 @@ public class TheEndUpdateMixin {
     @Inject(at = @At("HEAD"), method = "loadWorld")
     private void init(CallbackInfo info) {
         try {
+            @SuppressWarnings("resource")
             MinecraftServer self = (MinecraftServer)(Object)this;
             ServerWorld end = self.getWorld(net.minecraft.world.World.END);
             if (end != null) {

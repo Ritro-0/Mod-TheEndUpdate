@@ -20,9 +20,6 @@
 		],
 		"client": [
 			"com.theendupdate.TemplateModClient"
-		],
-		"fabric-datagen": [
-			"com.theendupdate.TemplateModDataGenerator"
 		]
 	},
 	"mixins": [

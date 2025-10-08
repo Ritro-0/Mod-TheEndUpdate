@@ -78,7 +78,7 @@ public class SpectralBlock extends Block {
 
     private void placeHalo(net.minecraft.server.world.ServerWorld world, BlockPos center) {
         iterateHalo(center, (target) -> {
-            if (!world.isChunkLoaded(target)) return;
+            if (!world.isChunkLoaded(target.getX() >> 4, target.getZ() >> 4)) return;
             BlockState current = world.getBlockState(target);
             if (current.isAir() || (current.isOf(Blocks.LIGHT) && current.get(Properties.LEVEL_15) < HALO_LEVEL)) {
                 BlockState halo = Blocks.LIGHT.getDefaultState().with(Properties.LEVEL_15, HALO_LEVEL);
@@ -89,7 +89,7 @@ public class SpectralBlock extends Block {
 
     private void clearHalo(net.minecraft.server.world.ServerWorld world, BlockPos center) {
         iterateHalo(center, (target) -> {
-            if (!world.isChunkLoaded(target)) return;
+            if (!world.isChunkLoaded(target.getX() >> 4, target.getZ() >> 4)) return;
             BlockState current = world.getBlockState(target);
             if (current.isOf(Blocks.LIGHT) && current.get(Properties.LEVEL_15) == HALO_LEVEL) {
                 world.removeBlock(target, false);

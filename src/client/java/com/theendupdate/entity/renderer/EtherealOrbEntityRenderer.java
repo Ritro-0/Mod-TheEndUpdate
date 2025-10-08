@@ -8,7 +8,6 @@ import com.theendupdate.entity.state.EtherealOrbRenderState;
 import com.theendupdate.entity.renderer.feature.EtherealOrbGlowFeatureRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
-// no extra state imports
 import net.minecraft.util.Identifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.render.VertexConsumerProvider;

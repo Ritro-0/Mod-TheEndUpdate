@@ -7,7 +7,6 @@ import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -16,8 +15,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.util.ItemScatterer;
 import org.jetbrains.annotations.Nullable;
-
-// no extra imports
 
 public class QuantumGatewayBlock extends BlockWithEntity {
     public QuantumGatewayBlock(Settings settings) {
@@ -87,19 +84,6 @@ public class QuantumGatewayBlock extends BlockWithEntity {
     @Nullable
     @Override
     public net.minecraft.block.entity.BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return new QuantumGatewayBlockEntity(pos, state); }
-
-    private static void tryCraft(QuantumGatewayBlockEntity gateway) {
-        ItemStack compass = gateway.inventory.getStack(0);
-        ItemStack diamond = gateway.inventory.getStack(1);
-        ItemStack output = gateway.inventory.getStack(2);
-        if (!compass.isEmpty() && compass.isOf(Items.RECOVERY_COMPASS)
-                && !diamond.isEmpty() && diamond.isOf(Items.DIAMOND_BLOCK)
-                && output.isEmpty()) {
-            compass.decrement(1);
-            diamond.decrement(1);
-            gateway.inventory.setStack(2, new ItemStack(Items.RECOVERY_COMPASS));
-        }
-    }
 }
 
 

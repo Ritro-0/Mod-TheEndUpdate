@@ -15,18 +15,14 @@ import net.minecraft.client.render.entity.state.CreakingEntityRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-// import removed: RotationAxis
 import net.minecraft.entity.AnimationState;
 import java.lang.reflect.Field;
 import java.util.Map;
 
 public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreakingEntity, CreakingEntityRenderState, CreakingEntityModel> {
 	private static final Identifier TEXTURE = Identifier.of(TemplateMod.MOD_ID, "textures/entity/shadow_creaking.png");
-	// Kept for reference; timing derives from AnimationState now
-	// private static final int EMERGE_DURATION_TICKS = 134;
 	private static final EntityModelLayer CREAKING_LAYER = new EntityModelLayer(Identifier.ofVanilla("creaking"), "main");
 	private static final int EMERGE_DURATION_TICKS = 134;
-	private static final int LEVITATE_DURATION_TICKS = 140; // match server extension
 	private float lastEmergeProgress;
 	private final CreakingEntityRenderer<ShadowCreakingEntity> vanillaDelegate;
 	private float currentScale = 1.0f;
@@ -369,10 +365,6 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			// Remove manual arm overlay; handled by authored LEVITATING animation
 		}
 
-		// kept intentionally for potential future use; not used currently
-		@SuppressWarnings("unused")
-		private void discoverPartsByReflection() {}
-
 		@SuppressWarnings("unchecked")
 		private static Map<String, ModelPart> getChildrenMap(ModelPart part) {
 			if (part == null) return null;
@@ -418,15 +410,4 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			return null;
 		}
 	}
-
-	// Helpers intentionally stubbed; suppress unused warnings
-	@SuppressWarnings("unused")
-	private static void startAnimationStatesContaining(CreakingEntityRenderState state, int age, String... keys) {}
-	@SuppressWarnings("unused")
-	private static void stopAnimationStatesContaining(CreakingEntityRenderState state, String... keys) {}
-	@SuppressWarnings("unused")
-	private static Field[] getAllFields(Class<?> clazz) { return new Field[0]; }
 }
-
-
-

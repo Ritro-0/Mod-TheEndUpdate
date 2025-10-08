@@ -29,13 +29,11 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.util.hit.HitResult;
-// import removed: BlockHitResult
 import net.minecraft.world.RaycastContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.particle.ParticleTypes;
-// no NBT base overrides needed in 1.21 for simple tracked data persistence here
 import net.minecraft.item.Items;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -44,7 +42,6 @@ import java.util.Comparator;
 import java.util.List;
 import net.minecraft.util.math.Box;
 import com.theendupdate.registry.ModEntities;
-// import removed: NbtCompound
 
 /**
  * EtherealOrbEntity - A floating, glowing orb creature that inhabits The End

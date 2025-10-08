@@ -298,14 +298,7 @@ public abstract class RecoveryCompassUseMixin {
      * Shows current mode status (regular right-click)
      */
     private void handleShadowHuntersTrackerStatus(World world, PlayerEntity user, Hand hand, CallbackInfoReturnable<net.minecraft.util.ActionResult> cir) {
-        if (!(user instanceof ServerPlayerEntity serverPlayer)) {
-            return;
-        }
-
-        ItemStack stack = serverPlayer.getStackInHand(hand);
-        NbtComponent custom = stack.get(DataComponentTypes.CUSTOM_DATA);
-        var tag = custom.copyNbt();
-        
+        // Method stub - tracker status handled elsewhere
     }
     
     private static BlockPos findAltarNear(ServerWorld world, BlockPos structurePos, BlockPos playerPos) {

@@ -38,10 +38,6 @@ public class TemplateModClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         com.theendupdate.TemplateMod.LOGGER.info("[DEBUG] TemplateModClient onInitializeClient starting");
-        // TODO: Add entity renderer when implementing custom renderer for 1.21.8
-        // EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, EtherealOrbEntityRenderer::new);
-        // EntityModelLayerRegistry.registerModelLayer(EtherealOrbEntityModel.ETHEREAL_ORB_LAYER, EtherealOrbEntityModel::getTexturedModelData);
-        
         
         // Register transparent blocks
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);

@@ -17,14 +17,11 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.entity.EquipmentSlot;
 import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
-import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.block.BlockState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,25 +80,23 @@ public class TemplateMod implements ModInitializer {
 
         // Global hooks to ensure mold_crawl reacts even if vanilla neighbor updates are skipped by renderer state:
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            if (world.isClient) return ActionResult.PASS;
-            BlockPos pos = hitResult.getBlockPos();
-            BlockState state = world.getBlockState(pos);
-            if (state.isOf(com.theendupdate.registry.ModBlocks.MOLD_CRAWL)) {
-                world.updateNeighbors(pos, state.getBlock());
+            if (!world.isClient) {
+                // Clicked block position
+                BlockPos clickedPos = hitResult.getBlockPos();
+                // Intended placed position is one block in the clicked face direction
+                BlockPos placedPos = clickedPos.offset(hitResult.getSide());
+                com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, clickedPos);
+                com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, placedPos);
             }
             return ActionResult.PASS;
         });
 
-        // Block break events for mold_crawl
-        PlayerBlockBreakEvents.BEFORE.register((world, player, pos, state, blockEntity) -> {
-            if (state.isOf(com.theendupdate.registry.ModBlocks.MOLD_CRAWL)) {
-                world.updateNeighbors(pos, state.getBlock());
+        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, entity) -> {
+            if (!world.isClient) {
+                com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, pos);
             }
-            return true; // Allow the break to continue
         });
 
-        // Commands
-        try { com.theendupdate.debug.DebugCommands.register(); } catch (Throwable ignored) {}
         // Post-gen spawners
         com.theendupdate.world.EtherealOrbOnCrystalsSpawner.init();
         LOGGER.info("[EndUpdate] onInitialize() completed");
@@ -132,6 +127,12 @@ public class TemplateMod implements ModInitializer {
                         double z = player.getZ();
                         theendupdate$spawnForOthers(world, player, x, y, z);
                     }
+
+                    // Gravitite trim: attract nearby items based on number of pieces (2,4,6,8 blocks)
+                    int gravititePieces = theendupdate$countGravititeTrimPieces(player);
+                    if (gravititePieces > 0 && theendupdate$cadence) {
+                        theendupdate$pullNearbyItems(world, player, gravititePieces);
+                    }
                 }
             }
         });
@@ -152,6 +153,46 @@ public class TemplateMod implements ModInitializer {
             }
         } catch (Throwable ignored) {}
         return count;
+    }
+
+    private static int theendupdate$countGravititeTrimPieces(ServerPlayerEntity player) {
+        int count = 0;
+        try {
+            for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
+                ItemStack armor = player.getEquippedStack(slot);
+                if (armor == null || armor.isEmpty()) continue;
+                ArmorTrim trim = armor.get(DataComponentTypes.TRIM);
+                if (trim == null) continue;
+                Identifier matId = trim.material().getKey().map(RegistryKey::getValue).orElse(null);
+                if (matId == null) continue;
+                if ("gravitite".equals(matId.getPath())) count++;
+            }
+        } catch (Throwable ignored) {}
+        return count;
+    }
+
+    private static void theendupdate$pullNearbyItems(ServerWorld world, ServerPlayerEntity player, int pieces) {
+        int range = switch (pieces) { case 1 -> 2; case 2 -> 4; case 3 -> 6; default -> 8; };
+        Box box = player.getBoundingBox().expand(range);
+        try {
+            java.util.List<ItemEntity> items = world.getEntitiesByClass(ItemEntity.class, box, e -> e != null && e.isAlive());
+            if (items.isEmpty()) return;
+            Vec3d playerPos = player.getPos().add(0.0, 0.8, 0.0);
+            double baseAccel = 0.42 + 0.05 * pieces;
+            for (ItemEntity item : items) {
+                Vec3d diff = playerPos.subtract(item.getPos());
+                double dist = diff.length();
+                if (dist < 0.001) continue;
+                double strength = baseAccel * Math.min(1.0, (dist / range) + 0.35);
+                Vec3d dir = diff.normalize();
+                dir = new Vec3d(dir.x, Math.max(dir.y + 0.06, 0.035), dir.z).normalize();
+                Vec3d pull = dir.multiply(strength);
+                Vec3d vel = item.getVelocity().multiply(0.80).add(pull.multiply(0.90));
+                if (vel.lengthSquared() > 1.4) vel = vel.normalize().multiply(1.15);
+                item.setVelocity(vel);
+                item.velocityModified = true;
+            }
+        } catch (Throwable ignored) {}
     }
 
     private static void theendupdate$spawnForOthers(ServerWorld world, ServerPlayerEntity owner, double x, double y, double z) {

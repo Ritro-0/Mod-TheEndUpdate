@@ -3,9 +3,7 @@ package com.theendupdate.block;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FenceBlock;
-import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.WorldView;
 
 public class EtherealFenceBlock extends FenceBlock {
     

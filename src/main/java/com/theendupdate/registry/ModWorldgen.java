@@ -6,7 +6,6 @@ import com.theendupdate.world.feature.BlueIceRiverFeature;
 import com.theendupdate.world.feature.ShadowlandsGroundCoverFeature;
 import com.theendupdate.world.feature.ShadowlandsChorusCleanupFeature;
 import com.theendupdate.world.feature.ShadowlandsHugeTreeFeature;
-import com.theendupdate.world.feature.ShadowlandsLandmassFeature;
 import com.theendupdate.world.feature.ShadowClawScatterFeature;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
@@ -22,7 +21,6 @@ import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.PlacedFeature;
-// import removed: not using explicit structure injection due to unavailable API
 
 /**
  * Registers End biome distribution and ground cover features for Mirelands.
@@ -101,11 +99,6 @@ public final class ModWorldgen {
         new ShadowlandsHugeTreeFeature(DefaultFeatureConfig.CODEC)
     );
 
-    public static final Feature<DefaultFeatureConfig> SHADOWLANDS_LANDMASS = Registry.register(
-        Registries.FEATURE,
-        id("shadowlands_landmass"),
-        new ShadowlandsLandmassFeature(DefaultFeatureConfig.CODEC)
-    );
 
     public static final Feature<DefaultFeatureConfig> SHADOW_CLAW_SCATTER = Registry.register(
         Registries.FEATURE,

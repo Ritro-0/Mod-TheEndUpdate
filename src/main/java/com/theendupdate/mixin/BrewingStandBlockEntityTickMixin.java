@@ -2,7 +2,6 @@ package com.theendupdate.mixin;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BrewingStandBlockEntity;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.recipe.BrewingRecipeRegistry;
