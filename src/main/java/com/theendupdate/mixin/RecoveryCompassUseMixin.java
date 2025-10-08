@@ -1,7 +1,6 @@
 package com.theendupdate.mixin;
 
 import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.player.PlayerEntity;
@@ -105,10 +104,12 @@ public abstract class RecoveryCompassUseMixin {
 
         BlockPos base = new BlockPos(gx, gy, gz);
 
-        // Require an active beacon with beam under the gateway; otherwise consume and play sound, but do not teleport
-        if (!targetWorld.getBlockState(base.down()).isOf(Blocks.BEACON) || !isBeaconBeamActive(targetWorld, base.down())) {
-            // Consume the used compass
-            stack.decrement(1);
+        // Require a beacon block under the gateway; do not require beam state (chunks may be cold-loaded)
+        if (!targetWorld.getBlockState(base.down()).isOf(Blocks.BEACON)) {
+            // Consume the used compass unless in Creative mode
+            if (!serverPlayer.isCreative()) {
+                stack.decrement(1);
+            }
             // Play beacon power down sound at the gateway
             targetWorld.playSound(null, base, SoundEvents.BLOCK_BEACON_DEACTIVATE, SoundCategory.BLOCKS, 1.0f, 1.0f);
             return;
@@ -117,8 +118,10 @@ public abstract class RecoveryCompassUseMixin {
         BlockPos teleportPos = findValidTeleportLocation(targetWorld, base, serverPlayer);
         
         if (teleportPos == null) {
-            // No valid location found within 20 blocks - consume compass and play failure sound
-            stack.decrement(1);
+            // No valid location found within 20 blocks - consume compass unless Creative, and play failure sound
+            if (!serverPlayer.isCreative()) {
+                stack.decrement(1);
+            }
             targetWorld.playSound(null, base, SoundEvents.BLOCK_BEACON_DEACTIVATE, SoundCategory.BLOCKS, 1.0f, 1.0f);
             return;
         }
@@ -131,11 +134,14 @@ public abstract class RecoveryCompassUseMixin {
         java.util.EnumSet<PositionFlag> flags = java.util.EnumSet.noneOf(PositionFlag.class);
         serverPlayer.teleport(targetWorld, x, y, z, flags, serverPlayer.getYaw(), serverPlayer.getPitch(), false);
         
-        // Reset velocity to prevent fall damage from previous momentum
+        // Reset velocity and fall distance to prevent fall damage from previous momentum
         serverPlayer.setVelocity(0.0, 0.0, 0.0);
+        serverPlayer.fallDistance = 0.0f;
 
-        // Consume the used compass
-        stack.decrement(1);
+        // Consume the used compass unless in Creative mode
+        if (!serverPlayer.isCreative()) {
+            stack.decrement(1);
+        }
 
         // Play beacon power down sound at the gateway
         targetWorld.playSound(null, base, SoundEvents.BLOCK_BEACON_DEACTIVATE, SoundCategory.BLOCKS, 1.0f, 1.0f);
@@ -200,31 +206,7 @@ public abstract class RecoveryCompassUseMixin {
         return world.isSpaceEmpty(player, playerBox);
     }
 
-    /**
-     * Checks if a beacon at the given position has an active beam.
-     * A beacon beam is considered active if it has beam segments and is not blocked.
-     * 
-     * @param world The world to check in
-     * @param beaconPos The position of the beacon
-     * @return true if the beacon has an active beam, false otherwise
-     */
-    private boolean isBeaconBeamActive(ServerWorld world, BlockPos beaconPos) {
-        if (!world.getBlockState(beaconPos).isOf(Blocks.BEACON)) {
-            return false;
-        }
-        
-        var blockEntity = world.getBlockEntity(beaconPos);
-        if (!(blockEntity instanceof BeaconBlockEntity beacon)) {
-            return false;
-        }
-        
-        try {
-            var segments = beacon.getBeamSegments();
-            return segments != null && !segments.isEmpty();
-        } catch (Throwable ignored) {
-            return false;
-        }
-    }
+    
 
     /**
      * Handles initial binding of Shadow Hunter's Tracker to a structure
