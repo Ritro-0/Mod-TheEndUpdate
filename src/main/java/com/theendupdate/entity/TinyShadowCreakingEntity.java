@@ -74,6 +74,7 @@ public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
         this.dropRole = role;
     }
 
+
     @Override
     public void onDeath(net.minecraft.entity.damage.DamageSource damageSource) {
         super.onDeath(damageSource);

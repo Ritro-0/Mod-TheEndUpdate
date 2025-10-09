@@ -26,7 +26,8 @@
 		"ItemStackMiningSpeedMixin",
 		"FenceBlockConnectivityMixin",
 		"LeashKnotEntityMixin",
-		"CowEntityMixin"
+		"CowEntityMixin",
+		"MooshroomEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

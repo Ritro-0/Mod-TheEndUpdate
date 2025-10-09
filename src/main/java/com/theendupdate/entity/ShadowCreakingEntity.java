@@ -108,6 +108,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
         builder.add(LEVITATION_INTRO_PLAYED, Boolean.FALSE);
 	}
 
+
 	public boolean isLevitating() {
 		return this.dataTracker.get(LEVITATING);
 	}
@@ -404,6 +405,21 @@ public class ShadowCreakingEntity extends CreakingEntity {
                     }
                     if (tags != null && tags.contains("theendupdate:half_health_levitation_triggered")) {
                         this.halfHealthLevitationTriggered = true;
+                    }
+                    
+                    // Fix broken levitation state after world reload
+                    // If entity has gravity disabled but is not levitating (broken state from reload during levitation)
+                    if (!this.hasNoGravity() && this.isLevitating() && this.levitateTicksRemaining <= 0) {
+                        // Levitation was interrupted, clean up tracked state
+                        this.setLevitating(false);
+                        this.setInvulnerable(false);
+                    } else if (this.hasNoGravity() && !this.isLevitating() && this.getPose() != EntityPose.EMERGING) {
+                        // Entity has no gravity but is not in levitation state - broken state from reload
+                        // Re-enable gravity to fix the floating issue
+                        this.setNoGravity(false);
+                        this.setInvulnerable(false);
+                        this.waitingForPostLandFreeze = false;
+                        this.postLandFreezeTicks = 0;
                     }
                 }
             } catch (Throwable ignored) {}
@@ -1461,7 +1477,7 @@ protected boolean isWeepingAngelActive() {
 	}
 
 	private void startRangedBeamAttack(Entity target) {
-		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		if (!(this.getWorld() instanceof ServerWorld)) return;
 		if (target == null || !target.isAlive()) return;
 		if (this.isLevitating() || this.getPose() == EntityPose.EMERGING || this.postLandFreezeTicks > 0) return;
 		// Snapshot start and end (end is player's current position) so the player can dodge
@@ -1477,7 +1493,6 @@ protected boolean isWeepingAngelActive() {
 	private void advanceRangedBeam() {
 		if (!(this.getWorld() instanceof ServerWorld sw)) { this.rangedBeamTravelTicks = 0; return; }
 		if (this.rangedBeamStart == null || this.rangedBeamEnd == null) { this.rangedBeamTravelTicks = 0; return; }
-		int total = this.rangedBeamTravelTicks;
 		// Compute current head position along the path from end of total-remaining perspective
 		double totalDistance = this.rangedBeamStart.distanceTo(this.rangedBeamEnd);
 		if (totalDistance < 1.0E-6) { this.rangedBeamTravelTicks = 0; return; }

@@ -112,6 +112,7 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
         this.childTinyDropRoleA = roleA;
         this.childTinyDropRoleB = roleB;
     }
+
 }
 
 
