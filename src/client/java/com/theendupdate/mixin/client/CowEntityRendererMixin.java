@@ -19,34 +19,41 @@ public abstract class CowEntityRendererMixin {
     @Inject(method = "updateRenderState(Lnet/minecraft/entity/passive/CowEntity;Lnet/minecraft/client/render/entity/state/CowEntityRenderState;F)V", 
             at = @At("TAIL"))
     private void theendupdate$trackAnimationProgress(CowEntity entity, CowEntityRenderState state, float tickDelta, CallbackInfo ci) {
+        float animationProgress = 0.0f;
+        
         if (entity instanceof CowEntityAnimationAccessor accessor) {
             long startTime = accessor.theendupdate$getAnimationStartTime();
             
             if (startTime > 0L) {
                 long currentTime = entity.getWorld().getTime();
                 long elapsed = currentTime - startTime;
-                // Animation is 100 ticks (5 seconds), progress from 0.0 to 1.0
-                float animationProgress = MathHelper.clamp((elapsed + tickDelta) / 100.0f, 0.0f, 1.0f);
                 
-                // Store in the render state via accessor
-                if (state instanceof com.theendupdate.accessor.CowRenderStateAnimationAccessor stateAccessor) {
-                    stateAccessor.theendupdate$setAnimationProgress(animationProgress);
+                // Animation is 100 ticks (5 seconds), progress from 0.0 to 1.0
+                // Automatically stop animation after it completes
+                if (elapsed >= 100L) {
+                    animationProgress = 0.0f;
+                    // Clear the start time on the server to prevent persistence
+                    if (!entity.getWorld().isClient) {
+                        accessor.theendupdate$setAnimationStartTime(0L);
+                    }
+                } else {
+                    animationProgress = MathHelper.clamp((elapsed + tickDelta) / 100.0f, 0.0f, 1.0f);
                 }
             }
+        }
+        
+        // Always set animation progress (even if 0) to prevent render state reuse issues
+        if (state instanceof com.theendupdate.accessor.CowRenderStateAnimationAccessor stateAccessor) {
+            stateAccessor.theendupdate$setAnimationProgress(animationProgress);
         }
     }
     
     @Inject(method = "render(Lnet/minecraft/client/render/entity/state/CowEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", 
             at = @At("HEAD"))
     private void theendupdate$applyMilkingAnimation(CowEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-        com.theendupdate.TemplateMod.LOGGER.info("CowRenderer.render: stateClass={}", state.getClass().getSimpleName());
-        
         float animationProgress = 0.0f;
         if (state instanceof com.theendupdate.accessor.CowRenderStateAnimationAccessor stateAccessor) {
             animationProgress = stateAccessor.theendupdate$getAnimationProgress();
-            com.theendupdate.TemplateMod.LOGGER.info("CowRenderer animation: progress={}", animationProgress);
-        } else {
-            com.theendupdate.TemplateMod.LOGGER.warn("CowRenderer state NOT accessor! Class: {}", state.getClass().getName());
         }
         
         if (animationProgress > 0.0f && animationProgress < 1.0f) {

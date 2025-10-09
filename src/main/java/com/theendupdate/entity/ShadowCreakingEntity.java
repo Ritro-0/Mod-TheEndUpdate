@@ -730,20 +730,20 @@ public class ShadowCreakingEntity extends CreakingEntity {
 						this.tryBlinkTeleportToTarget(tgt);
 					}
 
-					// Ranged attack trigger: if chasing target for >15s while not stuck and out of melee reach
-					if (this.rangedBeamCooldownTicks > 0) this.rangedBeamCooldownTicks--;
-					boolean notStuck = (this.stuckTeleportNoProgressTicks < 20) && (this.stuckTeleportNoApproachTicks < 20);
-					boolean outOfMelee = this.getPos().distanceTo(tgt.getPos()) > 6.0; // outside close combat
-					if (notStuck && outOfMelee && this.rangedBeamCooldownTicks <= 0) {
-						this.chaseNoHitTicks++;
-					} else {
-						this.chaseNoHitTicks = 0;
-					}
-					// Fire after 15s (300 ticks) of sustained chase
-					if (this.chaseNoHitTicks >= 300) {
-						this.startRangedBeamAttack(tgt);
-						this.chaseNoHitTicks = 0;
-					}
+				// Ranged attack trigger: if chasing target for >3s while not stuck and out of melee reach
+				if (this.rangedBeamCooldownTicks > 0) this.rangedBeamCooldownTicks--;
+				boolean notStuck = (this.stuckTeleportNoProgressTicks < 20) && (this.stuckTeleportNoApproachTicks < 20);
+				boolean outOfMelee = this.getPos().distanceTo(tgt.getPos()) > 6.0; // outside close combat
+				if (notStuck && outOfMelee && this.rangedBeamCooldownTicks <= 0) {
+					this.chaseNoHitTicks++;
+				} else {
+					this.chaseNoHitTicks = 0;
+				}
+				// Fire after 3s (60 ticks) of sustained chase when player is out of melee range
+				if (this.chaseNoHitTicks >= 60) {
+					this.startRangedBeamAttack(tgt);
+					this.chaseNoHitTicks = 0;
+				}
 					}
 				}
 			}
@@ -756,38 +756,20 @@ public class ShadowCreakingEntity extends CreakingEntity {
 			}
 		}
 
-			// When weeping is active (base variant > 50% HP), navigation is disabled by vanilla gaze logic.
-			// Still allow blink-teleport if stuck for prolonged time while target is out of reach.
-			if (this.isWeepingAngelActive()) {
-				var tgt2 = this.getTarget();
-				if (tgt2 != null && tgt2.isAlive() && this.getPose() != EntityPose.EMERGING && !this.isLevitating() && this.postLandFreezeTicks <= 0) {
-					double moved2 = Math.hypot(this.getX() - this.gazeLastX, this.getZ() - this.gazeLastZ);
-					boolean outOfReach2 = !canReachTarget(tgt2);
-					double dist3 = this.getPos().distanceTo(tgt2.getPos());
-					if (outOfReach2 && moved2 < 0.003) {
-						this.stuckTeleportNoProgressTicks++;
-					} else {
-						this.stuckTeleportNoProgressTicks = 0;
-					}
-					if (outOfReach2) {
-						if (this.prevDistanceToTarget - dist3 > 0.02) {
-							this.stuckTeleportNoApproachTicks = 0;
-						} else {
-							this.stuckTeleportNoApproachTicks++;
-						}
-					} else {
-						this.stuckTeleportNoApproachTicks = 0;
-					}
-					this.gazeLastX = this.getX();
-					this.gazeLastZ = this.getZ();
-					this.prevDistanceToTarget = dist3;
-					if (this.teleportCooldownTicks > 0) this.teleportCooldownTicks--;
-					boolean stuckLong2 = (this.stuckTeleportNoProgressTicks >= 200) || (this.stuckTeleportNoApproachTicks >= 200);
-					if (outOfReach2 && stuckLong2 && this.teleportCooldownTicks <= 0) {
-						this.tryBlinkTeleportToTarget(tgt2);
-					}
-				}
+		// When weeping is active (base variant > 50% HP), navigation is disabled by vanilla gaze logic.
+		// No teleport allowed while in weeping angel mode - entity must rely on weeping angel movement.
+		if (this.isWeepingAngelActive()) {
+			var tgt2 = this.getTarget();
+			if (tgt2 != null && tgt2.isAlive() && this.getPose() != EntityPose.EMERGING && !this.isLevitating() && this.postLandFreezeTicks <= 0) {
+				// Track position for stats but don't teleport
+				this.gazeLastX = this.getX();
+				this.gazeLastZ = this.getZ();
+				this.prevDistanceToTarget = this.getPos().distanceTo(tgt2.getPos());
+				// Reset stuck counters so they don't accumulate during weeping mode
+				this.stuckTeleportNoProgressTicks = 0;
+				this.stuckTeleportNoApproachTicks = 0;
 			}
+		}
 
 		// Client-side particles: soul swirl while EMERGING/DIGGING and during post-spawn levitation
 		if (this.getWorld().isClient) {
@@ -1476,10 +1458,19 @@ protected boolean isWeepingAngelActive() {
 		sw.spawnParticles(ParticleTypes.POOF, x, y, z, 10, 0.6, 0.4, 0.6, 0.02);
 	}
 
-	private void startRangedBeamAttack(Entity target) {
+	/**
+	 * Starts a ranged beam attack targeting the specified entity.
+	 * Public so it can be called from mixins for projectile retaliation.
+	 */
+	public void startRangedBeamAttack(Entity target) {
 		if (!(this.getWorld() instanceof ServerWorld)) return;
 		if (target == null || !target.isAlive()) return;
 		if (this.isLevitating() || this.getPose() == EntityPose.EMERGING || this.postLandFreezeTicks > 0) return;
+		
+		// Check cooldown - don't fire if on cooldown
+		if (this.rangedBeamCooldownTicks > 0) return;
+		if (this.rangedBeamTravelTicks > 0) return; // Already firing
+		
 		// Snapshot start and end (end is player's current position) so the player can dodge
 		this.rangedBeamStart = this.getPos().add(0.0, this.getStandingEyeHeight(), 0.0);
 		this.rangedBeamEnd = target.getPos().add(0.0, target.getStandingEyeHeight() * 0.5, 0.0);
@@ -1547,5 +1538,6 @@ protected boolean isWeepingAngelActive() {
 		}
 	}
 }
+
 
 

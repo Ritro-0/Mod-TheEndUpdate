@@ -15,25 +15,32 @@ public abstract class MooshroomEntityRendererMixin {
     
     @Inject(method = "updateRenderState", at = @At("TAIL"))
     private void theendupdate$trackAnimationProgress(MooshroomEntity entity, MooshroomEntityRenderState state, float tickDelta, CallbackInfo ci) {
+        float animationProgress = 0.0f;
+        
         if (entity instanceof CowEntityAnimationAccessor accessor) {
             long startTime = accessor.theendupdate$getAnimationStartTime();
             
             if (startTime > 0L) {
                 long currentTime = entity.getWorld().getTime();
                 long elapsed = currentTime - startTime;
+                
                 // Animation is 100 ticks (5 seconds), progress from 0.0 to 1.0
-                float animationProgress = MathHelper.clamp((elapsed + tickDelta) / 100.0f, 0.0f, 1.0f);
-                
-                com.theendupdate.TemplateMod.LOGGER.info("Mooshroom updateRenderState: startTime={}, progress={}", startTime, animationProgress);
-                
-                // Store in the render state via accessor
-                if (state instanceof com.theendupdate.accessor.CowRenderStateAnimationAccessor stateAccessor) {
-                    stateAccessor.theendupdate$setAnimationProgress(animationProgress);
-                    com.theendupdate.TemplateMod.LOGGER.info("Mooshroom animation stored in state!");
+                // Automatically stop animation after it completes
+                if (elapsed >= 100L) {
+                    animationProgress = 0.0f;
+                    // Clear the start time on the server to prevent persistence
+                    if (!entity.getWorld().isClient) {
+                        accessor.theendupdate$setAnimationStartTime(0L);
+                    }
                 } else {
-                    com.theendupdate.TemplateMod.LOGGER.warn("Mooshroom state NOT an accessor!");
+                    animationProgress = MathHelper.clamp((elapsed + tickDelta) / 100.0f, 0.0f, 1.0f);
                 }
             }
+        }
+        
+        // Always set animation progress (even if 0) to prevent render state reuse issues
+        if (state instanceof com.theendupdate.accessor.CowRenderStateAnimationAccessor stateAccessor) {
+            stateAccessor.theendupdate$setAnimationProgress(animationProgress);
         }
     }
     
