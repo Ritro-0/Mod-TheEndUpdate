@@ -24,6 +24,8 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.minecraft.entity.passive.CowEntity;
+import com.theendupdate.accessor.CowEntityAnimationAccessor;
 
 public class TemplateMod implements ModInitializer {
     public static final String MOD_ID = "theendupdate";
@@ -44,6 +46,16 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModEntities.registerModEntities();
         com.theendupdate.registry.ModWorldgen.registerAll();
         
+        // Register strippable blocks (axe right-click)
+        net.fabricmc.fabric.api.registry.StrippableBlockRegistry.register(
+            com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA,
+            com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA
+        );
+        net.fabricmc.fabric.api.registry.StrippableBlockRegistry.register(
+            com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP,
+            com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP
+        );
+        
         // Fuels: make ethereal wood a poor fuel source (~half normal wood burn time)
         FuelRegistryEvents.BUILD.register((builder, context) -> {
             final int ETHEREAL_FUEL_TICKS = context.baseSmeltTime() / 2; // usually 100 ticks
@@ -58,6 +70,11 @@ public class TemplateMod implements ModInitializer {
             builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_TRAPDOOR, ETHEREAL_FUEL_TICKS);
             builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_BUTTON, context.baseSmeltTime() / 4); // very low
             builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PRESSURE_PLATE, context.baseSmeltTime() / 4); // very low
+            // Shadow wood (same fuel values as ethereal)
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA, ETHEREAL_FUEL_TICKS);
+            builder.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP, ETHEREAL_FUEL_TICKS);
         });
 
         // Composting: add all plant items with appropriate chances
@@ -78,6 +95,10 @@ public class TemplateMod implements ModInitializer {
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS.asItem(), 0.85f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SPOROCARP.asItem(), 0.85f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PUSTULE.asItem(), 0.85f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA.asItem(), 0.85f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP.asItem(), 0.85f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA.asItem(), 0.85f);
+        CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP.asItem(), 0.85f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_BLOCK.asItem(), 0.65f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ENDER_CHRYSANTHEMUM.asItem(), 0.65f);
         CompostingChanceRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.VOID_BLOOM.asItem(), 0.65f);
@@ -112,6 +133,49 @@ public class TemplateMod implements ModInitializer {
                 if (world != null) {
                     com.theendupdate.entity.ShadowCreakingBossBarRegistry.tickAll(world);
                 }
+                
+                // Handle cow and mooshroom milking animation  
+                for (CowEntity cow : world.getEntitiesByType(net.minecraft.entity.EntityType.COW, entity -> true)) {
+                    if (cow instanceof CowEntityAnimationAccessor accessor) {
+                        long startTime = accessor.theendupdate$getAnimationStartTime();
+                        if (startTime > 0L) {
+                            long elapsed = world.getTime() - startTime;
+                            if (elapsed < 100L) {
+                                // Freeze the cow's movement
+                                cow.setVelocity(Vec3d.ZERO);
+                                cow.velocityModified = true;
+                                if (elapsed % 5 == 0) {
+                                    cow.getNavigation().stop();
+                                }
+                            } else {
+                                // Animation finished, reset
+                                accessor.theendupdate$setAnimationStartTime(0L);
+                            }
+                        }
+                    }
+                }
+                
+                // Handle mooshrooms (they have a separate EntityType)
+                for (net.minecraft.entity.passive.MooshroomEntity mooshroom : world.getEntitiesByType(net.minecraft.entity.EntityType.MOOSHROOM, entity -> true)) {
+                    if (mooshroom instanceof CowEntityAnimationAccessor accessor) {
+                        long startTime = accessor.theendupdate$getAnimationStartTime();
+                        if (startTime > 0L) {
+                            long elapsed = world.getTime() - startTime;
+                            if (elapsed < 100L) {
+                                // Freeze the mooshroom's movement
+                                mooshroom.setVelocity(Vec3d.ZERO);
+                                mooshroom.velocityModified = true;
+                                if (elapsed % 5 == 0) {
+                                    mooshroom.getNavigation().stop();
+                                }
+                            } else {
+                                // Animation finished, reset
+                                accessor.theendupdate$setAnimationStartTime(0L);
+                            }
+                        }
+                    }
+                }
+                
                 boolean theendupdate$cadence = (world.getTime() % 3) == 0;
                 boolean theendupdate$trackerCadence = (world.getTime() % 20) == 0; // Every second
                 for (ServerPlayerEntity player : world.getPlayers()) {

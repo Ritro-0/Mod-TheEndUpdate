@@ -7,7 +7,11 @@
 		"BeaconBlockEntityRendererMixin",
 		"CompassPropertyContextMixin",
 		"PlayerEntityGetDeathPosMixin",
-		"EntityRendererHasLabelMixin"
+		"EntityRendererHasLabelMixin",
+		"CowEntityRendererMixin",
+		"CowEntityRenderStateMixin",
+		"MooshroomEntityRendererMixin",
+		"MooshroomEntityRenderStateMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

@@ -86,6 +86,30 @@ public final class ModItems {
         ItemGroups.FOOD_AND_DRINK
     );
 
+    public static final Item STRAWBERRY_ICE_CREAM_CONE = registerItem(
+        "strawberry_ice_cream_cone",
+        key -> new com.theendupdate.item.StrawberryIceCreamConeItem(
+            new Item.Settings()
+                .registryKey(key)
+                .food(
+                    new FoodComponent.Builder()
+                        .nutrition(1)
+                        .saturationModifier(0.2f)
+                        .alwaysEdible()
+                        .build()
+                )
+                .component(
+                    DataComponentTypes.FOOD,
+                    new FoodComponent.Builder()
+                        .nutrition(1)
+                        .saturationModifier(0.2f)
+                        .alwaysEdible()
+                        .build()
+                )
+        ),
+        ItemGroups.FOOD_AND_DRINK
+    );
+
     // Gravitite materials
     public static final Item GRAVITITE_ESSENCE = registerItem(
         "gravitite_essence",

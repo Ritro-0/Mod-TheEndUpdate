@@ -4,6 +4,8 @@
     "theendupdate:ethereal_sporocarp",
     "theendupdate:ethereal_pustule",
     "theendupdate:shadow_cryptomycota",
-    "theendupdate:shadow_umbracarp"
+    "theendupdate:shadow_umbracarp",
+    "theendupdate:stripped_shadow_cryptomycota",
+    "theendupdate:stripped_shadow_umbracarp"
   ]
 }

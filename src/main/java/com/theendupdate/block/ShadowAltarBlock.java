@@ -82,6 +82,29 @@ public class ShadowAltarBlock extends BlockWithEntity {
 			? (w, p, s, be) -> ShadowAltarBlockEntity.tick(w, p, s, (ShadowAltarBlockEntity) be)
 			: null;
 	}
+	
+	// Mapping-safe: omit @Override and use broader signature
+	public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+		// Clean up the boss bar if altar is broken during charging
+		if (!world.isClient && !state.isOf(newState.getBlock())) {
+			BlockEntity be = world.getBlockEntity(pos);
+			if (be instanceof ShadowAltarBlockEntity altar) {
+				altar.cleanup();
+			}
+		}
+		if (!state.isOf(newState.getBlock()) && world instanceof ServerWorld sw) {
+			super.onStateReplaced(state, sw, pos, moved);
+		}
+	}
+	
+	// 1.21.8 superclass override variant
+	@Override
+	public void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
+		// Note: This variant doesn't receive newState, so we can't check if block is actually being replaced
+		// Only clean up if the block entity is actually being removed (checked by getting it after state change)
+		// We'll rely on the other variant for proper cleanup on break
+		super.onStateReplaced(state, world, pos, moved);
+	}
 }
 
 

@@ -300,6 +300,30 @@ public final class ModBlocks {
         )
     );
 
+    public static final Block STRIPPED_SHADOW_CRYPTOMYCOTA = registerBlock(
+        "stripped_shadow_cryptomycota",
+        key -> new com.theendupdate.block.EtherealSporocarpBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_LOG)
+                .sounds(BlockSoundGroup.WOOD)
+                .strength(2.0F, 3.0F)
+                .luminance(state -> 2)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block STRIPPED_SHADOW_UMBRACARP = registerBlock(
+        "stripped_shadow_umbracarp",
+        key -> new com.theendupdate.block.EtherealPustuleBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.OAK_WOOD)
+                .sounds(BlockSoundGroup.WOOD)
+                .strength(2.0F, 3.0F)
+                .luminance(state -> 2)
+                .registryKey(key)
+        )
+    );
+
     public static final Block SHADOW_PLANKS = registerBlock(
         "shadow_planks",
         key -> new Block(
@@ -520,7 +544,7 @@ public final class ModBlocks {
         "shadow_altar",
         key -> new com.theendupdate.block.ShadowAltarBlock(
             AbstractBlock.Settings
-                .copy(Blocks.NETHERITE_BLOCK) // netherite mining hardness and blast resistance
+                .copy(Blocks.SPAWNER) // spawner properties for proper transparency rendering
                 .requiresTool()
                 .strength(50.0F, 1200.0F)
                 .sounds(BlockSoundGroup.WOOD) // wooden-themed, but extremely tough

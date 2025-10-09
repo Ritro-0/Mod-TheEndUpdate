@@ -121,6 +121,25 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	}
 
 	@Override
+	public void remove(Entity.RemovalReason reason) {
+		super.remove(reason);
+		// Clean up boss bar when entity is removed for any reason (peaceful mode, dimension change, etc.)
+		if (!this.getWorld().isClient && this.bossBarManager != null && this.isMainEntity) {
+			// Only end boss fight if this is the main entity and it's being removed (not just dying normally)
+			if (reason == Entity.RemovalReason.KILLED) {
+				// Normal death - handled in onDeath
+			} else {
+				// Removed by peaceful mode, dimension change, etc. - end boss fight
+				com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking removed (reason: {}), cleaning up boss bar", reason);
+				this.bossBarManager.removeEntity(this.getUuid());
+			}
+		} else if (!this.getWorld().isClient && this.bossBarManager != null) {
+			// Mini/tiny entities - just remove from tracking
+			this.bossBarManager.removeEntity(this.getUuid());
+		}
+	}
+	
+	@Override
 	public void onDeath(DamageSource damageSource) {
 		super.onDeath(damageSource);
 		if (!(this.getWorld() instanceof ServerWorld sw)) return;

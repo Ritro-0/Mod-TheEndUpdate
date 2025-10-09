@@ -45,7 +45,7 @@ public class ShadowAltarBlockEntity extends BlockEntity {
 		
 		// Generate UUID for the entity that will spawn and start boss bar charging
 		this.pendingEntityUuid = UUID.randomUUID();
-		ShadowCreakingBossBarRegistry.createChargingBossBar(this.pendingEntityUuid, world);
+		ShadowCreakingBossBarRegistry.createChargingBossBar(this.pendingEntityUuid, world, this.pos);
 		
 		markDirty();
 		return true;
@@ -171,6 +171,16 @@ public class ShadowAltarBlockEntity extends BlockEntity {
 		// basic safety: avoid fluids and avoid outside world border
 		if (!world.getWorldBorder().contains(new Box(base))) return false;
 		return true;
+	}
+	
+	/**
+	 * Clean up the boss bar if the altar is broken during charging
+	 */
+	public void cleanup() {
+		if (this.pendingEntityUuid != null) {
+			ShadowCreakingBossBarRegistry.removeBossBar(this.pendingEntityUuid);
+			this.pendingEntityUuid = null;
+		}
 	}
 }
 

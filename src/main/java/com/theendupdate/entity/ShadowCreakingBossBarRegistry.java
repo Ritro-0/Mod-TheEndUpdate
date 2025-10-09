@@ -37,7 +37,7 @@ public class ShadowCreakingBossBarRegistry {
      * Creates a new boss bar manager that starts charging when the altar is lit.
      * This is called before the entity spawns.
      */
-    public static ShadowCreakingBossBarManager createChargingBossBar(UUID entityUuid, ServerWorld world) {
+    public static ShadowCreakingBossBarManager createChargingBossBar(UUID entityUuid, ServerWorld world, net.minecraft.util.math.BlockPos altarPos) {
         // Remove any existing boss bar for this entity (shouldn't happen, but safety check)
         ShadowCreakingBossBarManager existing = activeBossBars.remove(entityUuid);
         if (existing != null) {
@@ -49,7 +49,7 @@ public class ShadowCreakingBossBarRegistry {
         activeBossBars.put(entityUuid, manager);
         
         // Start the charging phase
-        manager.startChargingFromAltar(world);
+        manager.startChargingFromAltar(world, altarPos);
         
         return manager;
     }
@@ -114,7 +114,7 @@ public class ShadowCreakingBossBarRegistry {
                     manager.tick(world);
                 } else {
                     // Clean up inactive managers
-                    com.theendupdate.TemplateMod.LOGGER.info("Cleaning up inactive boss bar manager - active: {}", manager != null ? manager.isActive() : "null");
+                    com.theendupdate.TemplateMod.LOGGER.info("Cleaning up inactive boss bar manager");
                     iterator.remove();
                     if (manager != null) {
                         manager.endBossFight();

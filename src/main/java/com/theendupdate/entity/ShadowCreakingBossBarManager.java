@@ -22,10 +22,12 @@ public class ShadowCreakingBossBarManager {
     private final UUID mainEntityUuid;
     private final Map<UUID, EntityPhase> trackedEntities;
     private boolean isActive;
-    private boolean isEmerging;
+    public boolean isEmerging; // Public for registry access
     private int emergingTicks;
     public boolean isCharging; // New: true when charging before entity spawns
     public int chargingTicks; // New: tracks charging progress before entity spawns
+    private net.minecraft.util.math.BlockPos altarPos; // Track altar position during charging
+    private net.minecraft.registry.RegistryKey<net.minecraft.world.World> altarDimension; // Track altar dimension
     private static final int EMERGE_DURATION_TICKS = 134; // Match ShadowCreakingEntity.EMERGE_DURATION_TICKS
     private static final int LEVITATE_DURATION_TICKS = 140; // Match ShadowCreakingEntity.LEVITATE_DURATION_TICKS
     private static final int TOTAL_INTRO_DURATION = EMERGE_DURATION_TICKS + LEVITATE_DURATION_TICKS; // 274 ticks total
@@ -80,7 +82,7 @@ public class ShadowCreakingBossBarManager {
      * Starts the charging phase when the shadow altar is initially lit.
      * This begins the boss bar charging animation before the entity even spawns.
      */
-    public void startChargingFromAltar(ServerWorld world) {
+    public void startChargingFromAltar(ServerWorld world, net.minecraft.util.math.BlockPos altarPos) {
         if (world == null) return;
         
         this.isActive = true;
@@ -88,16 +90,19 @@ public class ShadowCreakingBossBarManager {
         this.chargingTicks = 0;
         this.isEmerging = false;
         this.emergingTicks = 0;
+        this.altarPos = altarPos; // Store altar position to verify it exists
+        this.altarDimension = world.getRegistryKey(); // Store dimension
         
         // Start charging from 0
         this.bossBar.setPercent(0.0f);
         this.bossBar.setStyle(BossBar.Style.NOTCHED_20); // More granular during charging
+        this.bossBar.setVisible(true); // Ensure visibility
         
         // Add nearby players to the boss bar
         this.updateNearbyPlayers(world);
         
-        com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking boss bar started charging from altar - will reach 100% in {} ticks, {} players watching", 
-            TOTAL_CHARGING_DURATION, this.bossBar.getPlayers().size());
+        com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking boss bar started charging from altar at {} - will reach 100% in {} ticks, {} players watching", 
+            altarPos, TOTAL_CHARGING_DURATION, this.bossBar.getPlayers().size());
     }
     
     /**
@@ -115,6 +120,8 @@ public class ShadowCreakingBossBarManager {
             if (this.isCharging) {
                 // Continue charging with the entity now tracked
                 // Keep existing charging progress and state
+                // Clear altar position since entity has spawned
+                this.altarPos = null;
                 this.isEmerging = true;
                 this.emergingTicks = 0;
                 this.bossBar.setStyle(BossBar.Style.NOTCHED_20); // Keep granular during emerging
@@ -155,17 +162,55 @@ public class ShadowCreakingBossBarManager {
             return;
         }
         
+        // Check if all players have logged out - end boss fight
+        try {
+            net.minecraft.server.MinecraftServer server = world.getServer();
+            if (server != null && server.getPlayerManager().getPlayerList().isEmpty()) {
+                com.theendupdate.TemplateMod.LOGGER.info("All players logged out, ending boss fight");
+                this.endBossFight();
+                return;
+            }
+        } catch (Exception e) {
+            com.theendupdate.TemplateMod.LOGGER.error("Error checking player list", e);
+        }
+        
         // Handle charging phase (before entity spawns)
         if (this.isCharging && !this.isEmerging) {
+            // Check if the altar still exists (only check after a few ticks to avoid race conditions)
+            if (this.altarPos != null && this.altarDimension != null && this.chargingTicks > 5) {
+                try {
+                    // Get the correct world for the altar's dimension
+                    net.minecraft.server.MinecraftServer server = world.getServer();
+                    if (server != null) {
+                        ServerWorld altarWorld = server.getWorld(this.altarDimension);
+                        if (altarWorld != null) {
+                            net.minecraft.block.entity.BlockEntity be = altarWorld.getBlockEntity(this.altarPos);
+                            if (!(be instanceof com.theendupdate.block.ShadowAltarBlockEntity)) {
+                                // Altar was broken, end the boss fight
+                                com.theendupdate.TemplateMod.LOGGER.info("Shadow Altar was broken during charging, ending boss fight");
+                                this.endBossFight();
+                                return;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    com.theendupdate.TemplateMod.LOGGER.error("Error checking altar state during charging", e);
+                }
+            }
+            
             this.chargingTicks++;
             // Charge to 100% over the entire duration (altar + emergence + levitation)
             float progress = Math.min(1.0f, (float) this.chargingTicks / TOTAL_CHARGING_DURATION);
             this.bossBar.setPercent(progress);
             
-            // Log progress every 20 ticks for debugging
+            // Ensure boss bar stays visible
+            this.bossBar.setVisible(true);
+            
+            // Log progress every second for debugging
             if (this.chargingTicks % 20 == 0) {
                 com.theendupdate.TemplateMod.LOGGER.info("Boss bar charging from altar: {}/{} ticks ({}%), {} players watching", 
-                    this.chargingTicks, TOTAL_CHARGING_DURATION, (int)(progress * 100), this.bossBar.getPlayers().size());
+                    this.chargingTicks, TOTAL_CHARGING_DURATION, (int)(progress * 100), 
+                    this.bossBar.getPlayers().size());
             }
             
             // Continue charging until entity spawns and takes over
@@ -232,6 +277,33 @@ public class ShadowCreakingBossBarManager {
         // Update health based on current entities
         this.updateBossBarHealth(world);
         
+        // Check if all entities are gone (dead, removed, or despawned due to peaceful mode)
+        // Only check after intro is complete and not during charging
+        if (!this.isEmerging && !this.isCharging) {
+            boolean hasAnyEntity = false;
+            for (UUID entityUuid : this.trackedEntities.keySet()) {
+                ShadowCreakingEntity entity = this.findEntityByUuid(world, entityUuid);
+                if (entity != null && !entity.isDead() && !entity.isRemoved()) {
+                    hasAnyEntity = true;
+                    break;
+                }
+            }
+            
+            // If no valid entities exist, end the boss fight
+            if (!hasAnyEntity && !this.trackedEntities.isEmpty()) {
+                com.theendupdate.TemplateMod.LOGGER.info("All Shadow Creaking entities gone (removed/killed/peaceful), ending boss fight");
+                this.endBossFight();
+                return;
+            }
+            
+            // Also end if tracked entities map is empty
+            if (this.trackedEntities.isEmpty()) {
+                com.theendupdate.TemplateMod.LOGGER.info("All Shadow Creaking entities defeated, ending boss fight");
+                this.endBossFight();
+                return;
+            }
+        }
+        
         // Update nearby players regularly (every 20 ticks = 1 second)
         if (world.getTime() % 20 == 0) {
             this.updateNearbyPlayers(world);
@@ -240,12 +312,6 @@ public class ShadowCreakingBossBarManager {
             float percent = this.bossBar.getPercent();
             com.theendupdate.TemplateMod.LOGGER.info("Boss bar at {}%, {} damage dealt of {} total HP, {} players watching, {} entities tracked", 
                 (int)(percent * 100), (int)totalDamageDealt, (int)TOTAL_MAX_HEALTH, this.bossBar.getPlayers().size(), this.trackedEntities.size());
-        }
-        
-        // Check if all entities are dead (but only after intro is complete and not charging)
-        if (this.trackedEntities.isEmpty() && !this.isEmerging && !this.isCharging) {
-            com.theendupdate.TemplateMod.LOGGER.info("All Shadow Creaking entities defeated, ending boss fight");
-            this.endBossFight();
         }
     }
     
@@ -428,8 +494,13 @@ public class ShadowCreakingBossBarManager {
         com.theendupdate.TemplateMod.LOGGER.info("Ending boss fight - was charging: {}, was emerging: {}, {} players watching", 
             this.isCharging, this.isEmerging, this.bossBar.getPlayers().size());
         this.isActive = false;
+        this.isCharging = false;
+        this.isEmerging = false;
+        this.altarPos = null;
+        this.altarDimension = null;
         this.bossBar.clearPlayers();
         this.trackedEntities.clear();
+        this.previousHealthValues.clear();
     }
     
     /**

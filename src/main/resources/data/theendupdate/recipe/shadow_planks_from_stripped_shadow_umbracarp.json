@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [ "theendupdate:stripped_shadow_umbracarp" ],
+  "result": { "id": "theendupdate:shadow_planks", "count": 4 }
+}
+
+
+
+

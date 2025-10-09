@@ -1,8 +1,10 @@
 package com.theendupdate.item;
 
+import com.theendupdate.accessor.CowEntityAnimationAccessor;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.passive.CowEntity;
+import net.minecraft.entity.passive.MooshroomEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.component.DataComponentTypes;
@@ -20,10 +22,16 @@ public class WoodenConeItem extends Item {
     @Override
     public ActionResult useOnEntity(ItemStack stack, PlayerEntity user, LivingEntity entity, Hand hand) {
         if (hand != Hand.MAIN_HAND) return ActionResult.PASS;
-        if (!(entity instanceof CowEntity cow)) return ActionResult.PASS;
-        if (cow.isBaby()) return ActionResult.PASS;
+        
+        // Check for both CowEntity and MooshroomEntity explicitly
+        boolean isMooshroom = entity instanceof MooshroomEntity;
+        boolean isCow = entity instanceof CowEntity;
+        
+        if (!isCow && !isMooshroom) return ActionResult.PASS;
+        if (entity.isBaby()) return ActionResult.PASS;
+        
         World world = user.getWorld();
-        if (world.isClient) return ActionResult.PASS;
+        if (world.isClient) return ActionResult.SUCCESS;
 
         // Prevent same-frame refill immediately after eating
         NbtComponent custom = stack.get(DataComponentTypes.CUSTOM_DATA);
@@ -51,7 +59,13 @@ public class WoodenConeItem extends Item {
         stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(newTag));
 
         boolean creative = user.getAbilities().creativeMode;
-        ItemStack iceCream = new ItemStack(com.theendupdate.registry.ModItems.ICE_CREAM_CONE);
+        
+        // Determine which ice cream to give based on entity type
+        ItemStack iceCream = new ItemStack(
+            isMooshroom ? com.theendupdate.registry.ModItems.STRAWBERRY_ICE_CREAM_CONE 
+                        : com.theendupdate.registry.ModItems.ICE_CREAM_CONE
+        );
+        
         if (!creative) {
             if (stack.getCount() == 1) {
                 user.setStackInHand(hand, iceCream);
@@ -66,6 +80,12 @@ public class WoodenConeItem extends Item {
                 user.dropItem(iceCream, false);
             }
         }
+        
+        // Mark the cow/mooshroom for animation
+        if (entity instanceof CowEntityAnimationAccessor accessor) {
+            accessor.theendupdate$setAnimationStartTime(world.getTime());
+        }
+        
         try { user.playSound(net.minecraft.sound.SoundEvents.ENTITY_COW_MILK, 1.0f, 1.0f); } catch (Throwable ignored) {}
         return ActionResult.CONSUME;
     }
