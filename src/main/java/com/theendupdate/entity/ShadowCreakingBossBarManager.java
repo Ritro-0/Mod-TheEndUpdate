@@ -74,8 +74,6 @@ public class ShadowCreakingBossBarManager {
         this.bossBar.setDarkenSky(false);
         this.bossBar.setDragonMusic(false);
         this.bossBar.setThickenFog(false);
-        
-        com.theendupdate.TemplateMod.LOGGER.info("Created Shadow Creaking boss bar for entity {}", mainEntityUuid);
     }
     
     /**
@@ -100,9 +98,6 @@ public class ShadowCreakingBossBarManager {
         
         // Add nearby players to the boss bar
         this.updateNearbyPlayers(world);
-        
-        com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking boss bar started charging from altar at {} - will reach 100% in {} ticks, {} players watching", 
-            altarPos, TOTAL_CHARGING_DURATION, this.bossBar.getPlayers().size());
     }
     
     /**
@@ -125,15 +120,12 @@ public class ShadowCreakingBossBarManager {
                 this.isEmerging = true;
                 this.emergingTicks = 0;
                 this.bossBar.setStyle(BossBar.Style.NOTCHED_20); // Keep granular during emerging
-                com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking boss bar continued charging (emerging mode) - entity spawned at {}%", 
-                    (int)(this.bossBar.getPercent() * 100));
             } else {
                 // Start charging from 0 during emerging animation (fallback)
                 this.isEmerging = true;
                 this.emergingTicks = 0;
                 this.bossBar.setPercent(0.0f);
                 this.bossBar.setStyle(BossBar.Style.NOTCHED_20); // More granular during emerging
-                com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking boss bar started (emerging mode) - will charge to 100%");
             }
         } else {
             // Spawned directly, start at 100% (no damage dealt yet)
@@ -143,13 +135,11 @@ public class ShadowCreakingBossBarManager {
             this.chargingTicks = 0;
             this.bossBar.setPercent(1.0f);
             this.bossBar.setStyle(BossBar.Style.PROGRESS);
-            com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking boss bar started (direct spawn mode) at 100%");
         }
         
         // Add nearby players to the boss bar
         if (mainEntity.getWorld() instanceof ServerWorld serverWorld) {
             this.updateNearbyPlayers(serverWorld);
-            com.theendupdate.TemplateMod.LOGGER.info("Boss bar has {} players", this.bossBar.getPlayers().size());
         }
     }
     
@@ -158,7 +148,6 @@ public class ShadowCreakingBossBarManager {
      */
     public void tick(ServerWorld world) {
         if (!this.isActive || world == null) {
-            com.theendupdate.TemplateMod.LOGGER.info("Boss bar tick skipped - active: {}, world: {}", this.isActive, world != null);
             return;
         }
         
@@ -206,13 +195,6 @@ public class ShadowCreakingBossBarManager {
             // Ensure boss bar stays visible
             this.bossBar.setVisible(true);
             
-            // Log progress every second for debugging
-            if (this.chargingTicks % 20 == 0) {
-                com.theendupdate.TemplateMod.LOGGER.info("Boss bar charging from altar: {}/{} ticks ({}%), {} players watching", 
-                    this.chargingTicks, TOTAL_CHARGING_DURATION, (int)(progress * 100), 
-                    this.bossBar.getPlayers().size());
-            }
-            
             // Continue charging until entity spawns and takes over
             this.updateNearbyPlayers(world);
             return;
@@ -238,7 +220,6 @@ public class ShadowCreakingBossBarManager {
             
             // If entity has taken damage, switch to health tracking immediately
             if (hasDamage) {
-                com.theendupdate.TemplateMod.LOGGER.info("Entity taking damage during emerging, switching to health tracking");
                 this.isEmerging = false;
                 this.isCharging = false;
                 this.bossBar.setStyle(BossBar.Style.PROGRESS);
@@ -250,13 +231,6 @@ public class ShadowCreakingBossBarManager {
                 this.bossBar.setPercent(progress);
             }
             
-            // Log progress every 20 ticks for debugging
-            if (this.emergingTicks % 20 == 0) {
-                float currentPercent = this.bossBar.getPercent();
-                com.theendupdate.TemplateMod.LOGGER.info("Boss bar charging (emerging): {}/{} ticks ({}%)", 
-                    this.emergingTicks, TOTAL_INTRO_DURATION, (int)(currentPercent * 100));
-            }
-            
             // Switch to normal progress bar when entire intro is complete
             if (this.emergingTicks >= TOTAL_INTRO_DURATION) {
                 this.isEmerging = false;
@@ -265,7 +239,6 @@ public class ShadowCreakingBossBarManager {
                 this.updateBossBarHealth(world);
                 // Update nearby players immediately after transition (before switching to proximity mode)
                 this.updateNearbyPlayers(world);
-                com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking intro complete (274 ticks), switching to health tracking - {} players watching", this.bossBar.getPlayers().size());
                 // Fall through to normal health tracking mode instead of returning
             } else {
                 // Still in intro, update players and return
@@ -307,11 +280,6 @@ public class ShadowCreakingBossBarManager {
         // Update nearby players regularly (every 20 ticks = 1 second)
         if (world.getTime() % 20 == 0) {
             this.updateNearbyPlayers(world);
-            
-            // Debug logging
-            float percent = this.bossBar.getPercent();
-            com.theendupdate.TemplateMod.LOGGER.info("Boss bar at {}%, {} damage dealt of {} total HP, {} players watching, {} entities tracked", 
-                (int)(percent * 100), (int)totalDamageDealt, (int)TOTAL_MAX_HEALTH, this.bossBar.getPlayers().size(), this.trackedEntities.size());
         }
     }
     
@@ -322,7 +290,6 @@ public class ShadowCreakingBossBarManager {
         this.trackedEntities.put(miniEntity.getUuid(), EntityPhase.MINI);
         // Initialize previous health value so damage tracking works immediately
         this.previousHealthValues.put(miniEntity.getUuid(), miniEntity.getMaxHealth());
-        com.theendupdate.TemplateMod.LOGGER.info("Added mini entity to boss bar tracking (max HP: {})", miniEntity.getMaxHealth());
     }
     
     /**
@@ -332,7 +299,6 @@ public class ShadowCreakingBossBarManager {
         this.trackedEntities.put(tinyEntity.getUuid(), EntityPhase.TINY);
         // Initialize previous health value so damage tracking works immediately
         this.previousHealthValues.put(tinyEntity.getUuid(), tinyEntity.getMaxHealth());
-        com.theendupdate.TemplateMod.LOGGER.info("Added tiny entity to boss bar tracking (max HP: {})", tinyEntity.getMaxHealth());
     }
     
     /**
@@ -377,13 +343,6 @@ public class ShadowCreakingBossBarManager {
                 if (damageTaken > 0) {
                     totalDamageDealt += damageTaken;
                     previousHealthValues.put(entityUuid, currentHealth);
-                    
-                    // Debug logging for tiny entities
-                    EntityPhase phase = entry.getValue();
-                    if (phase == EntityPhase.TINY) {
-                        com.theendupdate.TemplateMod.LOGGER.info("Tiny entity took {} damage, total damage: {}/{}", 
-                            damageTaken, (int)totalDamageDealt, (int)TOTAL_MAX_HEALTH);
-                    }
                 }
             }
         }
@@ -429,26 +388,48 @@ public class ShadowCreakingBossBarManager {
         // Get all players within view distance of any tracked entity
         Set<ServerPlayerEntity> nearbyPlayers = new HashSet<>();
         
-        // During charging/emerging phase, add all players from ALL dimensions (boss bar is global during intro)
-        if (this.isCharging || this.isEmerging) {
+        // During charging phase (before entity spawns), check proximity to altar position
+        if (this.isCharging && !this.isEmerging && this.altarPos != null && this.altarDimension != null) {
             try {
-                // Get the server from the world and iterate through all players in all dimensions
+                // Get the correct world for the altar's dimension
                 net.minecraft.server.MinecraftServer server = world.getServer();
                 if (server != null) {
-                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                        nearbyPlayers.add(player);
+                    ServerWorld altarWorld = server.getWorld(this.altarDimension);
+                    if (altarWorld != null) {
+                        // Only show boss bar to players near the altar
+                        net.minecraft.util.math.Vec3d altarVec = net.minecraft.util.math.Vec3d.ofCenter(this.altarPos);
+                        Box searchBox = Box.of(altarVec, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
+                        List<PlayerEntity> playersInRange = altarWorld.getEntitiesByClass(PlayerEntity.class, searchBox,
+                            p -> p.getPos().distanceTo(altarVec) <= VIEW_DISTANCE);
+                        
+                        for (PlayerEntity player : playersInRange) {
+                            if (player instanceof ServerPlayerEntity serverPlayer) {
+                                nearbyPlayers.add(serverPlayer);
+                            }
+                        }
                     }
-                }
-                // Only log occasionally to avoid spam
-                int totalTicks = this.chargingTicks + this.emergingTicks;
-                if (totalTicks % 20 == 0) {
-                    com.theendupdate.TemplateMod.LOGGER.info("Charging boss bar: {} players across all dimensions (charging: {}, emerging: {})", 
-                        nearbyPlayers.size(), this.isCharging, this.isEmerging);
                 }
             } catch (Exception e) {
                 // Fallback: if there's any issue getting players, skip this tick
-                com.theendupdate.TemplateMod.LOGGER.error("Error getting players during charging/emerging phase", e);
+                com.theendupdate.TemplateMod.LOGGER.error("Error getting players during charging phase", e);
                 return;
+            }
+        } else if (this.isEmerging || (this.isCharging && this.altarPos == null)) {
+            // During emerging phase or charging after entity spawned, track proximity to entities
+            for (UUID entityUuid : this.trackedEntities.keySet()) {
+                ShadowCreakingEntity entity = this.findEntityByUuid(world, entityUuid);
+                if (entity != null && entity.getWorld() instanceof ServerWorld entityWorld) {
+                    Box searchBox = Box.of(entity.getPos(), VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
+                    // Search for players in the entity's dimension, not the passed world
+                    List<PlayerEntity> playersInRange = entityWorld.getEntitiesByClass(PlayerEntity.class, searchBox, 
+                        p -> p.getPos().distanceTo(entity.getPos()) <= VIEW_DISTANCE);
+                    
+                    for (PlayerEntity player : playersInRange) {
+                        if (player instanceof ServerPlayerEntity serverPlayer) {
+                            nearbyPlayers.add(serverPlayer);
+                        }
+                    }
+                }
             }
         } else {
             // Normal entity-based proximity tracking
@@ -491,8 +472,6 @@ public class ShadowCreakingBossBarManager {
      * Ends the boss fight and cleans up
      */
     public void endBossFight() {
-        com.theendupdate.TemplateMod.LOGGER.info("Ending boss fight - was charging: {}, was emerging: {}, {} players watching", 
-            this.isCharging, this.isEmerging, this.bossBar.getPlayers().size());
         this.isActive = false;
         this.isCharging = false;
         this.isEmerging = false;

@@ -64,10 +64,8 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
             this.bossBarManager.removeEntity(this.getUuid());
         }
         
-        // Spawn tiny children if killed by player, or if roles were preset from a parent
-        boolean allowSpawn = wasKilledByPlayer(damageSource) ||
-            (this.childTinyDropRoleA != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE || this.childTinyDropRoleB != com.theendupdate.entity.TinyShadowCreakingEntity.DROP_NONE);
-        if (!allowSpawn) return;
+        // Only spawn tiny children if killed by player (consistent with regular shadow creaking)
+        if (!wasKilledByPlayer(damageSource)) return;
         
         // Create the two tiny entities to spawn
         TinyShadowCreakingEntity s1 = new TinyShadowCreakingEntity(com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING, sw);

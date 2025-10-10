@@ -68,7 +68,6 @@ public class ShadowCreakingBossBarRegistry {
         ShadowCreakingBossBarManager manager = activeBossBars.remove(oldUuid);
         if (manager != null) {
             activeBossBars.put(newUuid, manager);
-            com.theendupdate.TemplateMod.LOGGER.info("Transferred boss bar from UUID {} to {}", oldUuid, newUuid);
         }
     }
     
@@ -114,7 +113,6 @@ public class ShadowCreakingBossBarRegistry {
                     manager.tick(world);
                 } else {
                     // Clean up inactive managers
-                    com.theendupdate.TemplateMod.LOGGER.info("Cleaning up inactive boss bar manager");
                     iterator.remove();
                     if (manager != null) {
                         manager.endBossFight();
