@@ -77,6 +77,8 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	private Vec3d rangedBeamStart;
 	private Vec3d rangedBeamEnd;
 	private double rangedBeamSpeedPerTick; // blocks per tick
+	// Projectile retaliation tracking
+	private int projectileHitCounter = 0; // counts projectile hits to trigger retaliation every 3rd hit
 	
 	// Boss bar management
 	public ShadowCreakingBossBarManager bossBarManager;
@@ -1058,16 +1060,23 @@ protected boolean isWeepingAngelActive() {
 					));
 					
 					if (hasBlock) {
-						// Check if there's space above to jump through
-						Vec3d abovePos = testPos.add(0, 1.5, 0);
-						boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
-							abovePos.subtract(0.3, 0, 0.3), 
-							abovePos.add(0.3, 1.5, 0.3)
-						));
-						
-						if (hasSpaceAbove) {
-							return true;
+						// Check obstacle height before deciding to jump
+						int obstacleHeight = getObstacleHeight(testPos);
+						// Only jump if obstacle is 1-2 blocks tall (jumpable height)
+						if (obstacleHeight > 0 && obstacleHeight <= 2) {
+							// Verify there's space above to jump through
+							Vec3d abovePos = testPos.add(0, obstacleHeight, 0);
+							boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+								abovePos.subtract(0.3, 0, 0.3), 
+								abovePos.add(0.3, 1.5, 0.3)
+							));
+							
+							if (hasSpaceAbove) {
+								return true;
+							}
 						}
+						// Don't jump if obstacle is too tall
+						return false;
 					}
 				}
 			}
@@ -1081,16 +1090,23 @@ protected boolean isWeepingAngelActive() {
 		));
 		
 		if (hasBlockAhead) {
-			// Check if there's space above the block
-			Vec3d abovePos = frontCheckPos.add(0, 1.0, 0);
-			boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
-				abovePos.subtract(0.3, 0, 0.3), 
-				abovePos.add(0.3, 1.5, 0.3)
-			));
-			
-			if (hasSpaceAbove) {
-				return true;
+			// Check obstacle height before deciding to jump
+			int obstacleHeight = getObstacleHeight(frontCheckPos);
+			// Only jump if obstacle is 1-2 blocks tall (jumpable height)
+			if (obstacleHeight > 0 && obstacleHeight <= 2) {
+				// Verify there's space above the obstacle to land
+				Vec3d abovePos = frontCheckPos.add(0, obstacleHeight, 0);
+				boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+					abovePos.subtract(0.3, 0, 0.3), 
+					abovePos.add(0.3, 1.5, 0.3)
+				));
+				
+				if (hasSpaceAbove) {
+					return true;
+				}
 			}
+			// Don't jump if obstacle is too tall - need to path around instead
+			return false;
 		}
 		
 		// If entity hasn't made progress recently, consider jumping to break the cycle
@@ -1109,6 +1125,31 @@ protected boolean isWeepingAngelActive() {
 		}
 		
 		return false;
+	}
+	
+	/**
+	 * Check the height of an obstacle at the given position.
+	 * Returns the number of blocks tall the obstacle is (max 10 blocks checked).
+	 * This properly handles transparent but solid blocks like glass.
+	 */
+	private int getObstacleHeight(Vec3d basePos) {
+		int height = 0;
+		// Check up to 10 blocks high to properly handle tall glass walls, etc.
+		for (int i = 0; i < 10; i++) {
+			Vec3d checkPos = basePos.add(0, i, 0);
+			boolean hasBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+				checkPos.subtract(0.3, 0, 0.3), 
+				checkPos.add(0.3, 1.0, 0.3)
+			));
+			
+			if (hasBlock) {
+				height = i + 1;
+			} else {
+				// Found empty space, obstacle ends here
+				break;
+			}
+		}
+		return height;
 	}
 	
 	/**
@@ -1173,14 +1214,41 @@ protected boolean isWeepingAngelActive() {
 	}
 	
 	/**
-	 * Check if there's a blocking block in the path
+	 * Check if there's a blocking block in the path.
+	 * This properly handles transparent but solid blocks like glass by checking obstacle height.
 	 */
 	private boolean isBlockingPath(double dx, double dz) {
 		Vec3d currentPos = this.getPos();
 		Vec3d checkPos = currentPos.add(dx * 1.5, 0, dz * 1.5);
 		
-		// Check for solid blocks in the path
-		return !this.getWorld().isSpaceEmpty(this, new Box(checkPos.subtract(0.3, 0, 0.3), checkPos.add(0.3, 2, 0.3)));
+		// First check if there's any block at ground level
+		boolean hasGroundBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+			checkPos.subtract(0.3, 0, 0.3), 
+			checkPos.add(0.3, 1.0, 0.3)
+		));
+		
+		if (!hasGroundBlock) {
+			return false; // No obstacle at all
+		}
+		
+		// Check the height of the obstacle
+		int obstacleHeight = getObstacleHeight(checkPos);
+		
+		// Consider it blocking if it's taller than 2 blocks (not jumpable)
+		// or if there's no space above to jump through
+		if (obstacleHeight > 2) {
+			return true; // Too tall to jump over
+		} else if (obstacleHeight > 0) {
+			// Check if there's space above the obstacle
+			Vec3d abovePos = checkPos.add(0, obstacleHeight, 0);
+			boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+				abovePos.subtract(0.3, 0, 0.3), 
+				abovePos.add(0.3, 2.0, 0.3)
+			));
+			return !hasSpaceAbove; // Blocking only if no space above
+		}
+		
+		return false;
 	}
 	
 	/**
@@ -1492,6 +1560,19 @@ protected boolean isWeepingAngelActive() {
 	}
 	
 	/**
+	 * Increments the projectile hit counter and returns true if the entity should fire back.
+	 * Only fires back every 3rd projectile hit.
+	 */
+	public boolean shouldFireBackAtProjectile() {
+		this.projectileHitCounter++;
+		if (this.projectileHitCounter >= 3) {
+			this.projectileHitCounter = 0;
+			return true;
+		}
+		return false;
+	}
+	
+	/**
 	 * Forces the entity to teleport to a target when damaged from range.
 	 * Called when entity is damaged by a projectile but can't see the attacker.
 	 */
@@ -1550,6 +1631,42 @@ protected boolean isWeepingAngelActive() {
 		int ticksElapsed = Math.max(0, (int)Math.ceil(totalDistance / this.rangedBeamSpeedPerTick) - ticksRemaining);
 		double headDistance = Math.min(totalDistance, ticksElapsed * this.rangedBeamSpeedPerTick);
 		Vec3d head = this.rangedBeamStart.add(dir.multiply(headDistance));
+		
+		// Check for block collision along the beam's path for this tick
+		double nextHeadDistance = Math.min(totalDistance, (ticksElapsed + 1) * this.rangedBeamSpeedPerTick);
+		Vec3d nextHead = this.rangedBeamStart.add(dir.multiply(nextHeadDistance));
+		HitResult blockHit = sw.raycast(new RaycastContext(
+			head,
+			nextHead,
+			RaycastContext.ShapeType.COLLIDER,
+			RaycastContext.FluidHandling.NONE,
+			this
+		));
+		
+		// If we hit a block, detonate at the impact point
+		if (blockHit.getType() == HitResult.Type.BLOCK) {
+			Vec3d impactPos = blockHit.getPos();
+			// Spawn particles along the path up to the impact point
+			int segmentPoints = 6;
+			for (int i = 0; i < segmentPoints; i++) {
+				double t = i / (double)segmentPoints;
+				Vec3d p = head.lerp(impactPos, t);
+				sw.spawnParticles(ParticleTypes.SOUL, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
+				// trailing wisp
+				sw.spawnParticles(ParticleTypes.SOUL, p.x, p.y, p.z, 0, dir.x * 0.15, dir.y * 0.15, dir.z * 0.15, 0.0);
+			}
+			// Detonate at impact point
+			spawnSoulBurstAndDamageAt(impactPos.x, impactPos.y, impactPos.z, 14.0f * 2.5f, 4.25 * 1.1);
+			spawnExplosionVfx(sw, impactPos.x, impactPos.y, impactPos.z);
+			// Clean up beam state
+			this.rangedBeamStart = null;
+			this.rangedBeamEnd = null;
+			this.rangedBeamSpeedPerTick = 0.0;
+			this.rangedBeamTravelTicks = 0;
+			return;
+		}
+		
+		// No block hit - continue beam normally
 		// Spawn a short segment of particles forward from the last step
 		int segmentPoints = 6;
 		for (int i = 0; i < segmentPoints; i++) {

@@ -38,8 +38,11 @@ public abstract class ShadowCreakingDamageMixin {
                 // Target the player who hit us
                 sc.setTarget(player);
                 
-                // Fire back immediately as retaliation (bypasses cooldown)
-                sc.startRangedBeamAttack(player, true);
+                // Check if we should fire back (only every 3rd projectile hit)
+                if (sc.shouldFireBackAtProjectile()) {
+                    // Fire back as retaliation (bypasses cooldown)
+                    sc.startRangedBeamAttack(player, true);
+                }
                 
                 // Force aggressive pursuit - teleport if player is far away or out of sight
                 sc.forceAggressiveTeleportToTarget(player);
