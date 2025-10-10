@@ -1513,7 +1513,6 @@ protected boolean isWeepingAngelActive() {
 			this.stuckTeleportNoProgressTicks = 0;
 			this.stuckTeleportNoApproachTicks = 0;
 			this.teleportCooldownTicks = Math.min(this.teleportCooldownTicks, 20); // Reduce cooldown to 1 second max
-			com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking already targeting player at distance {} (canSee: {})", distance, canSeeTarget);
 		} else {
 			// Not currently targeting this player - they damaged us from stealth!
 			// If we can't see them OR they're far away, teleport aggressively to punish the stealth attack
@@ -1521,13 +1520,11 @@ protected boolean isWeepingAngelActive() {
 				// Force immediate teleport by clearing the cooldown
 				this.teleportCooldownTicks = 0;
 				this.tryBlinkTeleportToTarget(target);
-				com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking aggressively teleporting to hidden player at distance {} (canSee: {})", distance, canSeeTarget);
 			} else {
 				// Can see them and they're close - just start pursuing normally
 				this.stuckTeleportNoProgressTicks = 0;
 				this.stuckTeleportNoApproachTicks = 0;
 				this.teleportCooldownTicks = 0;
-				com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking now aware of player at distance {} (canSee: {})", distance, canSeeTarget);
 			}
 		}
 	}

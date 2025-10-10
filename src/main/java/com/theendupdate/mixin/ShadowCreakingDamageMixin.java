@@ -29,19 +29,12 @@ public abstract class ShadowCreakingDamageMixin {
         try {
             Entity attacker = source.getAttacker();
             
-            com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking damaged! Attacker: {}, isProjectile: {}", 
-                attacker != null ? attacker.getClass().getSimpleName() : "null",
-                source.isOf(net.minecraft.entity.damage.DamageTypes.ARROW) || source.isOf(net.minecraft.entity.damage.DamageTypes.TRIDENT));
-            
             // Check if damage is from a ranged attack (arrow, trident, etc.)
             boolean isRangedAttack = source.isOf(net.minecraft.entity.damage.DamageTypes.ARROW) 
                 || source.isOf(net.minecraft.entity.damage.DamageTypes.TRIDENT)
                 || attacker instanceof ProjectileEntity;
             
             if (isRangedAttack && attacker instanceof PlayerEntity player) {
-                com.theendupdate.TemplateMod.LOGGER.info("Player {} damaged Shadow Creaking with ranged attack from distance {}", 
-                    player.getName().getString(), sc.getPos().distanceTo(player.getPos()));
-                
                 // Target the player who hit us
                 sc.setTarget(player);
                 
