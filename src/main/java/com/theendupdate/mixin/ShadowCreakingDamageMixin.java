@@ -29,21 +29,27 @@ public abstract class ShadowCreakingDamageMixin {
         try {
             Entity attacker = source.getAttacker();
             
-            // Check if damage is from a projectile (arrow, trident, firework, etc.)
-            if (attacker instanceof ProjectileEntity proj) {
-                Entity owner = proj.getOwner();
+            com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking damaged! Attacker: {}, isProjectile: {}", 
+                attacker != null ? attacker.getClass().getSimpleName() : "null",
+                source.isOf(net.minecraft.entity.damage.DamageTypes.ARROW) || source.isOf(net.minecraft.entity.damage.DamageTypes.TRIDENT));
+            
+            // Check if damage is from a ranged attack (arrow, trident, etc.)
+            boolean isRangedAttack = source.isOf(net.minecraft.entity.damage.DamageTypes.ARROW) 
+                || source.isOf(net.minecraft.entity.damage.DamageTypes.TRIDENT)
+                || attacker instanceof ProjectileEntity;
+            
+            if (isRangedAttack && attacker instanceof PlayerEntity player) {
+                com.theendupdate.TemplateMod.LOGGER.info("Player {} damaged Shadow Creaking with ranged attack from distance {}", 
+                    player.getName().getString(), sc.getPos().distanceTo(player.getPos()));
                 
-                com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking hit by projectile! Owner: {}", owner != null ? owner.getName().getString() : "null");
+                // Target the player who hit us
+                sc.setTarget(player);
                 
-                if (owner instanceof PlayerEntity player) {
-                    com.theendupdate.TemplateMod.LOGGER.info("Firing retaliatory ranged attack at player!");
-                    
-                    // Target the player who hit us
-                    sc.setTarget(player);
-                    
-                    // Fire back immediately (method checks its own conditions and cooldown)
-                    sc.startRangedBeamAttack(player);
-                }
+                // Fire back immediately (method checks its own conditions and cooldown)
+                sc.startRangedBeamAttack(player);
+                
+                // Force aggressive pursuit - teleport if player is far away or out of sight
+                sc.forceAggressiveTeleportToTarget(player);
             }
         } catch (Throwable e) {
             com.theendupdate.TemplateMod.LOGGER.error("Error in projectile hit handler", e);

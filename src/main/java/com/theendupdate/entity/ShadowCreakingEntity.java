@@ -1480,6 +1480,57 @@ protected boolean isWeepingAngelActive() {
 		this.rangedBeamTravelTicks = Math.max(1, (int)Math.ceil(distance / this.rangedBeamSpeedPerTick));
 		this.rangedBeamCooldownTicks = 140; // ~7s cooldown
 	}
+	
+	/**
+	 * Forces the entity to teleport to a target when damaged from range.
+	 * Called when entity is damaged by a projectile but can't see the attacker.
+	 */
+	public void forceAggressiveTeleportToTarget(Entity target) {
+		if (!(this.getWorld() instanceof ServerWorld)) return;
+		if (target == null || !target.isAlive()) return;
+		if (this.isLevitating() || this.getPose() == EntityPose.EMERGING || this.postLandFreezeTicks > 0) return;
+		
+		// Check if we're already targeting this player - if so, only teleport if we're stuck/can't reach them
+		boolean alreadyTargeting = this.getTarget() == target;
+		
+		// Check distance to target
+		double distance = this.getPos().distanceTo(target.getPos());
+		
+		// Check if we can see the target
+		Vec3d attackerPos = this.getEyePos();
+		Vec3d targetPos = target.getBoundingBox().getCenter();
+		boolean canSeeTarget = this.getWorld().raycast(new RaycastContext(
+			attackerPos, 
+			targetPos, 
+			RaycastContext.ShapeType.COLLIDER, 
+			RaycastContext.FluidHandling.NONE, 
+			this
+		)).getType() == HitResult.Type.MISS;
+		
+		if (alreadyTargeting) {
+			// Already aware of and targeting this player - don't force teleport unless they're hiding
+			// Reset cooldowns to ensure we can pursue/teleport normally if needed
+			this.stuckTeleportNoProgressTicks = 0;
+			this.stuckTeleportNoApproachTicks = 0;
+			this.teleportCooldownTicks = Math.min(this.teleportCooldownTicks, 20); // Reduce cooldown to 1 second max
+			com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking already targeting player at distance {} (canSee: {})", distance, canSeeTarget);
+		} else {
+			// Not currently targeting this player - they damaged us from stealth!
+			// If we can't see them OR they're far away, teleport aggressively to punish the stealth attack
+			if (!canSeeTarget || distance > 8.0) {
+				// Force immediate teleport by clearing the cooldown
+				this.teleportCooldownTicks = 0;
+				this.tryBlinkTeleportToTarget(target);
+				com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking aggressively teleporting to hidden player at distance {} (canSee: {})", distance, canSeeTarget);
+			} else {
+				// Can see them and they're close - just start pursuing normally
+				this.stuckTeleportNoProgressTicks = 0;
+				this.stuckTeleportNoApproachTicks = 0;
+				this.teleportCooldownTicks = 0;
+				com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking now aware of player at distance {} (canSee: {})", distance, canSeeTarget);
+			}
+		}
+	}
 
 	private void advanceRangedBeam() {
 		if (!(this.getWorld() instanceof ServerWorld sw)) { this.rangedBeamTravelTicks = 0; return; }
