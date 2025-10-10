@@ -1461,14 +1461,16 @@ protected boolean isWeepingAngelActive() {
 	/**
 	 * Starts a ranged beam attack targeting the specified entity.
 	 * Public so it can be called from mixins for projectile retaliation.
+	 * @param target The target entity to attack
+	 * @param isRetaliation If true, bypasses cooldown (forced retaliation to player attack)
 	 */
-	public void startRangedBeamAttack(Entity target) {
+	public void startRangedBeamAttack(Entity target, boolean isRetaliation) {
 		if (!(this.getWorld() instanceof ServerWorld)) return;
 		if (target == null || !target.isAlive()) return;
 		if (this.isLevitating() || this.getPose() == EntityPose.EMERGING || this.postLandFreezeTicks > 0) return;
 		
-		// Check cooldown - don't fire if on cooldown
-		if (this.rangedBeamCooldownTicks > 0) return;
+		// Check cooldown - don't fire if on cooldown (unless this is a forced retaliation)
+		if (!isRetaliation && this.rangedBeamCooldownTicks > 0) return;
 		if (this.rangedBeamTravelTicks > 0) return; // Already firing
 		
 		// Snapshot start and end (end is player's current position) so the player can dodge
@@ -1479,6 +1481,14 @@ protected boolean isWeepingAngelActive() {
 		double distance = this.rangedBeamStart.distanceTo(this.rangedBeamEnd);
 		this.rangedBeamTravelTicks = Math.max(1, (int)Math.ceil(distance / this.rangedBeamSpeedPerTick));
 		this.rangedBeamCooldownTicks = 140; // ~7s cooldown
+	}
+	
+	/**
+	 * Starts a ranged beam attack targeting the specified entity.
+	 * Uses normal cooldown behavior.
+	 */
+	public void startRangedBeamAttack(Entity target) {
+		startRangedBeamAttack(target, false);
 	}
 	
 	/**
