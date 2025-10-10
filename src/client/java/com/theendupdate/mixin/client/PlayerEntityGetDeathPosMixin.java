@@ -29,7 +29,7 @@ public abstract class PlayerEntityGetDeathPosMixin {
 		// Handle quantum gateway compasses
 		if (GatewayCompassContext.isTaggedGatewayCompass(current)) {
 			PlayerEntity self = (PlayerEntity)(Object)this;
-			World world = self.getWorld();
+			World world = self.getEntityWorld();
 			if (!(world instanceof ClientWorld)) return;
 
 			NbtComponent custom = current.get(DataComponentTypes.CUSTOM_DATA);
@@ -51,7 +51,7 @@ public abstract class PlayerEntityGetDeathPosMixin {
 		// Handle Shadow Hunter's Tracker
 		if (GatewayCompassContext.isShadowHuntersTracker(current)) {
 			PlayerEntity self = (PlayerEntity)(Object)this;
-			World world = self.getWorld();
+			World world = self.getEntityWorld();
 			if (!(world instanceof ClientWorld)) return;
 
 			NbtComponent custom = current.get(DataComponentTypes.CUSTOM_DATA);

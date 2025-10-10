@@ -134,7 +134,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
     public void setCharged(boolean value) {
         this.dataTracker.set(CHARGED, value);
-        if (!this.getWorld().isClient) {
+        if (!this.getEntityWorld().isClient()) {
             if (value) this.addCommandTag("theendupdate:charged");
             else this.removeCommandTag("theendupdate:charged");
         }
@@ -146,7 +146,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
 	public void setStunted(boolean value) {
 		this.dataTracker.set(STUNTED, value);
-		if (!this.getWorld().isClient) {
+		if (!this.getEntityWorld().isClient()) {
 			if (value) this.addCommandTag("theendupdate:stunted");
 			else this.removeCommandTag("theendupdate:stunted");
 		}
@@ -185,24 +185,24 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         // Let vanilla collision resolution handle floor/wall/ceiling interactions with no manual nudging
 
         // Server-side subtle particle hint when charged (moderate frequency)
-        if (!this.getWorld().isClient && this.isCharged()) {
+        if (!this.getEntityWorld().isClient() && this.isCharged()) {
             // ~1 particle per second on average per orb
             if (this.age % 10 == 0 && this.getRandom().nextFloat() < 0.5f) {
                 double x = this.getX() + (this.getRandom().nextDouble() - 0.5) * 0.15;
                 double y = this.getY() + 0.9;
                 double z = this.getZ() + (this.getRandom().nextDouble() - 0.5) * 0.15;
-                if (this.getWorld() instanceof ServerWorld sw) {
+                if (this.getEntityWorld() instanceof ServerWorld sw) {
                     sw.spawnParticles(ParticleTypes.END_ROD, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
                 }
             }
         }
 
         // Panic & blood timers (server) and blood particle spew
-        if (!this.getWorld().isClient) {
+        if (!this.getEntityWorld().isClient()) {
             if (this.panicTicks > 0) this.panicTicks--;
             if (this.bloodTicks > 0) {
                 this.bloodTicks--;
-                if (this.getWorld() instanceof ServerWorld sw) {
+                if (this.getEntityWorld() instanceof ServerWorld sw) {
                     double cx = this.getX();
                     double cy = this.getY() + 0.9;
                     double cz = this.getZ();
@@ -218,7 +218,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         }
 
         // Sync charged from scoreboard tags on server (persists across saves)
-        if (!this.getWorld().isClient) {
+        if (!this.getEntityWorld().isClient()) {
             if (this.getCommandTags().contains("theendupdate:charged") && !this.isCharged()) {
                 this.setCharged(true);
             }
@@ -228,7 +228,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         }
 
         // No custom suffocation logic; rely on vanilla in-wall checks only
-        if (!this.getWorld().isClient) {
+        if (!this.getEntityWorld().isClient()) {
             // Restore growth counter from tracked data after reload
             int trackedAge = this.dataTracker.get(GROWING_AGE);
             if (this.growingAgeTicks == 0 && this.dataTracker.get(BABY) && trackedAge < 0) {
@@ -283,7 +283,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 this.pendingBabySpawn = false;
                 this.rotateAnimationState.stop();
                 this.dataTracker.set(BREEDING, Boolean.FALSE);
-                if (this.getWorld() instanceof ServerWorld sw) {
+                if (this.getEntityWorld() instanceof ServerWorld sw) {
                     this.spawnBaby(sw);
                     // Start breeding cooldown after successful spawn
                     this.breedCooldownTicks = BREED_COOLDOWN_TICKS;
@@ -292,15 +292,15 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         }
 
         // While panicking, move erratically at higher speed to simulate fear
-        if (!this.getWorld().isClient && this.isPanicking()) {
-            Vec3d pos = this.getPos();
+        if (!this.getEntityWorld().isClient() && this.isPanicking()) {
+            Vec3d pos = new Vec3d(this.getX(), this.getY(), this.getZ());
             double range = 4.0;
             double dx = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
             double dy = (this.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
             double dz = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
             Vec3d target = new Vec3d(
                 pos.x + dx,
-                MathHelper.clamp(pos.y + dy, this.getWorld().getBottomY() + 5, this.getWorld().getBottomY() + 100),
+                MathHelper.clamp(pos.y + dy, this.getEntityWorld().getBottomY() + 5, this.getEntityWorld().getBottomY() + 100),
                 pos.z + dz
             );
             Vec3d safe = this.clampTargetToFreeSpace(pos, target);
@@ -356,9 +356,9 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         for (int i = 1; i <= steps; i++) {
             double t = i / (double) steps;
             Vec3d stepPos = from.lerp(to, t);
-            Vec3d delta = stepPos.subtract(this.getPos());
+            Vec3d delta = stepPos.subtract(new Vec3d(this.getX(), this.getY(), this.getZ()));
             Box test = this.getBoundingBox().offset(delta);
-            if (this.getWorld().isSpaceEmpty(this, test)) {
+            if (this.getEntityWorld().isSpaceEmpty(this, test)) {
                 lastFree = stepPos;
             } else {
                 break;
@@ -373,27 +373,27 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 		// Using the Ethereal Orb spawn egg on an adult should spawn a baby (vanilla parity)
 		if (stack != null && stack.isOf(com.theendupdate.registry.ModItems.ETHEREAL_ORB_SPAWN_EGG)) {
 			if (!this.isBaby()) {
-				if (!this.getWorld().isClient) {
-					if (this.getWorld() instanceof ServerWorld sw) {
+				if (!this.getEntityWorld().isClient()) {
+					if (this.getEntityWorld() instanceof ServerWorld sw) {
 						this.spawnBaby(sw);
 					}
 					if (!player.getAbilities().creativeMode) {
 						stack.decrement(1);
 					}
 				}
-				return this.getWorld().isClient ? ActionResult.SUCCESS : ActionResult.CONSUME;
+				return this.getEntityWorld().isClient() ? ActionResult.SUCCESS : ActionResult.CONSUME;
 			}
 			// If already a baby, do nothing special; let other handlers decide
 			return ActionResult.PASS;
 		}
         if (this.isBaby() && !this.isStunted() && stack != null && stack.isOf(Items.SHEARS)) {
-			if (!this.getWorld().isClient) {
+			if (!this.getEntityWorld().isClient()) {
 				this.setStunted(true);
 				this.panicTicks = 40; // 2 seconds of panic
 				this.bloodTicks = 20; // brief spew of dust
                 this.setBulbPresent(false);
 				// Drop ethereal bulb block item
-				if (this.getWorld() instanceof ServerWorld sw) {
+				if (this.getEntityWorld() instanceof ServerWorld sw) {
 					this.dropStack(sw, new ItemStack(ModBlocks.ETHEREAL_BULB));
 				}
 				// Damage shears
@@ -401,37 +401,37 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 					stack.damage(1, player, hand);
 				}
 				// Play lose bulb sound
-				this.getWorld().playSound(null, this.getBlockPos(), com.theendupdate.registry.ModSounds.ETHEREAL_ORB_LOSES_BULB, SoundCategory.NEUTRAL, 1.0f, 1.0f);
+				this.getEntityWorld().playSound(null, this.getBlockPos(), com.theendupdate.registry.ModSounds.ETHEREAL_ORB_LOSES_BULB, SoundCategory.NEUTRAL, 1.0f, 1.0f);
 			}
-			return this.getWorld().isClient ? ActionResult.SUCCESS : ActionResult.CONSUME;
+			return this.getEntityWorld().isClient() ? ActionResult.SUCCESS : ActionResult.CONSUME;
 		}
 
 		// Reattach bulb to a stunted baby using the ethereal bulb item
 		if (this.isBaby() && this.isStunted() && !this.hasBulb() && stack != null && stack.isOf(ModBlocks.ETHEREAL_BULB.asItem())) {
-			if (!this.getWorld().isClient) {
+			if (!this.getEntityWorld().isClient()) {
 				if (!player.getAbilities().creativeMode) {
 					stack.decrement(1);
 				}
 				this.setBulbPresent(true);
 				// Resume normal behavior immediately upon reattachment
 				this.setStunted(false);
-				this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.2f);
-				if (this.getWorld() instanceof ServerWorld sw) {
+				this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.2f);
+				if (this.getEntityWorld() instanceof ServerWorld sw) {
 					sw.spawnParticles(ParticleTypes.END_ROD, this.getX(), this.getY() + 0.9, this.getZ(), 8, 0.15, 0.15, 0.15, 0.0);
 				}
 			}
-			return this.getWorld().isClient ? ActionResult.SUCCESS : ActionResult.CONSUME;
+			return this.getEntityWorld().isClient() ? ActionResult.SUCCESS : ActionResult.CONSUME;
 		}
 
 		// Priority: brushing to harvest spectral debris (and remove glow)
         if (this.isCharged() && stack != null && stack.isOf(Items.BRUSH)) {
-            if (!this.getWorld().isClient) {
-                if (this.getWorld() instanceof ServerWorld sw) {
+            if (!this.getEntityWorld().isClient()) {
+                if (this.getEntityWorld() instanceof ServerWorld sw) {
                     this.dropStack(sw, new ItemStack(ModItems.SPECTRAL_DEBRIS));
                 }
                 this.setCharged(false);
                 // small server particle to indicate harvesting
-                if (this.getWorld() instanceof ServerWorld sw2) {
+                if (this.getEntityWorld() instanceof ServerWorld sw2) {
                     sw2.spawnParticles(ParticleTypes.POOF, this.getX(), this.getY() + 0.9, this.getZ(), 3, 0.1, 0.1, 0.1, 0.0);
                 }
                 if (!player.getAbilities().creativeMode) {
@@ -439,9 +439,9 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                     stack.damage(1, player, hand);
                 }
                 // Play resin breaking-like sound
-                this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_HONEY_BLOCK_BREAK, SoundCategory.BLOCKS, 0.9f, 1.0f);
+                this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_HONEY_BLOCK_BREAK, SoundCategory.BLOCKS, 0.9f, 1.0f);
             }
-            if (this.getWorld().isClient) return ActionResult.SUCCESS;
+            if (this.getEntityWorld().isClient()) return ActionResult.SUCCESS;
             return ActionResult.CONSUME;
         }
         return this.theendupdate$handleFeed(player, hand);
@@ -459,7 +459,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             boolean canBreed = !this.isBaby() && !this.pendingBabySpawn && this.breedCooldownTicks <= 0;
             if (!canBreed) return ActionResult.PASS;
 
-            if (!this.getWorld().isClient) {
+            if (!this.getEntityWorld().isClient()) {
                 // Server: allow breeding in both survival and creative; consume only in survival
                 boolean survivalConsume = !player.getAbilities().creativeMode && stack.getCount() > 0;
                 if (survivalConsume) {
@@ -469,7 +469,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 this.babySpawnAge = this.age + ROTATE_ANIMATION_TICKS;
                 this.dataTracker.set(BREEDING, Boolean.TRUE);
                 // Subtle resonate sound
-                this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 0.9f);
+                this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 0.9f);
                 return ActionResult.CONSUME;
             } else {
                 // Client: play hand swing when orb is breed-ready and player holds the block
@@ -480,7 +480,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         // Accelerate baby growth with voidstar nuggets (10% of remaining time)
         if (this.isBaby() && stack != null && stack.isOf(ModItems.VOIDSTAR_NUGGET)) {
-            if (!this.getWorld().isClient) {
+            if (!this.getEntityWorld().isClient()) {
                 // Server: allow effect in creative; consume only in survival
                 boolean survivalConsume = !player.getAbilities().creativeMode && stack.getCount() > 0;
                 if (survivalConsume || player.getAbilities().creativeMode) {
@@ -488,7 +488,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                     int reduce = Math.max(1, MathHelper.ceil(remaining * 0.10f));
                     this.growingAgeTicks = Math.min(0, this.growingAgeTicks + reduce);
                     if (survivalConsume) stack.decrement(1);
-                    this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.BLOCKS, 0.8f, 1.2f);
+                    this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.BLOCKS, 0.8f, 1.2f);
                     return ActionResult.CONSUME;
                 }
                 return ActionResult.PASS;
@@ -500,14 +500,14 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         }
 
         if (!this.isCharged() && stack != null && stack.isOf(ModItems.VOIDSTAR_NUGGET)) {
-            if (!this.getWorld().isClient) {
+            if (!this.getEntityWorld().isClient()) {
                 // Server: allow effect in creative; consume only in survival
                 boolean survivalConsume = !player.getAbilities().creativeMode && stack.getCount() > 0;
                 if (survivalConsume || player.getAbilities().creativeMode) {
                     this.setCharged(true);
                     if (survivalConsume) stack.decrement(1);
                     // Play a single amethyst step-like sound
-                    this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.BLOCKS, 0.8f, 1.0f);
+                    this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.BLOCKS, 0.8f, 1.0f);
                     return ActionResult.CONSUME;
                 }
                 return ActionResult.PASS;
@@ -543,9 +543,9 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         if (fly != null) fly.setBaseValue(0.7);
         this.dataTracker.set(BABY, Boolean.FALSE);
         // Small poof
-        if (this.getWorld() instanceof ServerWorld sw) {
+        if (this.getEntityWorld() instanceof ServerWorld sw) {
             sw.spawnParticles(ParticleTypes.POOF, this.getX(), this.getY() + 0.6, this.getZ(), 6, 0.15, 0.15, 0.15, 0.0);
-            this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.NEUTRAL, 0.6f, 1.3f);
+            this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.NEUTRAL, 0.6f, 1.3f);
         }
     }
 
@@ -560,7 +560,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         baby.dataTracker.set(GROWING_AGE, -BABY_GROW_TICKS);
         world.spawnEntity(baby);
         world.spawnParticles(ParticleTypes.END_ROD, safePos.x, safePos.y + 0.4, safePos.z, 10, 0.2, 0.2, 0.2, 0.0);
-        this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.0f);
+        this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.0f);
     }
     
     /**
@@ -663,10 +663,10 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             if (this.targetAdult == null) return;
 				// Recalculate frequently so babies are responsive like vanilla FollowParent
 				repathCooldown = Math.max(0, repathCooldown - 1);
-				Vec3d pos = this.targetAdult.getPos();
+				Vec3d pos = new Vec3d(this.targetAdult.getX(), this.targetAdult.getY(), this.targetAdult.getZ());
 				// Slightly faster than adults so babies can catch up
 				double speed = 2.6;
-				Vec3d from = orb.getPos();
+				Vec3d from = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
 				Vec3d desired = new Vec3d(pos.x, pos.y + 0.2, pos.z);
 				Vec3d safeTarget = orb.clampTargetToFreeSpace(from, desired);
 				orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
@@ -675,7 +675,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         private EtherealOrbEntity findNearestAdult() {
             Box box = orb.getBoundingBox().expand(RANGE);
-            List<EtherealOrbEntity> list = orb.getWorld().getEntitiesByClass(EtherealOrbEntity.class, box, e -> e != orb && !e.isBaby());
+            List<EtherealOrbEntity> list = orb.getEntityWorld().getEntitiesByClass(EtherealOrbEntity.class, box, e -> e != orb && !e.isBaby());
             if (list.isEmpty()) return null;
             return list.stream().min(Comparator.comparingDouble(e -> e.squaredDistanceTo(orb))).orElse(null);
         }
@@ -709,7 +709,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         @Override
         public boolean canStart() {
-            return !orb.getWorld().isClient && orb.getTarget() == null && !orb.isPanicking();
+            return !orb.getEntityWorld().isClient() && orb.getTarget() == null && !orb.isPanicking();
         }
 
         @Override
@@ -719,7 +719,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         @Override
         public void start() {
-            this.lastPosition = orb.getPos();
+            this.lastPosition = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
             this.stuckCounter = 0;
             this.repathCooldown = 0;
 			this.verticalOrbitMode = false;
@@ -749,23 +749,23 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             Vec3d desired;
             if (homeCrystalPos != null) {
 				Vec3d home = Vec3d.ofCenter(homeCrystalPos);
-                double dist = orb.getPos().distanceTo(home);
+                double dist = new Vec3d(orb.getX(), orb.getY(), orb.getZ()).distanceTo(home);
                 // Detach if dragged too far from home
                 if (dist > HOME_MAX_DISTANCE) {
                     homeCrystalPos = null;
                 }
                 if (homeCrystalPos != null && dist > HOME_RADIUS) {
                     // Fly back to within HOME_RADIUS of home
-                    Vec3d dir = home.subtract(orb.getPos()).normalize();
+                    Vec3d dir = home.subtract(new Vec3d(orb.getX(), orb.getY(), orb.getZ())).normalize();
                     Vec3d target = home.add(dir.multiply(-Math.max(1.5, 0.5)));
                     desired = target;
                 } else {
 					// Idle around home: choose an orbit waypoint with clearance preference
-					if (repathCooldown == 0 || intermediateWaypoint == null || orb.getPos().squaredDistanceTo(intermediateWaypoint) < 1.0) {
+					if (repathCooldown == 0 || intermediateWaypoint == null || new Vec3d(orb.getX(), orb.getY(), orb.getZ()).squaredDistanceTo(intermediateWaypoint) < 1.0) {
 						double angle = (orb.age % 360) * 0.0174533;
 						// Keep same radius regardless of orbit mode
 						double radius = 3.0 + (orb.getRandom().nextDouble() * 2.0);
-						Vec3d curPos = orb.getPos();
+						Vec3d curPos = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
 						Vec3d candidate;
 						if (verticalOrbitMode) {
 							candidate = computeVerticalOrbit(home, radius, angle, verticalPlaneAxis);
@@ -815,15 +815,15 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 }
             } else {
                 // No home; wander and keep scanning
-                if (repathCooldown == 0 || intermediateWaypoint == null || orb.getPos().squaredDistanceTo(intermediateWaypoint) < 1.0) {
-                    Vec3d pos = orb.getPos();
+                if (repathCooldown == 0 || intermediateWaypoint == null || new Vec3d(orb.getX(), orb.getY(), orb.getZ()).squaredDistanceTo(intermediateWaypoint) < 1.0) {
+                    Vec3d pos = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
                     double range = 6.0;
                     double dx = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
                     double dy = (orb.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
                     double dz = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
                     intermediateWaypoint = new Vec3d(
                         pos.x + dx,
-                        MathHelper.clamp(pos.y + dy, orb.getWorld().getBottomY() + 5, orb.getWorld().getBottomY() + 100),
+                        MathHelper.clamp(pos.y + dy, orb.getEntityWorld().getBottomY() + 5, orb.getEntityWorld().getBottomY() + 100),
                         pos.z + dz
                     );
                     repathCooldown = REPATH_TICKS;
@@ -832,11 +832,11 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             }
 
             // Movement + avoidance
-            Vec3d cur = orb.getPos();
+            Vec3d cur = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
             double d2 = cur.squaredDistanceTo(desired);
             double speed = d2 > 64 ? 2.8 : 2.0;
 
-            HitResult hit = orb.getWorld().raycast(new RaycastContext(
+            HitResult hit = orb.getEntityWorld().raycast(new RaycastContext(
                 cur, desired, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, orb));
             if (hit.getType() == HitResult.Type.BLOCK) {
                 Vec3d dir = desired.subtract(cur);
@@ -956,14 +956,14 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 		}
 
 		private double clampY(double y) {
-			int bottom = orb.getWorld().getBottomY() + 5;
-			int top = orb.getWorld().getBottomY() + 100;
+			int bottom = orb.getEntityWorld().getBottomY() + 5;
+			int top = orb.getEntityWorld().getBottomY() + 100;
 			return MathHelper.clamp(y, bottom, top);
 		}
 
 		private boolean isSegmentClear(Vec3d from, Vec3d to) {
 			// Raycast for hard blockers first
-			HitResult hit = orb.getWorld().raycast(new RaycastContext(
+			HitResult hit = orb.getEntityWorld().raycast(new RaycastContext(
 				from, to, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, orb));
 			if (hit.getType() == HitResult.Type.BLOCK) return false;
 			// Step with the entity's bounding box to ensure there is enough clearance to move
@@ -971,15 +971,15 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 			for (int i = 1; i <= steps; i++) {
 				double t = i / (double) steps;
 				Vec3d step = from.lerp(to, t);
-				Vec3d delta = step.subtract(orb.getPos());
+				Vec3d delta = step.subtract(new Vec3d(orb.getX(), orb.getY(), orb.getZ()));
 				Box test = orb.getBoundingBox().offset(delta);
-				if (!orb.getWorld().isSpaceEmpty(orb, test)) return false;
+				if (!orb.getEntityWorld().isSpaceEmpty(orb, test)) return false;
 			}
 			return true;
 		}
 
         private boolean isTargetBlock(BlockPos pos) {
-            var state = orb.getWorld().getBlockState(pos);
+            var state = orb.getEntityWorld().getBlockState(pos);
             return state.isOf(ModBlocks.ASTRAL_REMNANT) || state.isOf(ModBlocks.STELLARITH_CRYSTAL);
         }
 
@@ -999,14 +999,14 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             for (int i = 0; i < offsets.length && visited < maxChunks; i++) {
                 int cx = center.x + offsets[i][0];
                 int cz = center.z + offsets[i][1];
-                if (!orb.getWorld().isChunkLoaded(cx, cz)) continue;
+                if (!orb.getEntityWorld().isChunkLoaded(cx, cz)) continue;
                 visited++;
-                Chunk chunk = orb.getWorld().getChunk(cx, cz);
+                Chunk chunk = orb.getEntityWorld().getChunk(cx, cz);
                 int minX = chunk.getPos().getStartX();
                 int minZ = chunk.getPos().getStartZ();
                 int maxX = minX + 15;
                 int maxZ = minZ + 15;
-                int bottomY = orb.getWorld().getBottomY();
+                int bottomY = orb.getEntityWorld().getBottomY();
                 int topY = bottomY + 128;
                 for (int x = minX; x <= maxX; x += 2) {
                     for (int z = minZ; z <= maxZ; z += 2) {

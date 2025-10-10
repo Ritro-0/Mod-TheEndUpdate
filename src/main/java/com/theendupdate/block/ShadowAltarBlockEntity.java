@@ -52,7 +52,7 @@ public class ShadowAltarBlockEntity extends BlockEntity {
 	}
 
 	public static void tick(World world, BlockPos pos, BlockState state, ShadowAltarBlockEntity altar) {
-		if (world.isClient) return;
+		if (world.isClient()) return;
 		ServerWorld server = (ServerWorld) world;
 
 		if (altar.cooldownTicksRemaining > 0) {

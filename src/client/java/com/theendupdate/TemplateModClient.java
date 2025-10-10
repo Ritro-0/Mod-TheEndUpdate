@@ -8,6 +8,7 @@ import com.theendupdate.entity.model.EtherealOrbEntityModel;
 import com.theendupdate.entity.renderer.EtherealOrbEntityRenderer;
 import com.theendupdate.entity.renderer.ShadowCreakingEntityRenderer;
 import com.theendupdate.registry.ModBlocks;
+import com.theendupdate.registry.ModBlockEntities;
 import com.theendupdate.registry.ModEntities;
 
 // The correct imports for Fabric 1.21.8
@@ -39,6 +40,7 @@ public class TemplateModClient implements ClientModInitializer {
     public void onInitializeClient() {
         com.theendupdate.TemplateMod.LOGGER.info("[DEBUG] TemplateModClient onInitializeClient starting");
         
+        
         // Register transparent blocks
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.ENDER_CHRYSANTHEMUM, BlockRenderLayer.CUTOUT);
@@ -69,7 +71,12 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.QUANTUM_GATEWAY, BlockRenderLayer.TRANSLUCENT);
         // Shadow altar uses cutout layer for spawner-like interior visibility
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_ALTAR, BlockRenderLayer.CUTOUT);
+        
+        // TODO: Quantum Gateway wavy beacon beam is currently disabled for 1.21.10
+        // Waiting for complete yarn mappings and stable Fabric API for the new render state system
+        
         // Entity Initialization
+        // Entity renderers updated for 1.21.10 rendering API (OrderedRenderCommandQueue)
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
         // Shadow Creaking renderer (uses vanilla creaking model layer, inverted)

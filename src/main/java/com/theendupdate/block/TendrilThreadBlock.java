@@ -97,7 +97,7 @@ public class TendrilThreadBlock extends PlantBlock implements Fertilizable {
         
         // Right-click with shears to stunt growth
         if (heldItem.isOf(Items.SHEARS)) {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 world.setBlockState(pos, state.with(STUNTED, true));
                 
                 // Damage the shears

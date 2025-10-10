@@ -4,14 +4,13 @@
 	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"TheEndUpdateClientMixin",
-		"BeaconBlockEntityRendererMixin",
 		"CompassPropertyContextMixin",
 		"PlayerEntityGetDeathPosMixin",
 		"EntityRendererHasLabelMixin",
-		"CowEntityRendererMixin",
 		"CowEntityRenderStateMixin",
-		"MooshroomEntityRendererMixin",
-		"MooshroomEntityRenderStateMixin"
+		"MooshroomEntityRenderStateMixin",
+		"CowEntityRendererMixin",
+		"MooshroomEntityRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

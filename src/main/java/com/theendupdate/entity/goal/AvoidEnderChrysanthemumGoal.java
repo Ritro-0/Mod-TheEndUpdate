@@ -36,12 +36,12 @@ public class AvoidEnderChrysanthemumGoal extends Goal {
 
     @Override
     public boolean canStart() {
-        if (this.mob.getWorld().isClient) return false;
+        if (this.mob.getEntityWorld().isClient()) return false;
         this.nearestChrysanthemum = findNearestChrysanthemum(this.mob.getBlockPos(), this.avoidRadius);
         if (this.nearestChrysanthemum == null) return false;
 
         // Compute a target position that moves away from the repellent
-        Vec3d from = this.mob.getPos();
+        Vec3d from = new Vec3d(this.mob.getX(), this.mob.getY(), this.mob.getZ());
         Vec3d threat = Vec3d.ofCenter(this.nearestChrysanthemum);
         Vec3d awayVector = from.subtract(threat);
 
@@ -74,7 +74,7 @@ public class AvoidEnderChrysanthemumGoal extends Goal {
     }
 
     private BlockPos findNearestChrysanthemum(BlockPos origin, int radius) {
-        World world = this.mob.getWorld();
+        World world = this.mob.getEntityWorld();
         int r = radius;
         BlockPos closest = null;
         double closestDistSq = Double.MAX_VALUE;

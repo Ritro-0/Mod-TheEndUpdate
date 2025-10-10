@@ -34,8 +34,8 @@ public class WoodenConeItem extends Item {
         if (!isCow && !isMooshroom) return ActionResult.PASS;
         if (entity.isBaby()) return ActionResult.PASS;
         
-        World world = user.getWorld();
-        if (world.isClient) return ActionResult.SUCCESS;
+        World world = user.getEntityWorld();
+        if (world.isClient()) return ActionResult.SUCCESS;
 
         // Prevent same-frame refill immediately after eating - check both ice cream types
         if (IceCreamConeItem.isOnCooldown(user, world) || StrawberryIceCreamConeItem.isOnCooldown(user, world)) {

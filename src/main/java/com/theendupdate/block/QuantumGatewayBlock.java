@@ -46,7 +46,7 @@ public class QuantumGatewayBlock extends BlockWithEntity {
     public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.isOf(newState.getBlock())) {
             BlockEntity be = world.getBlockEntity(pos);
-            if (be instanceof QuantumGatewayBlockEntity gateway && !world.isClient) {
+            if (be instanceof QuantumGatewayBlockEntity gateway && !world.isClient()) {
                 // Drop only the two input slots (0 and 1). Do not drop the output (2).
                 for (int i = 0; i < 2; i++) {
                     ItemStack stack = gateway.inventory.getStack(i);
@@ -67,7 +67,7 @@ public class QuantumGatewayBlock extends BlockWithEntity {
 
     // Mapping-safe variant with Hand parameter
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (world.isClient) return ActionResult.SUCCESS;
+        if (world.isClient()) return ActionResult.SUCCESS;
         BlockEntity be = world.getBlockEntity(pos);
         if (be instanceof QuantumGatewayBlockEntity gateway) {
             player.openHandledScreen(gateway);

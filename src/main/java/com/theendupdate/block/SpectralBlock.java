@@ -24,7 +24,7 @@ public class SpectralBlock extends Block {
     @Override
     public void onPlaced(World world, BlockPos pos, BlockState state, net.minecraft.entity.LivingEntity placer, net.minecraft.item.ItemStack itemStack) {
         super.onPlaced(world, pos, state, placer, itemStack);
-        if (!world.isClient) {
+        if (!world.isClient()) {
             placeHalo((net.minecraft.server.world.ServerWorld) world, pos);
         }
     }
@@ -32,7 +32,7 @@ public class SpectralBlock extends Block {
     // Mapping-safe: omit @Override for the World signature variant used by some mappings
     public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
         if (state.getBlock() != newState.getBlock()) {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 clearHalo((net.minecraft.server.world.ServerWorld) world, pos);
             }
         }
@@ -46,7 +46,7 @@ public class SpectralBlock extends Block {
 
     @Override
     public void afterBreak(net.minecraft.world.World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
-        if (!world.isClient) {
+        if (!world.isClient()) {
             boolean hasSilk = false;
             int fortuneLevel = 0;
             try {

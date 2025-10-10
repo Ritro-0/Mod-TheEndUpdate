@@ -67,5 +67,13 @@ private final Animation rotate;
         rotate.apply(state.rotateAnimationState, state.age, 1.0f);
         // Hook for future animation application using state
     }
+
+    /**
+     * Get the root ModelPart for direct rendering access
+     * Used by feature renderers that need to submit render commands to OrderedRenderCommandQueue
+     */
+    public ModelPart getRoot() {
+        return this.root;
+    }
 }
      

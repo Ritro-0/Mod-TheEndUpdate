@@ -10,7 +10,8 @@ import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.util.Identifier;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.state.CameraRenderState;
 
 
 /**
@@ -29,6 +30,7 @@ public class EtherealOrbEntityRenderer extends MobEntityRenderer<EtherealOrbEnti
     
     public EtherealOrbEntityRenderer(EntityRendererFactory.Context context) {
         super(context, new EtherealOrbEntityModel(context.getPart(TemplateModClient.MODEL_ETHEREAL_ORB_LAYER)), 0.3f);
+        // Add the emissive glow layer using vanilla's EyesFeatureRenderer pattern (like glow squids)
         this.addFeature(new EtherealOrbGlowFeatureRenderer(this, GLOW_TEXTURE));
     }
     
@@ -55,15 +57,15 @@ public class EtherealOrbEntityRenderer extends MobEntityRenderer<EtherealOrbEnti
     }
 
     @Override
-    public void render(EtherealOrbRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+    public void render(EtherealOrbRenderState state, MatrixStack matrices, OrderedRenderCommandQueue commandQueue, CameraRenderState cameraState) {
         if (state.baby) {
             matrices.push();
             matrices.scale(0.6f, 0.6f, 0.6f);
-            super.render(state, matrices, vertexConsumers, light);
+            super.render(state, matrices, commandQueue, cameraState);
             matrices.pop();
             return;
         }
-        super.render(state, matrices, vertexConsumers, light);
+        super.render(state, matrices, commandQueue, cameraState);
     }
 
     // No label logic overrides here; handled via mixin to core renderer

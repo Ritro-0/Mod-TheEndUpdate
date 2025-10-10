@@ -2,5 +2,6 @@
   "model": {
     "type": "minecraft:model",
     "model": "theendupdate:item/tiny_shadow_creaking_spawn_egg"
-  }
+  },
+  "minecraft:entity_type": "theendupdate:tiny_shadow_creaking"
 }

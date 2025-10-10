@@ -5,7 +5,8 @@ import com.theendupdate.entity.ShadowCreakingEntity;
 import com.theendupdate.entity.MiniShadowCreakingEntity;
 import com.theendupdate.entity.TinyShadowCreakingEntity;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.render.entity.CreakingEntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
@@ -119,7 +120,7 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 	}
 
 	@Override
-	public void render(CreakingEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+	public void render(CreakingEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue commandQueue, CameraRenderState cameraState) {
 		float progress = this.lastEmergeProgress; // 0..1
 		float inv = 1.0f - progress;
 		float h = inv * 1.6f;
@@ -129,7 +130,7 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 		if (this.currentScale != 1.0f) {
 			matrices.scale(this.currentScale, this.currentScale, this.currentScale);
 		}
-		super.render(state, matrices, vertexConsumers, light);
+		super.render(state, matrices, commandQueue, cameraState);
 	}
 
 	private static final class ShadowCreakingPlantingModel extends CreakingEntityModel {

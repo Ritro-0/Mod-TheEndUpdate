@@ -60,7 +60,8 @@ public class EtherealBulbButtonBlock extends ButtonBlock {
 
     private boolean isAllowedThinSupport(Object face, BlockState support, Direction supportSide) {
         // Chain ends: allow if axis matches the attachment direction axis
-        if (support.isOf(Blocks.CHAIN)) {
+        // Note: Blocks.CHAIN constant may have changed in 1.21.10, using alternative check
+        if (support.contains(Properties.AXIS) && (support.getBlock().getTranslationKey().contains("chain"))) {
             var axis = support.get(Properties.AXIS);
             // Floor/Ceiling -> vertical chain only
             if (face.toString().equals("FLOOR") || face.toString().equals("CEILING")) {

@@ -28,6 +28,8 @@
   "block.theendupdate.mold_block": "Mold Block",
   "block.theendupdate.void_bloom": "Void Bloom",
   "block.theendupdate.ender_chrysanthemum": "Ender Chrysanthemum",
+  "item.theendupdate.closed_ender_chrysanthemum": "Closed Ender Chrysanthemum",
+  "item.theendupdate.closed_ender_chrysanthemum.tooltip": "Remains permanently closed when placed",
   "block.theendupdate.void_sap": "Void Sap",
   "block.theendupdate.tendril_sprout": "Tendril Sprout",
   "block.theendupdate.tendril_thread": "Tendril Thread",

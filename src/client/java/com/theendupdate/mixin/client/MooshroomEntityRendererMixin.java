@@ -21,7 +21,7 @@ public abstract class MooshroomEntityRendererMixin {
             long startTime = accessor.theendupdate$getAnimationStartTime();
             
             if (startTime > 0L) {
-                long currentTime = entity.getWorld().getTime();
+                long currentTime = entity.getEntityWorld().getTime();
                 long elapsed = currentTime - startTime;
                 
                 // Animation is 100 ticks (5 seconds), progress from 0.0 to 1.0
@@ -29,7 +29,7 @@ public abstract class MooshroomEntityRendererMixin {
                 if (elapsed >= 100L) {
                     animationProgress = 0.0f;
                     // Clear the start time on the server to prevent persistence
-                    if (!entity.getWorld().isClient) {
+                    if (!entity.getEntityWorld().isClient()) {
                         accessor.theendupdate$setAnimationStartTime(0L);
                     }
                 } else {

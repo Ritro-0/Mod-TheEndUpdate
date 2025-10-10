@@ -188,7 +188,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
         ItemStack stack = player.getStackInHand(hand);
         // Shears stunt the tip, switching it to the "vines" texture
         if (stack.isOf(Items.SHEARS) && state.get(TIP)) {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 world.setBlockState(pos, state.with(STUNTED, true).with(TIP_VINES, true));
                 stack.damage(1, player, hand);
             }
@@ -201,7 +201,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         ItemStack stack = player.getMainHandStack();
         if (stack.isOf(Items.SHEARS) && state.get(TIP)) {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 world.setBlockState(pos, state.with(STUNTED, true).with(TIP_VINES, true));
                 stack.damage(1, player, Hand.MAIN_HAND);
             }
@@ -299,7 +299,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 		}
 
 		// Recompute chain tip flags on ANY neighbor change to reflect new base-candidate conditions
-		if (world instanceof net.minecraft.world.World w && !w.isClient) {
+		if (world instanceof net.minecraft.world.World w && !w.isClient()) {
 			try {
 				com.theendupdate.TemplateMod.LOGGER.info(
 					"MoldCrawl neighborUpdate ENTER: pos={} neighborPos={} dir={} thisFacing={} isClient={} stateTip={} stateTipVines={}",
@@ -493,7 +493,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     @Override
     protected void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
         super.onBlockAdded(state, world, pos, oldState, notify);
-        if (!world.isClient) {
+        if (!world.isClient()) {
             ((ServerWorld) world).scheduleBlockTick(pos, this, 1);
         }
     }
@@ -514,7 +514,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     }
 
 	private void handleNeighborChange(World world, BlockPos pos, BlockState state, BlockPos neighborPos) {
-		if (world.isClient) return;
+		if (world.isClient()) return;
 		// Resolve true base and tip, then apply the same immediate tip rule as before
 		Direction f = state.get(FACING);
 		BlockPos base = pos;
@@ -545,7 +545,7 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 
     // External hook: called by global events when any nearby block changes
     public static void reactToExternalChange(World world, BlockPos changedPos) {
-        if (world.isClient) return;
+        if (world.isClient()) return;
         for (Direction d : Direction.values()) {
             BlockPos neighbor = changedPos.offset(d);
             BlockState st = world.getBlockState(neighbor);

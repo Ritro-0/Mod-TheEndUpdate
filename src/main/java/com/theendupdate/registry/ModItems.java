@@ -7,7 +7,6 @@ import net.minecraft.component.type.FoodComponent;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
-import net.minecraft.item.SpawnEggItem;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
@@ -122,11 +121,11 @@ public final class ModItems {
     );
 
     
-    // Spawn eggs
+    // Spawn eggs - Using custom spawn egg class to properly associate entity types
     public static final Item ETHEREAL_ORB_SPAWN_EGG = registerItem(
         "ethereal_orb_spawn_egg",
-        key -> new SpawnEggItem(
-            com.theendupdate.registry.ModEntities.ETHEREAL_ORB,
+        key -> new com.theendupdate.item.CustomSpawnEggItem(
+            ModEntities.ETHEREAL_ORB,
             new Item.Settings().registryKey(key)
         ),
         net.minecraft.item.ItemGroups.SPAWN_EGGS
@@ -134,8 +133,8 @@ public final class ModItems {
 
     public static final Item SHADOW_CREAKING_SPAWN_EGG = registerItem(
         "shadow_creaking_spawn_egg",
-        key -> new SpawnEggItem(
-            com.theendupdate.registry.ModEntities.SHADOW_CREAKING,
+        key -> new com.theendupdate.item.CustomSpawnEggItem(
+            ModEntities.SHADOW_CREAKING,
             new Item.Settings().registryKey(key)
         ),
         net.minecraft.item.ItemGroups.SPAWN_EGGS
@@ -143,8 +142,8 @@ public final class ModItems {
 
     public static final Item MINI_SHADOW_CREAKING_SPAWN_EGG = registerItem(
         "mini_shadow_creaking_spawn_egg",
-        key -> new SpawnEggItem(
-            com.theendupdate.registry.ModEntities.MINI_SHADOW_CREAKING,
+        key -> new com.theendupdate.item.CustomSpawnEggItem(
+            ModEntities.MINI_SHADOW_CREAKING,
             new Item.Settings().registryKey(key)
         ),
         net.minecraft.item.ItemGroups.SPAWN_EGGS
@@ -152,8 +151,8 @@ public final class ModItems {
 
     public static final Item TINY_SHADOW_CREAKING_SPAWN_EGG = registerItem(
         "tiny_shadow_creaking_spawn_egg",
-        key -> new SpawnEggItem(
-            com.theendupdate.registry.ModEntities.TINY_SHADOW_CREAKING,
+        key -> new com.theendupdate.item.CustomSpawnEggItem(
+            ModEntities.TINY_SHADOW_CREAKING,
             new Item.Settings().registryKey(key)
         ),
         net.minecraft.item.ItemGroups.SPAWN_EGGS
@@ -163,6 +162,8 @@ public final class ModItems {
 
     // Shadow Altar as standalone item test
     // Removed shadow_altar_test item - no longer needed
+
+    // Closed Ender Chrysanthemum - separate item that places permanently closed flowers
 
     @SafeVarargs
     private static Item registerItem(String name, java.util.function.Function<RegistryKey<Item>, Item> factory, net.minecraft.registry.RegistryKey<net.minecraft.item.ItemGroup>... groups) {

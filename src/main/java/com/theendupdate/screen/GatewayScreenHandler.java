@@ -28,9 +28,9 @@ public class GatewayScreenHandler extends ScreenHandler {
     public GatewayScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory, net.minecraft.util.math.BlockPos gatewayPos) {
         super(com.theendupdate.registry.ModScreenHandlers.GATEWAY, syncId);
         this.inventory = inventory;
-        this.isServer = !playerInventory.player.getWorld().isClient;
+        this.isServer = !playerInventory.player.getEntityWorld().isClient();
         this.gatewayPos = gatewayPos;
-        this.context = ScreenHandlerContext.create(playerInventory.player.getWorld(), gatewayPos);
+        this.context = ScreenHandlerContext.create(playerInventory.player.getEntityWorld(), gatewayPos);
 
         // Inputs at anvil positions (approx): left (27,47), right (76,47); output (134,47)
         this.addSlot(new Slot(inventory, 0, 27, 47) {

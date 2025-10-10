@@ -1,9 +1,10 @@
 package com.theendupdate.mixin.client;
 
 import com.theendupdate.accessor.CowEntityAnimationAccessor;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.CowEntityRenderer;
 import net.minecraft.client.render.entity.state.CowEntityRenderState;
+import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.util.math.MathHelper;
@@ -25,7 +26,7 @@ public abstract class CowEntityRendererMixin {
             long startTime = accessor.theendupdate$getAnimationStartTime();
             
             if (startTime > 0L) {
-                long currentTime = entity.getWorld().getTime();
+                long currentTime = entity.getEntityWorld().getTime();
                 long elapsed = currentTime - startTime;
                 
                 // Animation is 100 ticks (5 seconds), progress from 0.0 to 1.0
@@ -33,7 +34,7 @@ public abstract class CowEntityRendererMixin {
                 if (elapsed >= 100L) {
                     animationProgress = 0.0f;
                     // Clear the start time on the server to prevent persistence
-                    if (!entity.getWorld().isClient) {
+                    if (!entity.getEntityWorld().isClient()) {
                         accessor.theendupdate$setAnimationStartTime(0L);
                     }
                 } else {
@@ -48,9 +49,9 @@ public abstract class CowEntityRendererMixin {
         }
     }
     
-    @Inject(method = "render(Lnet/minecraft/client/render/entity/state/CowEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", 
+    @Inject(method = "render", 
             at = @At("HEAD"))
-    private void theendupdate$applyMilkingAnimation(CowEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+    private void theendupdate$applyMilkingAnimation(CowEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue renderCommandQueue, CameraRenderState cameraState, CallbackInfo ci) {
         float animationProgress = 0.0f;
         if (state instanceof com.theendupdate.accessor.CowRenderStateAnimationAccessor stateAccessor) {
             animationProgress = stateAccessor.theendupdate$getAnimationProgress();
@@ -81,9 +82,9 @@ public abstract class CowEntityRendererMixin {
         }
     }
     
-    @Inject(method = "render(Lnet/minecraft/client/render/entity/state/CowEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", 
+    @Inject(method = "render", 
             at = @At("RETURN"))
-    private void theendupdate$popMilkingAnimation(CowEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+    private void theendupdate$popMilkingAnimation(CowEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue renderCommandQueue, CameraRenderState cameraState, CallbackInfo ci) {
         float animationProgress = 0.0f;
         if (state instanceof com.theendupdate.accessor.CowRenderStateAnimationAccessor stateAccessor) {
             animationProgress = stateAccessor.theendupdate$getAnimationProgress();

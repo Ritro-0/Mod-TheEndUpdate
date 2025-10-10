@@ -176,7 +176,7 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
             BooleanProperty property = getPropertyForDirection(clickedFace);
             
             if (!state.get(property) && canPlaceOnFace(world, pos, clickedFace)) {
-                if (!world.isClient) {
+                if (!world.isClient()) {
                     world.setBlockState(pos, state.with(property, true));
                     if (!player.getAbilities().creativeMode) {
                         itemStack.decrement(1);

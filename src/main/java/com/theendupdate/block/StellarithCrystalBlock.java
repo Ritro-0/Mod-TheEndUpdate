@@ -31,7 +31,7 @@ public class StellarithCrystalBlock extends Block {
 
     @Override
     public void afterBreak(net.minecraft.world.World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
-        if (!world.isClient) {
+        if (!world.isClient()) {
             // Manual drop logic (mirror End Mire approach): Silk Touch -> drop self; else -> drop shard
             boolean hasSilk = false;
             try {

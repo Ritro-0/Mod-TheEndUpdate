@@ -24,7 +24,7 @@ public abstract class LeashKnotEntityMixin {
         BlockPos pos = self.getAttachedBlockPos();
         if (pos == null) return;
         
-        BlockState state = self.getWorld().getBlockState(pos);
+        BlockState state = self.getEntityWorld().getBlockState(pos);
         
         // If attached to our custom fences, force it to stay attached
         if (state.getBlock() instanceof EtherealFenceBlock || state.getBlock() instanceof ShadowFenceBlock) {

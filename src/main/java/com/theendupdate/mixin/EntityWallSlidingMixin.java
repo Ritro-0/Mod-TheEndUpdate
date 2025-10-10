@@ -25,10 +25,10 @@ public abstract class EntityWallSlidingMixin {
     @Inject(method = "move", at = @At("TAIL"))
     private void applyVoidSapWallSliding(MovementType movementType, Vec3d movement, CallbackInfo ci) {
         Entity entity = (Entity) (Object) this;
-        World world = entity.getWorld();
+        World world = entity.getEntityWorld();
         
         // Only process on server side, for falling entities, and during normal movement
-        if (world.isClient || entity.getVelocity().y >= 0 || movementType != MovementType.SELF) return;
+        if (world.isClient() || entity.getVelocity().y >= 0 || movementType != MovementType.SELF) return;
 
         // Check if entity is near any void sap blocks
         Box entityBox = entity.getBoundingBox();

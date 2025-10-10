@@ -3,7 +3,12 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [ { "type": "minecraft:item", "name": "theendupdate:ender_chrysanthemum" } ]
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "theendupdate:ender_chrysanthemum"
+        }
+      ]
     }
   ]
 }

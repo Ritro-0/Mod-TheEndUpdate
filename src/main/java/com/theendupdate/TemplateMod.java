@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import net.minecraft.entity.passive.CowEntity;
 import com.theendupdate.accessor.CowEntityAnimationAccessor;
+import net.minecraft.block.BlockState;
 
 public class TemplateMod implements ModInitializer {
     public static final String MOD_ID = "theendupdate";
@@ -45,6 +46,7 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModSounds.register();
         com.theendupdate.registry.ModEntities.registerModEntities();
         com.theendupdate.registry.ModWorldgen.registerAll();
+        
         
         // Register strippable blocks (axe right-click)
         net.fabricmc.fabric.api.registry.StrippableBlockRegistry.register(
@@ -106,7 +108,7 @@ public class TemplateMod implements ModInitializer {
 
         // Global hooks to ensure mold_crawl reacts even if vanilla neighbor updates are skipped by renderer state:
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 // Clicked block position
                 BlockPos clickedPos = hitResult.getBlockPos();
                 // Intended placed position is one block in the clicked face direction
@@ -118,13 +120,19 @@ public class TemplateMod implements ModInitializer {
         });
 
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, entity) -> {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 com.theendupdate.block.MoldcrawlBlock.reactToExternalChange(world, pos);
             }
         });
 
         // Post-gen spawners
         com.theendupdate.world.EtherealOrbOnCrystalsSpawner.init();
+        
+        // Register commands
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            com.theendupdate.command.FixFlowersCommand.register(dispatcher);
+        });
+        
         LOGGER.info("[EndUpdate] onInitialize() completed");
 
         // Server tick: spawn subtle END_ROD particles around players wearing spectral trims
@@ -175,6 +183,7 @@ public class TemplateMod implements ModInitializer {
                         }
                     }
                 }
+                
                 
                 boolean theendupdate$cadence = (world.getTime() % 3) == 0;
                 boolean theendupdate$trackerCadence = (world.getTime() % 20) == 0; // Every second
@@ -246,10 +255,10 @@ public class TemplateMod implements ModInitializer {
         try {
             java.util.List<ItemEntity> items = world.getEntitiesByClass(ItemEntity.class, box, e -> e != null && e.isAlive());
             if (items.isEmpty()) return;
-            Vec3d playerPos = player.getPos().add(0.0, 0.8, 0.0);
+            Vec3d playerPos = new Vec3d(player.getX(), player.getY(), player.getZ()).add(0.0, 0.8, 0.0);
             double baseAccel = 0.42 + 0.05 * pieces;
             for (ItemEntity item : items) {
-                Vec3d diff = playerPos.subtract(item.getPos());
+                Vec3d diff = playerPos.subtract(new Vec3d(item.getX(), item.getY(), item.getZ()));
                 double dist = diff.length();
                 if (dist < 0.001) continue;
                 double strength = baseAccel * Math.min(1.0, (dist / range) + 0.35);
@@ -285,8 +294,8 @@ public class TemplateMod implements ModInitializer {
             var items = world.getEntitiesByClass(ItemEntity.class, box, item -> true);
             for (ItemEntity item : items) {
                 if (item == null || item.isRemoved()) continue;
-                Vec3d playerPos = player.getPos();
-                Vec3d itemPos = item.getPos();
+                Vec3d playerPos = new Vec3d(player.getX(), player.getY(), player.getZ());
+                Vec3d itemPos = new Vec3d(item.getX(), item.getY(), item.getZ());
                 Vec3d pull = playerPos.subtract(itemPos).normalize().multiply(0.15);
                 Vec3d vel = item.getVelocity().multiply(0.80).add(pull.multiply(0.90));
                 if (vel.lengthSquared() > 1.4) vel = vel.normalize().multiply(1.15);

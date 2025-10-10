@@ -127,7 +127,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	public void remove(Entity.RemovalReason reason) {
 		super.remove(reason);
 		// Clean up boss bar when entity is removed for any reason (peaceful mode, dimension change, etc.)
-		if (!this.getWorld().isClient && this.bossBarManager != null && this.isMainEntity) {
+		if (!this.getEntityWorld().isClient() && this.bossBarManager != null && this.isMainEntity) {
 			// Only end boss fight if this is the main entity and it's being removed (not just dying normally)
 			if (reason == Entity.RemovalReason.KILLED) {
 				// Normal death - handled in onDeath
@@ -136,7 +136,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				com.theendupdate.TemplateMod.LOGGER.info("Shadow Creaking removed (reason: {}), cleaning up boss bar", reason);
 				this.bossBarManager.removeEntity(this.getUuid());
 			}
-		} else if (!this.getWorld().isClient && this.bossBarManager != null) {
+		} else if (!this.getEntityWorld().isClient() && this.bossBarManager != null) {
 			// Mini/tiny entities - just remove from tracking
 			this.bossBarManager.removeEntity(this.getUuid());
 		}
@@ -145,7 +145,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	@Override
 	public void onDeath(DamageSource damageSource) {
 		super.onDeath(damageSource);
-		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		if (!(this.getEntityWorld() instanceof ServerWorld sw)) return;
 		
 		// Handle boss bar cleanup for all entities
 		if (this.bossBarManager != null) {
@@ -383,7 +383,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		
 		// Handle boss bar initialization for main entity
 		// Note: Boss bar ticking is handled by ShadowCreakingBossBarRegistry, not here
-		if (!this.getWorld().isClient && this.isMainEntity) {
+		if (!this.getEntityWorld().isClient() && this.isMainEntity) {
 			// Initialize boss bar if not already done (fallback for any spawn method)
 			if (this.bossBarManager == null && this.age <= 5) {
 				boolean isEmerging = this.getPose() == EntityPose.EMERGING;
@@ -394,7 +394,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		}
 
 		// Restore persisted one-time state on fresh loads so rejoin does not replay cinematics
-		if (!this.getWorld().isClient) {
+		if (!this.getEntityWorld().isClient()) {
             try {
                 if (this.age <= 1) {
                     java.util.Set<String> tags = this.getCommandTags();
@@ -428,7 +428,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		}
 
 		// If not spawned by altar or by a parent, never run spawn cinematics (emerge/levitation)
-		if (!this.getWorld().isClient && this.age <= 1) {
+		if (!this.getEntityWorld().isClient() && this.age <= 1) {
 			try {
 				java.util.Set<String> tags = this.getCommandTags();
 				boolean fromAltar = tags != null && tags.contains("theendupdate:spawned_by_altar");
@@ -477,7 +477,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		}
 
 		// Proactively strip vanilla gaze-freeze goals when weeping is not active (base <50% hp) or for mini/tiny
-		if (!this.getWorld().isClient && !this.prunedGazeFreezeGoals && this.age > 0) {
+		if (!this.getEntityWorld().isClient() && !this.prunedGazeFreezeGoals && this.age > 0) {
 			boolean neverWeep = (this instanceof com.theendupdate.entity.MiniShadowCreakingEntity) || (this instanceof com.theendupdate.entity.TinyShadowCreakingEntity);
 			if (neverWeep || !this.isWeepingAngelActive()) {
 				this.prunedGazeFreezeGoals = true;
@@ -500,7 +500,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		}
 
         // Server: run levitation if already active; do not auto-start by time on reload
-        if (!this.getWorld().isClient) {
+        if (!this.getEntityWorld().isClient()) {
             // Removed age-window auto-start. Levitation is started only at emerge completion (above).
 
 			// Trigger a second levitation when dropping below half health (phase 2), then drop weeping-angel restriction
@@ -532,7 +532,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 					yMove = LEVITATE_SPEED_PER_TICK;
 				}
 				// Prevent moving into ceilings
-				if (!this.getWorld().isSpaceEmpty(this, this.getBoundingBox().offset(0.0, yMove, 0.0))) {
+				if (!this.getEntityWorld().isSpaceEmpty(this, this.getBoundingBox().offset(0.0, yMove, 0.0))) {
 					yMove = 0.0;
 				}
 				// Move vertically; keep horizontal still
@@ -543,7 +543,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				// Spawn endermites at hands when arms reach full T-pose (~2s into levitation)
 				if (!this.spawnedLevitationEndermites && elapsedTicks >= 40) {
 					this.spawnedLevitationEndermites = true;
-					if (this.getWorld() instanceof ServerWorld sw2) {
+					if (this.getEntityWorld() instanceof ServerWorld sw2) {
 						double yawRad = Math.toRadians(this.getYaw());
 						double rightX = Math.cos(yawRad);
 						double rightZ = Math.sin(yawRad);
@@ -655,7 +655,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 							}
 
 					// Track deeper stuck conditions for teleport using 3D distance and reachability
-					double d3 = this.getPos().distanceTo(tgt.getPos());
+					double d3 = new Vec3d(this.getX(), this.getY(), this.getZ()).distanceTo(new Vec3d(tgt.getX(), tgt.getY(), tgt.getZ()));
 					boolean outOfReachNow = !canReachTarget(tgt);
 					// No movement while out of reach
 					if (outOfReachNow && moved < 0.003) {
@@ -716,9 +716,9 @@ public class ShadowCreakingEntity extends CreakingEntity {
 						
 					this.gazeLastX = this.getX();
 					this.gazeLastZ = this.getZ();
-					this.prevDistanceToTarget = this.getPos().distanceTo(tgt.getPos());
+					this.prevDistanceToTarget = new Vec3d(this.getX(), this.getY(), this.getZ()).distanceTo(new Vec3d(tgt.getX(), tgt.getY(), tgt.getZ()));
 						// Manual attack only as a fallback, with a cooldown matching typical melee pacing
-						if (dd <= 2.6 && this.gazeOverrideAttackCooldownTicks <= 0 && this.getWorld() instanceof ServerWorld swClose) {
+						if (dd <= 2.6 && this.gazeOverrideAttackCooldownTicks <= 0 && this.getEntityWorld() instanceof ServerWorld swClose) {
 							if (this.tryAttack(swClose, tgt)) {
 								this.gazeOverrideAttackCooldownTicks = 20; // ~1s between swings
 							}
@@ -735,7 +735,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				// Ranged attack trigger: if chasing target for >3s while not stuck and out of melee reach
 				if (this.rangedBeamCooldownTicks > 0) this.rangedBeamCooldownTicks--;
 				boolean notStuck = (this.stuckTeleportNoProgressTicks < 20) && (this.stuckTeleportNoApproachTicks < 20);
-				boolean outOfMelee = this.getPos().distanceTo(tgt.getPos()) > 6.0; // outside close combat
+				boolean outOfMelee = new Vec3d(this.getX(), this.getY(), this.getZ()).distanceTo(new Vec3d(tgt.getX(), tgt.getY(), tgt.getZ())) > 6.0; // outside close combat
 				if (notStuck && outOfMelee && this.rangedBeamCooldownTicks <= 0) {
 					this.chaseNoHitTicks++;
 				} else {
@@ -766,7 +766,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 				// Track position for stats but don't teleport
 				this.gazeLastX = this.getX();
 				this.gazeLastZ = this.getZ();
-				this.prevDistanceToTarget = this.getPos().distanceTo(tgt2.getPos());
+				this.prevDistanceToTarget = new Vec3d(this.getX(), this.getY(), this.getZ()).distanceTo(new Vec3d(tgt2.getX(), tgt2.getY(), tgt2.getZ()));
 				// Reset stuck counters so they don't accumulate during weeping mode
 				this.stuckTeleportNoProgressTicks = 0;
 				this.stuckTeleportNoApproachTicks = 0;
@@ -774,7 +774,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		}
 
 		// Client-side particles: soul swirl while EMERGING/DIGGING and during post-spawn levitation
-		if (this.getWorld().isClient) {
+		if (this.getEntityWorld().isClient()) {
 			switch (this.getPose()) {
 				case EMERGING:
 					// Near-feet swirl while emerging
@@ -793,7 +793,7 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		}
 
 		// Server: advance any active ranged beam
-		if (!this.getWorld().isClient) {
+		if (!this.getEntityWorld().isClient()) {
 			if (this.rangedBeamTravelTicks > 0 && this.rangedBeamStart != null && this.rangedBeamEnd != null) {
 				advanceRangedBeam();
 			}
@@ -945,7 +945,7 @@ protected boolean isWeepingAngelActive() {
 		Vec3d targetPos = target.getBoundingBox().getCenter();
 		
 		// Use world.raycast to check for obstructions
-		return this.getWorld().raycast(new RaycastContext(
+		return this.getEntityWorld().raycast(new RaycastContext(
 			attackerPos, 
 			targetPos, 
 			RaycastContext.ShapeType.COLLIDER, 
@@ -1018,7 +1018,7 @@ protected boolean isWeepingAngelActive() {
 			double vx = -Math.sin(t) * scaledTangential;
 			double vy = 0.01 + MathHelper.nextBetween(random, -0.005f, 0.005f);
 			double vz = Math.cos(t) * scaledTangential;
-			this.getWorld().addParticleClient(ParticleTypes.SOUL, px, py, pz, vx, vy, vz);
+			this.getEntityWorld().addParticleClient(ParticleTypes.SOUL, px, py, pz, vx, vy, vz);
 		}
 	}
 
@@ -1034,7 +1034,7 @@ protected boolean isWeepingAngelActive() {
 	private boolean shouldJumpToReachTarget(Entity target) {
 		if (target == null) return false;
 		
-		Vec3d start = this.getPos();
+		Vec3d start = new Vec3d(this.getX(), this.getY(), this.getZ());
 		Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
 		Vec3d direction = end.subtract(start).normalize();
 		double distance = start.distanceTo(end);
@@ -1054,7 +1054,7 @@ protected boolean isWeepingAngelActive() {
 				// Check for blocking blocks at various heights
 				for (double yOffset = 0; yOffset <= 1.5; yOffset += 0.5) {
 					Vec3d testPos = checkPos.add(0, yOffset, 0);
-					boolean hasBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+					boolean hasBlock = !this.getEntityWorld().isSpaceEmpty(this, new Box(
 						testPos.subtract(0.3, 0, 0.3), 
 						testPos.add(0.3, 0.5, 0.3)
 					));
@@ -1066,7 +1066,7 @@ protected boolean isWeepingAngelActive() {
 						if (obstacleHeight > 0 && obstacleHeight <= 2) {
 							// Verify there's space above to jump through
 							Vec3d abovePos = testPos.add(0, obstacleHeight, 0);
-							boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+							boolean hasSpaceAbove = this.getEntityWorld().isSpaceEmpty(this, new Box(
 								abovePos.subtract(0.3, 0, 0.3), 
 								abovePos.add(0.3, 1.5, 0.3)
 							));
@@ -1084,7 +1084,7 @@ protected boolean isWeepingAngelActive() {
 		
 		// Check for blocks directly in front that need to be jumped over (works for climbing and horizontal)
 		Vec3d frontCheckPos = start.add(direction.multiply(0.8));
-		boolean hasBlockAhead = !this.getWorld().isSpaceEmpty(this, new Box(
+		boolean hasBlockAhead = !this.getEntityWorld().isSpaceEmpty(this, new Box(
 			frontCheckPos.subtract(0.3, 0, 0.3), 
 			frontCheckPos.add(0.3, 1.0, 0.3)
 		));
@@ -1096,7 +1096,7 @@ protected boolean isWeepingAngelActive() {
 			if (obstacleHeight > 0 && obstacleHeight <= 2) {
 				// Verify there's space above the obstacle to land
 				Vec3d abovePos = frontCheckPos.add(0, obstacleHeight, 0);
-				boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+				boolean hasSpaceAbove = this.getEntityWorld().isSpaceEmpty(this, new Box(
 					abovePos.subtract(0.3, 0, 0.3), 
 					abovePos.add(0.3, 1.5, 0.3)
 				));
@@ -1114,7 +1114,7 @@ protected boolean isWeepingAngelActive() {
 		if (this.gazeNoProgressTicks >= 10) { // Stuck for ~0.5 seconds
 			// Check if jumping would help (could be descending or just getting unstuck)
 			Vec3d jumpLandPos = start.add(direction.multiply(1.5));
-			boolean landingClear = this.getWorld().isSpaceEmpty(this, new Box(
+			boolean landingClear = this.getEntityWorld().isSpaceEmpty(this, new Box(
 				jumpLandPos.subtract(0.3, 0, 0.3), 
 				jumpLandPos.add(0.3, 2, 0.3)
 			));
@@ -1137,7 +1137,7 @@ protected boolean isWeepingAngelActive() {
 		// Check up to 10 blocks high to properly handle tall glass walls, etc.
 		for (int i = 0; i < 10; i++) {
 			Vec3d checkPos = basePos.add(0, i, 0);
-			boolean hasBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+			boolean hasBlock = !this.getEntityWorld().isSpaceEmpty(this, new Box(
 				checkPos.subtract(0.3, 0, 0.3), 
 				checkPos.add(0.3, 1.0, 0.3)
 			));
@@ -1158,8 +1158,8 @@ protected boolean isWeepingAngelActive() {
 	private Vec3d findBetterPathDirection(Entity target) {
 		if (target == null) return null;
 		
-		Vec3d currentPos = this.getPos();
-		Vec3d targetPos = target.getPos();
+		Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+		Vec3d targetPos = new Vec3d(target.getX(), target.getY(), target.getZ());
 		Vec3d directDirection = targetPos.subtract(currentPos).normalize();
 		
 		// Try directions closer to the direct path first (45-degree increments)
@@ -1185,7 +1185,7 @@ protected boolean isWeepingAngelActive() {
 				Vec3d testPos = currentPos.add(testDirection.multiply(distance));
 				
 				// Check if this direction is clear
-				if (this.getWorld().isSpaceEmpty(this, new Box(testPos.subtract(0.3, 0, 0.3), testPos.add(0.3, 2, 0.3)))) {
+				if (this.getEntityWorld().isSpaceEmpty(this, new Box(testPos.subtract(0.3, 0, 0.3), testPos.add(0.3, 2, 0.3)))) {
 					// Calculate score: prioritize directions that are both clear and closer to target
 					double currentDist = currentPos.distanceTo(targetPos);
 					double testDist = testPos.distanceTo(targetPos);
@@ -1218,11 +1218,11 @@ protected boolean isWeepingAngelActive() {
 	 * This properly handles transparent but solid blocks like glass by checking obstacle height.
 	 */
 	private boolean isBlockingPath(double dx, double dz) {
-		Vec3d currentPos = this.getPos();
+		Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
 		Vec3d checkPos = currentPos.add(dx * 1.5, 0, dz * 1.5);
 		
 		// First check if there's any block at ground level
-		boolean hasGroundBlock = !this.getWorld().isSpaceEmpty(this, new Box(
+		boolean hasGroundBlock = !this.getEntityWorld().isSpaceEmpty(this, new Box(
 			checkPos.subtract(0.3, 0, 0.3), 
 			checkPos.add(0.3, 1.0, 0.3)
 		));
@@ -1241,7 +1241,7 @@ protected boolean isWeepingAngelActive() {
 		} else if (obstacleHeight > 0) {
 			// Check if there's space above the obstacle
 			Vec3d abovePos = checkPos.add(0, obstacleHeight, 0);
-			boolean hasSpaceAbove = this.getWorld().isSpaceEmpty(this, new Box(
+			boolean hasSpaceAbove = this.getEntityWorld().isSpaceEmpty(this, new Box(
 				abovePos.subtract(0.3, 0, 0.3), 
 				abovePos.add(0.3, 2.0, 0.3)
 			));
@@ -1267,7 +1267,7 @@ protected boolean isWeepingAngelActive() {
 			
 			if (target != null) {
 				// Find the best direction to jump toward the target
-				Vec3d start = this.getPos();
+				Vec3d start = new Vec3d(this.getX(), this.getY(), this.getZ());
 				Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
 				double distance = start.distanceTo(end);
 				
@@ -1279,7 +1279,7 @@ protected boolean isWeepingAngelActive() {
 					boolean directBlocked = false;
 					for (double i = 0.5; i < Math.min(1.5, distance); i += 0.3) {
 						Vec3d checkPos = start.add(directDirection.multiply(i));
-						if (!this.getWorld().isSpaceEmpty(this, new Box(checkPos.subtract(0.3, 0, 0.3), checkPos.add(0.3, 2, 0.3)))) {
+						if (!this.getEntityWorld().isSpaceEmpty(this, new Box(checkPos.subtract(0.3, 0, 0.3), checkPos.add(0.3, 2, 0.3)))) {
 							directBlocked = true;
 							break;
 						}
@@ -1324,7 +1324,7 @@ protected boolean isWeepingAngelActive() {
 	private Vec3d findBestJumpDirection(Entity target) {
 		if (target == null) return null;
 		
-		Vec3d start = this.getPos();
+		Vec3d start = new Vec3d(this.getX(), this.getY(), this.getZ());
 		Vec3d end = new Vec3d(target.getX(), this.getY(), target.getZ());
 		Vec3d directDirection = end.subtract(start).normalize();
 		double directAngle = Math.atan2(directDirection.z, directDirection.x);
@@ -1346,7 +1346,7 @@ protected boolean isWeepingAngelActive() {
 				Vec3d landingPos = start.add(testDirection.multiply(jumpDist));
 				
 				// Check if landing area is clear
-				boolean landingClear = this.getWorld().isSpaceEmpty(this, new Box(
+				boolean landingClear = this.getEntityWorld().isSpaceEmpty(this, new Box(
 					landingPos.subtract(0.3, 0, 0.3), 
 					landingPos.add(0.3, 2, 0.3)
 				));
@@ -1357,7 +1357,7 @@ protected boolean isWeepingAngelActive() {
 				boolean hasGround = false;
 				for (double checkDown = 0; checkDown <= 2.0; checkDown += 0.5) {
 					Vec3d groundCheck = landingPos.subtract(0, checkDown, 0);
-					boolean groundExists = !this.getWorld().isSpaceEmpty(this, new Box(
+					boolean groundExists = !this.getEntityWorld().isSpaceEmpty(this, new Box(
 						groundCheck.subtract(0.3, -0.1, 0.3), 
 						groundCheck.add(0.3, 0, 0.3)
 					));
@@ -1398,7 +1398,7 @@ protected boolean isWeepingAngelActive() {
 	}
 
 	private void spawnSoulBurstAndDamage() {
-		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		if (!(this.getEntityWorld() instanceof ServerWorld sw)) return;
 		Random r = this.getRandom();
 		// 1) Spawn dense sphere of soul particles around the entity
 		double cx = this.getX();
@@ -1439,7 +1439,7 @@ protected boolean isWeepingAngelActive() {
 
 	private void tryBlinkTeleportToTarget(Entity target) {
 		if (target == null) return;
-		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		if (!(this.getEntityWorld() instanceof ServerWorld sw)) return;
 		if (!target.isAlive()) return;
 		// Snapshot origin before moving
 		double ox = this.getX();
@@ -1533,7 +1533,7 @@ protected boolean isWeepingAngelActive() {
 	 * @param isRetaliation If true, bypasses cooldown (forced retaliation to player attack)
 	 */
 	public void startRangedBeamAttack(Entity target, boolean isRetaliation) {
-		if (!(this.getWorld() instanceof ServerWorld)) return;
+		if (!(this.getEntityWorld() instanceof ServerWorld)) return;
 		if (target == null || !target.isAlive()) return;
 		if (this.isLevitating() || this.getPose() == EntityPose.EMERGING || this.postLandFreezeTicks > 0) return;
 		
@@ -1542,8 +1542,8 @@ protected boolean isWeepingAngelActive() {
 		if (this.rangedBeamTravelTicks > 0) return; // Already firing
 		
 		// Snapshot start and end (end is player's current position) so the player can dodge
-		this.rangedBeamStart = this.getPos().add(0.0, this.getStandingEyeHeight(), 0.0);
-		this.rangedBeamEnd = target.getPos().add(0.0, target.getStandingEyeHeight() * 0.5, 0.0);
+		this.rangedBeamStart = new Vec3d(this.getX(), this.getY(), this.getZ()).add(0.0, this.getStandingEyeHeight(), 0.0);
+		this.rangedBeamEnd = new Vec3d(target.getX(), target.getY(), target.getZ()).add(0.0, target.getStandingEyeHeight() * 0.5, 0.0);
 		// Speed so that typical 20-30 block distance reaches in ~0.6-0.9s
 		this.rangedBeamSpeedPerTick = 40.0 / 60.0; // ~0.666 blocks/tick
 		double distance = this.rangedBeamStart.distanceTo(this.rangedBeamEnd);
@@ -1577,7 +1577,7 @@ protected boolean isWeepingAngelActive() {
 	 * Called when entity is damaged by a projectile but can't see the attacker.
 	 */
 	public void forceAggressiveTeleportToTarget(Entity target) {
-		if (!(this.getWorld() instanceof ServerWorld)) return;
+		if (!(this.getEntityWorld() instanceof ServerWorld)) return;
 		if (target == null || !target.isAlive()) return;
 		if (this.isLevitating() || this.getPose() == EntityPose.EMERGING || this.postLandFreezeTicks > 0) return;
 		
@@ -1585,12 +1585,12 @@ protected boolean isWeepingAngelActive() {
 		boolean alreadyTargeting = this.getTarget() == target;
 		
 		// Check distance to target
-		double distance = this.getPos().distanceTo(target.getPos());
+		double distance = new Vec3d(this.getX(), this.getY(), this.getZ()).distanceTo(new Vec3d(target.getX(), target.getY(), target.getZ()));
 		
 		// Check if we can see the target
 		Vec3d attackerPos = this.getEyePos();
 		Vec3d targetPos = target.getBoundingBox().getCenter();
-		boolean canSeeTarget = this.getWorld().raycast(new RaycastContext(
+		boolean canSeeTarget = this.getEntityWorld().raycast(new RaycastContext(
 			attackerPos, 
 			targetPos, 
 			RaycastContext.ShapeType.COLLIDER, 
@@ -1621,7 +1621,7 @@ protected boolean isWeepingAngelActive() {
 	}
 
 	private void advanceRangedBeam() {
-		if (!(this.getWorld() instanceof ServerWorld sw)) { this.rangedBeamTravelTicks = 0; return; }
+		if (!(this.getEntityWorld() instanceof ServerWorld sw)) { this.rangedBeamTravelTicks = 0; return; }
 		if (this.rangedBeamStart == null || this.rangedBeamEnd == null) { this.rangedBeamTravelTicks = 0; return; }
 		// Compute current head position along the path from end of total-remaining perspective
 		double totalDistance = this.rangedBeamStart.distanceTo(this.rangedBeamEnd);
@@ -1688,7 +1688,7 @@ protected boolean isWeepingAngelActive() {
 	}
 
 	private void spawnSoulBurstAndDamageAt(double cx, double cy, double cz, float damage, double radius) {
-		if (!(this.getWorld() instanceof ServerWorld sw)) return;
+		if (!(this.getEntityWorld() instanceof ServerWorld sw)) return;
 		Random r = this.getRandom();
 		for (int i = 0; i < 240; i++) {
 			double theta = r.nextDouble() * Math.PI * 2.0;

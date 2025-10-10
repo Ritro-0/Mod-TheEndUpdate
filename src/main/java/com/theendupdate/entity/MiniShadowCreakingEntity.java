@@ -42,7 +42,7 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
     public void tick() {
         super.tick();
         // If spawned by a parent (main creaking), force a one-time intro regardless of altar
-        if (!this.getWorld().isClient && this.age == 1) {
+        if (!this.getEntityWorld().isClient() && this.age == 1) {
             try {
                 java.util.Set<String> tags = this.getCommandTags();
                 if (tags != null && tags.contains("theendupdate:spawned_by_parent")) {
@@ -57,7 +57,7 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
     @Override
     public void onDeath(DamageSource damageSource) {
         super.onDeath(damageSource);
-        if (!(this.getWorld() instanceof ServerWorld sw)) return;
+        if (!(this.getEntityWorld() instanceof ServerWorld sw)) return;
         
         // Handle boss bar cleanup
         if (this.bossBarManager != null) {

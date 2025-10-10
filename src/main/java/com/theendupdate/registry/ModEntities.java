@@ -31,6 +31,8 @@ public final class ModEntities {
             // 7×7 px by 11 px tall → 0.4375f × 0.6875f blocks
             .dimensions(0.4375f, 0.6875f)
             .eyeHeight(0.34375f)
+            .maxTrackingRange(64)
+            .trackingTickInterval(2)
             .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, ETHEREAL_ORB_ID))
     );
 
@@ -42,6 +44,8 @@ public final class ModEntities {
             // Approximate vanilla Creaking size
             .dimensions(0.6f, 2.7f)
             .eyeHeight(2.2f)
+            .maxTrackingRange(64)
+            .trackingTickInterval(2)
             .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, SHADOW_CREAKING_ID))
     );
 
@@ -52,6 +56,8 @@ public final class ModEntities {
         EntityType.Builder.create(MiniShadowCreakingEntity::new, SpawnGroup.MONSTER)
             .dimensions(0.3f, 1.35f)
             .eyeHeight(1.1f)
+            .maxTrackingRange(64)
+            .trackingTickInterval(2)
             .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, MINI_SHADOW_CREAKING_ID))
     );
 
@@ -62,6 +68,8 @@ public final class ModEntities {
         EntityType.Builder.create(TinyShadowCreakingEntity::new, SpawnGroup.MONSTER)
             .dimensions(0.15f, 0.675f)
             .eyeHeight(0.55f)
+            .maxTrackingRange(64)
+            .trackingTickInterval(2)
             .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, TINY_SHADOW_CREAKING_ID))
     );
     

@@ -40,7 +40,7 @@ public abstract class RecoveryCompassUseMixin {
             if (tag.contains("shadow_hunter_tracker") && tag.getBoolean("shadow_hunter_tracker").orElse(false)) {
                 // Shadow Hunter's Tracker should work like quantum gateway compass but without teleportation
                 // Client: short-circuit to success to avoid further processing; server handles binding
-                if (world.isClient) {
+                if (world.isClient()) {
                     return;
                 }
                 
@@ -74,7 +74,7 @@ public abstract class RecoveryCompassUseMixin {
         if (!(tag.contains("gx") && tag.contains("gy") && tag.contains("gz") && tag.contains("gd"))) return;
 
         // Client: short-circuit to success to avoid further processing; server performs the teleport
-        if (world.isClient) {
+        if (world.isClient()) {
             return;
         }
 
@@ -97,7 +97,9 @@ public abstract class RecoveryCompassUseMixin {
 
         Identifier dimId = Identifier.of(dimStr);
         RegistryKey<World> targetKey = RegistryKey.of(RegistryKeys.WORLD, dimId);
-        ServerWorld targetWorld = serverPlayer.getServer().getWorld(targetKey);
+        // Get server from the world the player is in
+        ServerWorld currentWorld = (ServerWorld) world;
+        ServerWorld targetWorld = currentWorld.getServer().getWorld(targetKey);
         if (targetWorld == null) {
             return;
         }

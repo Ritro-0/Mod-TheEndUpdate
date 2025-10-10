@@ -47,7 +47,7 @@ public class ShadowAltarBlock extends BlockWithEntity {
 		ItemStack held = player.getStackInHand(hand);
 		boolean isIgniter = held.isOf(Items.FLINT_AND_STEEL) || held.isOf(Items.FIRE_CHARGE);
 		if (!isIgniter) return ActionResult.PASS;
-		if (world.isClient) return ActionResult.SUCCESS;
+		if (world.isClient()) return ActionResult.SUCCESS;
 
 		BlockEntity be = world.getBlockEntity(pos);
 		if (be instanceof ShadowAltarBlockEntity altar) {
@@ -77,7 +77,7 @@ public class ShadowAltarBlock extends BlockWithEntity {
 
 	@Override
 	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
-		if (world.isClient) return null;
+		if (world.isClient()) return null;
 		return (type == ModBlockEntities.SHADOW_ALTAR)
 			? (w, p, s, be) -> ShadowAltarBlockEntity.tick(w, p, s, (ShadowAltarBlockEntity) be)
 			: null;
@@ -86,7 +86,7 @@ public class ShadowAltarBlock extends BlockWithEntity {
 	// Mapping-safe: omit @Override and use broader signature
 	public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
 		// Clean up the boss bar if altar is broken during charging
-		if (!world.isClient && !state.isOf(newState.getBlock())) {
+		if (!world.isClient() && !state.isOf(newState.getBlock())) {
 			BlockEntity be = world.getBlockEntity(pos);
 			if (be instanceof ShadowAltarBlockEntity altar) {
 				altar.cleanup();

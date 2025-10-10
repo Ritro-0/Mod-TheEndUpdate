@@ -6,6 +6,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.entity.player.PlayerEntity;
 import java.util.*;
 
@@ -138,7 +139,7 @@ public class ShadowCreakingBossBarManager {
         }
         
         // Add nearby players to the boss bar
-        if (mainEntity.getWorld() instanceof ServerWorld serverWorld) {
+        if (mainEntity.getEntityWorld() instanceof ServerWorld serverWorld) {
             this.updateNearbyPlayers(serverWorld);
         }
     }
@@ -400,7 +401,7 @@ public class ShadowCreakingBossBarManager {
                         net.minecraft.util.math.Vec3d altarVec = net.minecraft.util.math.Vec3d.ofCenter(this.altarPos);
                         Box searchBox = Box.of(altarVec, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
                         List<PlayerEntity> playersInRange = altarWorld.getEntitiesByClass(PlayerEntity.class, searchBox,
-                            p -> p.getPos().distanceTo(altarVec) <= VIEW_DISTANCE);
+                            p -> new Vec3d(p.getX(), p.getY(), p.getZ()).distanceTo(altarVec) <= VIEW_DISTANCE);
                         
                         for (PlayerEntity player : playersInRange) {
                             if (player instanceof ServerPlayerEntity serverPlayer) {
@@ -418,11 +419,11 @@ public class ShadowCreakingBossBarManager {
             // During emerging phase or charging after entity spawned, track proximity to entities
             for (UUID entityUuid : this.trackedEntities.keySet()) {
                 ShadowCreakingEntity entity = this.findEntityByUuid(world, entityUuid);
-                if (entity != null && entity.getWorld() instanceof ServerWorld entityWorld) {
-                    Box searchBox = Box.of(entity.getPos(), VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
+                if (entity != null && entity.getEntityWorld() instanceof ServerWorld entityWorld) {
+                    Box searchBox = Box.of(new Vec3d(entity.getX(), entity.getY(), entity.getZ()), VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
                     // Search for players in the entity's dimension, not the passed world
                     List<PlayerEntity> playersInRange = entityWorld.getEntitiesByClass(PlayerEntity.class, searchBox, 
-                        p -> p.getPos().distanceTo(entity.getPos()) <= VIEW_DISTANCE);
+                        p -> new Vec3d(p.getX(), p.getY(), p.getZ()).distanceTo(new Vec3d(entity.getX(), entity.getY(), entity.getZ())) <= VIEW_DISTANCE);
                     
                     for (PlayerEntity player : playersInRange) {
                         if (player instanceof ServerPlayerEntity serverPlayer) {
@@ -435,11 +436,11 @@ public class ShadowCreakingBossBarManager {
             // Normal entity-based proximity tracking
             for (UUID entityUuid : this.trackedEntities.keySet()) {
                 ShadowCreakingEntity entity = this.findEntityByUuid(world, entityUuid);
-                if (entity != null && entity.getWorld() instanceof ServerWorld entityWorld) {
-                    Box searchBox = Box.of(entity.getPos(), VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
+                if (entity != null && entity.getEntityWorld() instanceof ServerWorld entityWorld) {
+                    Box searchBox = Box.of(new Vec3d(entity.getX(), entity.getY(), entity.getZ()), VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
                     // Search for players in the entity's dimension, not the passed world
                     List<PlayerEntity> playersInRange = entityWorld.getEntitiesByClass(PlayerEntity.class, searchBox, 
-                        p -> p.getPos().distanceTo(entity.getPos()) <= VIEW_DISTANCE);
+                        p -> new Vec3d(p.getX(), p.getY(), p.getZ()).distanceTo(new Vec3d(entity.getX(), entity.getY(), entity.getZ())) <= VIEW_DISTANCE);
                     
                     for (PlayerEntity player : playersInRange) {
                         if (player instanceof ServerPlayerEntity serverPlayer) {
