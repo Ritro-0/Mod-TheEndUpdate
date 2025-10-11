@@ -14,6 +14,7 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.CreakingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.Box;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.particle.ParticleTypes;
@@ -88,6 +89,12 @@ public class ShadowCreakingEntity extends CreakingEntity {
 		super(entityType, world);
 		this.experiencePoints = 7;
 		this.setPersistent();
+	}
+	
+	@Override
+	public ItemStack getPickBlockStack() {
+		// Return the spawn egg when middle-clicked in creative mode
+		return new ItemStack(com.theendupdate.registry.ModItems.SHADOW_CREAKING_SPAWN_EGG);
 	}
 
 	public static DefaultAttributeContainer.Builder createShadowCreakingAttributes() {
@@ -373,6 +380,12 @@ public class ShadowCreakingEntity extends CreakingEntity {
 
 	@Override
 	public void tick() {
+		// Despawn in peaceful mode (all variants: normal, mini, tiny)
+		if (!this.getEntityWorld().isClient() && this.getEntityWorld().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
+			this.discard();
+			return;
+		}
+		
 		// If entity has NoAI flag set, skip all custom behavior
 		if (super.isAiDisabled()) {
 			super.tick();

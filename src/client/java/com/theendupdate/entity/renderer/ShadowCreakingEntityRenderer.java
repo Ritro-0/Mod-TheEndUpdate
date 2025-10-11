@@ -4,6 +4,7 @@ import com.theendupdate.TemplateMod;
 import com.theendupdate.entity.ShadowCreakingEntity;
 import com.theendupdate.entity.MiniShadowCreakingEntity;
 import com.theendupdate.entity.TinyShadowCreakingEntity;
+import com.theendupdate.entity.state.ShadowCreakingRenderState;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.state.CameraRenderState;
@@ -20,7 +21,7 @@ import net.minecraft.entity.AnimationState;
 import java.lang.reflect.Field;
 import java.util.Map;
 
-public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreakingEntity, CreakingEntityRenderState, CreakingEntityModel> {
+public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreakingEntity, ShadowCreakingRenderState, CreakingEntityModel> {
 	private static final Identifier TEXTURE = Identifier.of(TemplateMod.MOD_ID, "textures/entity/shadow_creaking.png");
 	private static final EntityModelLayer CREAKING_LAYER = new EntityModelLayer(Identifier.ofVanilla("creaking"), "main");
 	private static final int EMERGE_DURATION_TICKS = 134;
@@ -34,14 +35,21 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 	}
 
 	@Override
-	public CreakingEntityRenderState createRenderState() {
-		return new CreakingEntityRenderState();
+	public ShadowCreakingRenderState createRenderState() {
+		return new ShadowCreakingRenderState();
 	}
 
 	@Override
-	public void updateRenderState(ShadowCreakingEntity entity, CreakingEntityRenderState state, float tickDelta) {
+	public void updateRenderState(ShadowCreakingEntity entity, ShadowCreakingRenderState state, float tickDelta) {
 		// Populate all vanilla creaking animation state via delegate
-		this.vanillaDelegate.updateRenderState(entity, state, tickDelta);
+		// We need to cast because vanillaDelegate expects CreakingEntityRenderState but we have ShadowCreakingRenderState
+		CreakingEntityRenderState vanillaState = state; // Safe upcast
+		this.vanillaDelegate.updateRenderState(entity, vanillaState, tickDelta);
+		
+		// Copy animation states from entity to render state
+		state.emergingAnimationState.copyFrom(entity.emergingAnimationState);
+		state.levitatingAnimationState.copyFrom(entity.levitatingAnimationState);
+		
 		// Decide scale for this entity instance
 		if (entity instanceof MiniShadowCreakingEntity) {
 			this.currentScale = 0.5f; // render scale matches 0.5x hitbox
@@ -50,10 +58,10 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 		} else {
 			this.currentScale = 1.0f;
 		}
-		// If server signals forced running overlay (during anti-freeze step), let model apply a run overlay
-		if (this.getModel() instanceof ShadowCreakingPlantingModel m) {
-			m.setRunOverlay(entity.isForcingRunOverlay());
-		}
+		
+		// Store run overlay state in render state
+		state.runOverlay = entity.isForcingRunOverlay();
+		
 		try {
 			// Drive emerge progress from the entity's AnimationState time when POSE == EMERGING
 			float raw;
@@ -90,38 +98,33 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 				mapped = 0.99f + x * 0.01f;
 			}
 			this.lastEmergeProgress = MathHelper.clamp(mapped, 0.0f, 1.0f);
-			if (this.getModel() instanceof ShadowCreakingPlantingModel m) {
-				m.setEmergeProgress(this.lastEmergeProgress);
-                if (entity.getPose() == net.minecraft.entity.EntityPose.EMERGING && entity.age <= EMERGE_DURATION_TICKS) {
-					m.beginEmerge((int)(entity.age + tickDelta));
-				} else {
-					m.endEmerge();
-				}
-                // Pass levitation state/time for head spin overlay.
-                // Only drive levitation visuals when the server says we are levitating; do not infer by age window.
-                boolean lev = entity.isLevitating() || entity.levitatingAnimationState.isRunning();
-				// Compute phase: first 2s arms-out; after that is hover
-				float totalMs;
-                if (lev) {
-					totalMs = (float)entity.levitatingAnimationState.getTimeInMilliseconds(entity.age) + tickDelta * 50.0f;
-				} else {
-					totalMs = 0.0f;
-				}
-				m.setLevitating(lev, totalMs, (int)(entity.age + tickDelta));
+			state.emergeProgress = this.lastEmergeProgress;
+			
+			// Store emerging state
+			state.emergingActive = entity.getPose() == net.minecraft.entity.EntityPose.EMERGING && entity.age <= EMERGE_DURATION_TICKS;
+			
+			// Store levitation state
+			boolean lev = entity.isLevitating() || entity.levitatingAnimationState.isRunning();
+			state.levitatingActive = lev;
+			if (lev) {
+				state.levitatingMs = (float)entity.levitatingAnimationState.getTimeInMilliseconds(entity.age) + tickDelta * 50.0f;
+			} else {
+				state.levitatingMs = 0.0f;
 			}
 		} catch (Throwable ignored) {
 			this.lastEmergeProgress = 1.0f;
+			state.emergeProgress = 1.0f;
 		}
 	}
 
 	@Override
-	public Identifier getTexture(CreakingEntityRenderState state) {
+	public Identifier getTexture(ShadowCreakingRenderState state) {
 		return TEXTURE;
 	}
 
 	@Override
-	public void render(CreakingEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue commandQueue, CameraRenderState cameraState) {
-		float progress = this.lastEmergeProgress; // 0..1
+	public void render(ShadowCreakingRenderState state, MatrixStack matrices, OrderedRenderCommandQueue commandQueue, CameraRenderState cameraState) {
+		float progress = state.emergeProgress; // 0..1
 		float inv = 1.0f - progress;
 		float h = inv * 1.6f;
 		if (h > 0.0f) {
@@ -141,18 +144,9 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 		private ModelPart rightArm;
 		private ModelPart leftLeg;
 		private ModelPart rightLeg;
-		// Progress is computed and used only for vertical offset during render
-		private float emergeProgress;
 		private final net.minecraft.client.render.entity.animation.Animation emergingAnim;
 		private final net.minecraft.client.render.entity.animation.Animation levitatingAnim;
-		private final AnimationState emergingState = new AnimationState();
-		private boolean emergingActive;
-		private final AnimationState levitatingState = new AnimationState();
-		private boolean levitatingActive;
-		private float levitatingMs;
 		private float lastLevitationAngle;
-		private boolean runOverlay;
-		// removed unused overlay tracking
 
 		public ShadowCreakingPlantingModel(ModelPart root) {
 			super(root);
@@ -177,8 +171,6 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			this.levitatingAnim = com.theendupdate.entity.animation.ShadowCreakingAnimations.LEVITATING.createAnimation(root);
 		}
 
-		public void setRunOverlay(boolean active) { this.runOverlay = active; }
-
 		private ModelPart tryGet(ModelPart base, String name) {
 			if (base == null) return null;
 			try {
@@ -188,38 +180,19 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			}
 		}
 
-		public void setEmergeProgress(float p) {
-			this.emergeProgress = MathHelper.clamp(p, 0.0f, 1.0f);
-		}
-
-		public void beginEmerge(int age) {
-			this.emergingState.startIfNotRunning(age);
-			this.emergingActive = true;
-		}
-
-		public void endEmerge() {
-			this.emergingState.stop();
-			this.emergingActive = false;
-		}
-
-		public void setLevitating(boolean active, float ms, int renderAge) {
-			this.levitatingActive = active;
-			this.levitatingMs = ms;
-			if (active) {
-				int offsetTicks = Math.max(0, (int)(ms / 50.0f));
-				int startAge = Math.max(0, renderAge - offsetTicks);
-				this.levitatingState.startIfNotRunning(startAge);
-			} else {
-				this.levitatingState.stop();
-			}
-		}
-
 		@Override
 		public void setAngles(CreakingEntityRenderState state) {
+			// Cast to our custom render state (safe because our renderer always creates ShadowCreakingRenderState)
+			if (!(state instanceof ShadowCreakingRenderState)) {
+				super.setAngles(state);
+				return;
+			}
+			ShadowCreakingRenderState shadowState = (ShadowCreakingRenderState) state;
+			
 			// Take full control during LEVITATING just like EMERGING
-			if (this.levitatingActive) {
+			if (shadowState.levitatingActive) {
 				for (ModelPart part : this.modelRoot.traverse()) part.resetTransform();
-				this.levitatingAnim.apply(this.levitatingState, state.age, 1.0f);
+				this.levitatingAnim.apply(shadowState.levitatingAnimationState, shadowState.age, 1.0f);
 				// Ensure parts resolved for spin overlay
 				if (this.head == null) {
 					this.head = tryGet(this.modelRoot, "head");
@@ -230,12 +203,12 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 					if (this.body == null) this.body = findDeepByNames(this.modelRoot, new String[]{"body"}, new String[]{"torso","chest"});
 				}
 				// After the 2s intro, overlay rapid head spin
-				float levMsNow = (float)this.levitatingState.getTimeInMilliseconds(state.age);
+				float levMsNow = (float)shadowState.levitatingAnimationState.getTimeInMilliseconds(shadowState.age);
 				if (levMsNow >= 2000.0f) {
 					ModelPart spinTarget = this.head != null ? this.head : this.body;
 					if (spinTarget != null) {
 						// Use age in ticks to accumulate spin delta frame-over-frame for stability
-						float seconds = (state.age % 200000) / 20.0f; // avoid float overflow
+						float seconds = (shadowState.age % 200000) / 20.0f; // avoid float overflow
 						float revolutionsPerSecond = 3.0f;
 						float angle = (float)(Math.PI * 2.0) * revolutionsPerSecond * seconds;
 						float twoPi = (float)(Math.PI * 2.0);
@@ -248,14 +221,14 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 				return;
 			}
 			// Apply EMERGING animation 1:1 during emerge; otherwise defer to vanilla setAngles
-			if (this.emergingActive) {
+			if (shadowState.emergingActive) {
 				for (ModelPart part : this.modelRoot.traverse()) part.resetTransform();
-				this.emergingAnim.apply(this.emergingState, state.age, 1.0f);
+				this.emergingAnim.apply(shadowState.emergingAnimationState, shadowState.age, 1.0f);
 
 				// Overlay physical mechanics: hands plant early, then a right-leg step drives the rise
 				// without snapping arms backward.
-				float p = MathHelper.clamp(this.emergeProgress, 0.0f, 1.0f); // vertical progress 0..1
-				float ms = (float)this.emergingState.getTimeInMilliseconds(state.age);
+				float p = MathHelper.clamp(shadowState.emergeProgress, 0.0f, 1.0f); // vertical progress 0..1
+				float ms = (float)shadowState.emergingAnimationState.getTimeInMilliseconds(shadowState.age);
 				float raw = MathHelper.clamp(ms / 6700.0f, 0.0f, 1.0f); // timeline 0..1
 				float release = p > 0.98f ? MathHelper.clamp((p - 0.98f) / 0.02f, 0.0f, 1.0f) : 0.0f;
 				float overlayFade = 1.0f - MathHelper.clamp((raw - 0.90f) / 0.10f, 0.0f, 1.0f); // fade overlays before the very end
@@ -302,7 +275,8 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 				// Legs: do not procedurally override; keyframes handle early plant and hold
 				return;
 			}
-			super.setAngles(state);
+			// Cast state for vanilla method - safe because ShadowCreakingRenderState extends CreakingEntityRenderState
+			super.setAngles(shadowState);
 			// Ensure critical parts are located even if not found at construction time
 			if (this.head == null) {
 				this.head = tryGet(this.modelRoot, "head");
@@ -321,32 +295,8 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 				if (this.rightArm == null) this.rightArm = findDeepByNames(this.modelRoot, new String[]{"right","arm"}, new String[]{"arm_right","rightarm","right","hand"});
 			}
 
-			// Apply authored LEVITATING animation when levitating
-			if (this.levitatingActive) {
-				// Reset transforms so levitation animation fully controls the pose
-				for (ModelPart part : this.modelRoot.traverse()) part.resetTransform();
-				// Drive using the same API as EMERGING: advance by the levitation state's time
-				// Sync levitatingState time from ms for consistency
-				int syntheticAge = (int)(this.levitatingMs / 50.0f);
-				this.levitatingAnim.apply(this.levitatingState, syntheticAge, 1.0f);
-				// After the 2s intro, overlay rapid head spin
-				if (this.levitatingMs >= 2000.0f) {
-					ModelPart spinTarget = this.head != null ? this.head : findDeepByNames(this.modelRoot, new String[]{"head"}, new String[]{"skull","cranium","neck"});
-					if (spinTarget == null) spinTarget = this.body != null ? this.body : findDeepByNames(this.modelRoot, new String[]{"body"}, new String[]{"torso","chest"});
-					if (spinTarget != null) {
-						float seconds = this.levitatingMs / 1000.0f;
-						float revolutionsPerSecond = 3.0f;
-						float angle = (float)(Math.PI * 2.0) * revolutionsPerSecond * seconds;
-						float twoPi = (float)(Math.PI * 2.0);
-						angle = angle % twoPi;
-						if (angle > Math.PI) angle -= twoPi;
-						spinTarget.yaw -= this.lastLevitationAngle;
-						spinTarget.yaw += angle;
-						this.lastLevitationAngle = angle;
-					}
-				}
-			} else if (this.lastLevitationAngle != 0.0f) {
-				// Clear any leftover overlay when levitation ends
+			// Clear any leftover overlay when levitation ends
+			if (!shadowState.levitatingActive && this.lastLevitationAngle != 0.0f) {
 				ModelPart spinTarget = this.head != null ? this.head : this.body;
 				if (spinTarget != null) {
 					spinTarget.yaw -= this.lastLevitationAngle;
@@ -355,10 +305,10 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			}
 
 			// Run overlay: add slight leg swing if requested to ensure motion isn't visually static
-			if (this.runOverlay && this.leftLeg != null && this.rightLeg != null) {
+			if (shadowState.runOverlay && this.leftLeg != null && this.rightLeg != null) {
 				float swing = 0.5f;
 				float speed = 0.25f;
-				float t = (state.age % 200000) * speed;
+				float t = (shadowState.age % 200000) * speed;
 				this.leftLeg.pitch += MathHelper.sin(t) * swing * 0.6f;
 				this.rightLeg.pitch += MathHelper.sin(t + (float)Math.PI) * swing * 0.6f;
 			}

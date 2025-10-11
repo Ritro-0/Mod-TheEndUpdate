@@ -4,6 +4,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 
@@ -16,6 +17,12 @@ public class MiniShadowCreakingEntity extends ShadowCreakingEntity {
     public MiniShadowCreakingEntity(EntityType<? extends ShadowCreakingEntity> entityType, World world) {
         super(entityType, world);
         this.experiencePoints = 3;
+    }
+    
+    @Override
+    public ItemStack getPickBlockStack() {
+        // Return the mini spawn egg when middle-clicked in creative mode
+        return new ItemStack(com.theendupdate.registry.ModItems.MINI_SHADOW_CREAKING_SPAWN_EGG);
     }
 
     public static DefaultAttributeContainer.Builder createMiniAttributes() {

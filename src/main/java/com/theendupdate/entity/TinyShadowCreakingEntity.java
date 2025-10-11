@@ -3,6 +3,7 @@ package com.theendupdate.entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
 public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
@@ -18,6 +19,12 @@ public class TinyShadowCreakingEntity extends ShadowCreakingEntity {
     public TinyShadowCreakingEntity(EntityType<? extends ShadowCreakingEntity> entityType, World world) {
         super(entityType, world);
         this.experiencePoints = 1;
+    }
+    
+    @Override
+    public ItemStack getPickBlockStack() {
+        // Return the tiny spawn egg when middle-clicked in creative mode
+        return new ItemStack(com.theendupdate.registry.ModItems.TINY_SHADOW_CREAKING_SPAWN_EGG);
     }
 
     public static DefaultAttributeContainer.Builder createTinyAttributes() {

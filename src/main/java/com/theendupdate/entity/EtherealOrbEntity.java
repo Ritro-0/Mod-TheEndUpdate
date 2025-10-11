@@ -87,6 +87,12 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     }
     
     @Override
+    public ItemStack getPickBlockStack() {
+        // Return the spawn egg when middle-clicked in creative mode
+        return new ItemStack(com.theendupdate.registry.ModItems.ETHEREAL_ORB_SPAWN_EGG);
+    }
+    
+    @Override
     public boolean isInAir() {
         return !this.isOnGround() && !this.isTouchingWater();
     }
@@ -182,7 +188,9 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         this.updateAnimations();
         // Ensure we never accumulate fall distance
         this.fallDistance = 0.0F;
-        // Let vanilla collision resolution handle floor/wall/ceiling interactions with no manual nudging
+        
+        // Handle bouncing when hitting surfaces
+        this.handleSurfaceBounce();
 
         // Server-side subtle particle hint when charged (moderate frequency)
         if (!this.getEntityWorld().isClient() && this.isCharged()) {
@@ -296,7 +304,8 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             Vec3d pos = new Vec3d(this.getX(), this.getY(), this.getZ());
             double range = 4.0;
             double dx = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
-            double dy = (this.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
+            // Bias upward when panicking to avoid ground-hugging
+            double dy = Math.abs(this.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
             double dz = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
             Vec3d target = new Vec3d(
                 pos.x + dx,
@@ -305,6 +314,62 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             );
             Vec3d safe = this.clampTargetToFreeSpace(pos, target);
             this.getMoveControl().moveTo(safe.x, safe.y, safe.z, 3.2);
+        }
+    }
+
+    /**
+     * Handles bouncing behavior when the orb collides with surfaces.
+     * This prevents orbs from getting stuck on the ground or bouncing ineffectively.
+     */
+    private void handleSurfaceBounce() {
+        if (this.getEntityWorld().isClient()) return;
+        
+        Vec3d velocity = this.getVelocity();
+        boolean hasCollision = false;
+        Vec3d newVelocity = velocity;
+        
+        // Check for ground collision
+        if (this.isOnGround() || this.verticalCollision) {
+            // Bounce upward with some energy retention
+            if (velocity.y <= 0.05) {
+                double bounceStrength = 0.25 + this.getRandom().nextDouble() * 0.15;
+                newVelocity = new Vec3d(
+                    velocity.x * 0.7,  // Dampen horizontal movement
+                    bounceStrength,     // Bounce upward
+                    velocity.z * 0.7
+                );
+                hasCollision = true;
+            }
+        }
+        
+        // Check for horizontal collisions (walls)
+        if (this.horizontalCollision) {
+            // Reverse horizontal velocity and add slight upward component
+            newVelocity = new Vec3d(
+                -velocity.x * 0.5 + (this.getRandom().nextDouble() - 0.5) * 0.1,
+                Math.max(velocity.y, 0.0) + 0.15,  // Add upward boost
+                -velocity.z * 0.5 + (this.getRandom().nextDouble() - 0.5) * 0.1
+            );
+            hasCollision = true;
+        }
+        
+        // Apply the bounce velocity if there was a collision
+        if (hasCollision) {
+            this.setVelocity(newVelocity);
+            this.velocityModified = true;
+        }
+        
+        // Prevent sinking by adding buoyancy when moving slowly near the ground
+        if (!this.isPanicking() && !this.isRotatingForSpawn()) {
+            double groundDistance = this.getY() - this.getEntityWorld().getBottomY();
+            BlockPos groundPos = this.getBlockPos().down();
+            boolean nearGround = !this.getEntityWorld().getBlockState(groundPos).isAir() && groundDistance < 3.0;
+            
+            if (nearGround && velocity.y < 0.05) {
+                // Add gentle upward float to prevent ground-hugging
+                this.addVelocity(0, 0.08, 0);
+                this.velocityModified = true;
+            }
         }
     }
 
@@ -819,11 +884,26 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                     Vec3d pos = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
                     double range = 6.0;
                     double dx = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
-                    double dy = (orb.getRandom().nextDouble() * 2.0 - 1.0) * (range * 0.6);
+                    
+                    // Bias upward to prevent ground-hugging when homeless
+                    // Use absolute value to always be positive, then occasionally allow downward movement
+                    double dy;
+                    double minFloatHeight = orb.getEntityWorld().getBottomY() + 8.0;
+                    if (pos.y < minFloatHeight) {
+                        // Below minimum height: always go up
+                        dy = Math.abs(orb.getRandom().nextDouble()) * (range * 0.8);
+                    } else if (pos.y < minFloatHeight + 10.0) {
+                        // Near minimum: strong upward bias (80% chance to go up)
+                        dy = (orb.getRandom().nextDouble() < 0.8 ? 1 : -1) * Math.abs(orb.getRandom().nextDouble()) * (range * 0.5);
+                    } else {
+                        // At good height: gentle wandering with slight upward bias (60% chance to go up)
+                        dy = (orb.getRandom().nextDouble() < 0.6 ? 1 : -1) * Math.abs(orb.getRandom().nextDouble()) * (range * 0.4);
+                    }
+                    
                     double dz = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
                     intermediateWaypoint = new Vec3d(
                         pos.x + dx,
-                        MathHelper.clamp(pos.y + dy, orb.getEntityWorld().getBottomY() + 5, orb.getEntityWorld().getBottomY() + 100),
+                        MathHelper.clamp(pos.y + dy, orb.getEntityWorld().getBottomY() + 5, orb.getEntityWorld().getBottomY() + 120),
                         pos.z + dz
                     );
                     repathCooldown = REPATH_TICKS;
