@@ -1,0 +1,8 @@
+accessWidener v2 named
+accessible field net/minecraft/block/entity/BlockEntityType blocks Ljava/util/Set;
+mutable field net/minecraft/block/entity/BlockEntityType blocks Ljava/util/Set;
+accessible class net/minecraft/client/render/block/entity/SignBlockEntityRenderer$SignModelPair
+accessible class net/minecraft/client/render/block/entity/HangingSignBlockEntityRenderer$HangingSignModelPair
+accessible method net/minecraft/client/render/block/entity/SignBlockEntityRenderer$SignModelPair <init> (Lnet/minecraft/client/model/Model;Lnet/minecraft/client/model/Model;)V
+accessible method net/minecraft/client/render/block/entity/HangingSignBlockEntityRenderer$HangingSignModelPair <init> (Lnet/minecraft/client/model/Model;Lnet/minecraft/client/model/Model;)V
+

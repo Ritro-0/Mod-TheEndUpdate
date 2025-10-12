@@ -146,7 +146,6 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 		private ModelPart rightLeg;
 		private final net.minecraft.client.render.entity.animation.Animation emergingAnim;
 		private final net.minecraft.client.render.entity.animation.Animation levitatingAnim;
-		private float lastLevitationAngle;
 
 		public ShadowCreakingPlantingModel(ModelPart root) {
 			super(root);
@@ -213,9 +212,9 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 						float angle = (float)(Math.PI * 2.0) * revolutionsPerSecond * seconds;
 						float twoPi = (float)(Math.PI * 2.0);
 						angle = angle % twoPi;
-						spinTarget.yaw -= this.lastLevitationAngle;
+						spinTarget.yaw -= shadowState.lastLevitationAngle;
 						spinTarget.yaw += angle;
-						this.lastLevitationAngle = angle;
+						shadowState.lastLevitationAngle = angle;
 					}
 				}
 				return;
@@ -296,12 +295,12 @@ public class ShadowCreakingEntityRenderer extends MobEntityRenderer<ShadowCreaki
 			}
 
 			// Clear any leftover overlay when levitation ends
-			if (!shadowState.levitatingActive && this.lastLevitationAngle != 0.0f) {
+			if (!shadowState.levitatingActive && shadowState.lastLevitationAngle != 0.0f) {
 				ModelPart spinTarget = this.head != null ? this.head : this.body;
 				if (spinTarget != null) {
-					spinTarget.yaw -= this.lastLevitationAngle;
+					spinTarget.yaw -= shadowState.lastLevitationAngle;
 				}
-				this.lastLevitationAngle = 0.0f;
+				shadowState.lastLevitationAngle = 0.0f;
 			}
 
 			// Run overlay: add slight leg swing if requested to ensure motion isn't visually static

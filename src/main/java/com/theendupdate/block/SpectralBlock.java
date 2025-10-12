@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.entity.player.PlayerEntity;
@@ -19,6 +20,12 @@ public class SpectralBlock extends Block {
 
     public SpectralBlock(Settings settings) {
         super(settings);
+    }
+
+    // Mapping-safe: omit @Override for cross-version compatibility
+    public PistonBehavior getPistonBehavior(BlockState state) {
+        // Explicitly set to NORMAL for consistent push/pull behavior (like glowstone)
+        return PistonBehavior.NORMAL;
     }
 
     @Override

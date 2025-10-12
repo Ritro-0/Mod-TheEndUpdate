@@ -10,7 +10,11 @@
 		"CowEntityRenderStateMixin",
 		"MooshroomEntityRenderStateMixin",
 		"CowEntityRendererMixin",
-		"MooshroomEntityRendererMixin"
+		"MooshroomEntityRendererMixin",
+		"TexturedRenderLayersSignsMixin",
+		"TexturedRenderLayersHangingSignsMixin",
+		"SignBlockEntityRendererMixin",
+		"LoadedEntityModelsMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

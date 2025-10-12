@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "   ",
+    "LLL"
+  ],
+  "key": {
+    "L": "theendupdate:stripped_shadow_cryptomycota"
+  },
+  "result": {
+    "id": "theendupdate:shadow_shelf",
+    "count": 6
+  }
+}
+

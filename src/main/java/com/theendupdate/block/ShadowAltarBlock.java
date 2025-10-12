@@ -8,6 +8,7 @@ import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -34,6 +35,12 @@ public class ShadowAltarBlock extends BlockWithEntity {
 	@Override
 	public BlockRenderType getRenderType(BlockState state) {
 		return BlockRenderType.MODEL;
+	}
+
+	// Mapping-safe: omit @Override for cross-version compatibility
+	public PistonBehavior getPistonBehavior(BlockState state) {
+		// Block entities should be immovable to prevent corruption/duplication
+		return PistonBehavior.BLOCK;
 	}
 
 	@Nullable

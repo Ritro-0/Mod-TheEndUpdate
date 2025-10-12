@@ -17,10 +17,17 @@ import net.minecraft.block.WoodType;
 import net.minecraft.block.PlantBlock;
 import net.minecraft.block.TallPlantBlock;
 import net.minecraft.block.FlowerPotBlock;
+import net.minecraft.block.SignBlock;
+import net.minecraft.block.WallSignBlock;
+import net.minecraft.block.HangingSignBlock;
+import net.minecraft.block.WallHangingSignBlock;
+import net.minecraft.block.ShelfBlock;
 
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
+import net.minecraft.item.SignItem;
+import net.minecraft.item.HangingSignItem;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
@@ -28,6 +35,17 @@ import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.util.Identifier;
 
 public final class ModBlocks {
+    // Register custom WoodTypes and BlockSetTypes using Fabric API
+    public static final BlockSetType ETHEREAL_BLOCK_SET_TYPE = net.fabricmc.fabric.api.object.builder.v1.block.type.BlockSetTypeBuilder.copyOf(BlockSetType.OAK)
+        .register(Identifier.of(TemplateMod.MOD_ID, "ethereal"));
+    public static final WoodType ETHEREAL_WOOD_TYPE = net.fabricmc.fabric.api.object.builder.v1.block.type.WoodTypeBuilder.copyOf(WoodType.OAK)
+        .register(Identifier.of(TemplateMod.MOD_ID, "ethereal"), ETHEREAL_BLOCK_SET_TYPE);
+    
+    public static final BlockSetType SHADOW_BLOCK_SET_TYPE = net.fabricmc.fabric.api.object.builder.v1.block.type.BlockSetTypeBuilder.copyOf(BlockSetType.OAK)
+        .register(Identifier.of(TemplateMod.MOD_ID, "shadow"));
+    public static final WoodType SHADOW_WOOD_TYPE = net.fabricmc.fabric.api.object.builder.v1.block.type.WoodTypeBuilder.copyOf(WoodType.OAK)
+        .register(Identifier.of(TemplateMod.MOD_ID, "shadow"), SHADOW_BLOCK_SET_TYPE);
+    
     public static final Block END_MIRE = registerBlock(
         "end_mire",
         key -> new com.theendupdate.block.EndMireBlock(
@@ -187,7 +205,7 @@ public final class ModBlocks {
 
     public static final Block ETHEREAL_PLANKS = registerBlock(
         "ethereal_planks",
-        key -> new Block(
+        key -> new com.theendupdate.block.EtherealPlanksBlock(
             AbstractBlock.Settings
                 .copy(Blocks.OAK_PLANKS)
                 .sounds(BlockSoundGroup.WOOD)
@@ -216,7 +234,7 @@ public final class ModBlocks {
     public static final Block ETHEREAL_DOOR = registerBlock(
         "ethereal_door",
         key -> new DoorBlock(
-            BlockSetType.OAK,
+            ETHEREAL_BLOCK_SET_TYPE,
             AbstractBlock.Settings.copy(Blocks.OAK_DOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
         )
     );
@@ -224,7 +242,7 @@ public final class ModBlocks {
     public static final Block ETHEREAL_TRAPDOOR = registerBlock(
         "ethereal_trapdoor",
         key -> new TrapdoorBlock(
-            BlockSetType.OAK,
+            ETHEREAL_BLOCK_SET_TYPE,
             AbstractBlock.Settings.copy(Blocks.OAK_TRAPDOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
         )
     );
@@ -239,7 +257,7 @@ public final class ModBlocks {
     public static final Block ETHEREAL_FENCE_GATE = registerBlock(
         "ethereal_fence_gate",
         key -> new FenceGateBlock(
-            WoodType.OAK,
+            ETHEREAL_WOOD_TYPE,
             AbstractBlock.Settings.copy(Blocks.OAK_FENCE_GATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
@@ -247,11 +265,25 @@ public final class ModBlocks {
     public static final Block ETHEREAL_BUTTON = registerBlock(
         "ethereal_button",
         key -> new ButtonBlock(
-            BlockSetType.OAK,
+            ETHEREAL_BLOCK_SET_TYPE,
             30,
             AbstractBlock.Settings.copy(Blocks.OAK_BUTTON).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
+
+    public static final Block ETHEREAL_PRESSURE_PLATE = registerBlock(
+        "ethereal_pressure_plate",
+        key -> new PressurePlateBlock(
+            ETHEREAL_BLOCK_SET_TYPE,
+            AbstractBlock.Settings.copy(Blocks.OAK_PRESSURE_PLATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+        )
+    );
+
+    // Ethereal signs - must be declared before block entity registration
+    public static Block ETHEREAL_SIGN = null;
+    public static Block ETHEREAL_WALL_SIGN = null;
+    public static Block ETHEREAL_HANGING_SIGN = null;
+    public static Block ETHEREAL_WALL_HANGING_SIGN = null;
 
     // Ethereal Bulb - luminous button crafted from orb bulb, longer press, bright like soul lantern (~10)
     public static final Block ETHEREAL_BULB = registerBlock(
@@ -264,14 +296,6 @@ public final class ModBlocks {
                 .luminance(state -> 10)
                 .nonOpaque()
                 .registryKey(key)
-        )
-    );
-
-    public static final Block ETHEREAL_PRESSURE_PLATE = registerBlock(
-        "ethereal_pressure_plate",
-        key -> new PressurePlateBlock(
-            BlockSetType.OAK,
-            AbstractBlock.Settings.copy(Blocks.OAK_PRESSURE_PLATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
 
@@ -326,7 +350,7 @@ public final class ModBlocks {
 
     public static final Block SHADOW_PLANKS = registerBlock(
         "shadow_planks",
-        key -> new Block(
+        key -> new com.theendupdate.block.ShadowPlanksBlock(
             AbstractBlock.Settings
                 .copy(Blocks.OAK_PLANKS)
                 .sounds(BlockSoundGroup.WOOD)
@@ -353,7 +377,7 @@ public final class ModBlocks {
     public static final Block SHADOW_DOOR = registerBlock(
         "shadow_door",
         key -> new DoorBlock(
-            BlockSetType.OAK,
+            SHADOW_BLOCK_SET_TYPE,
             AbstractBlock.Settings.copy(Blocks.OAK_DOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
         )
     );
@@ -361,7 +385,7 @@ public final class ModBlocks {
     public static final Block SHADOW_TRAPDOOR = registerBlock(
         "shadow_trapdoor",
         key -> new TrapdoorBlock(
-            BlockSetType.OAK,
+            SHADOW_BLOCK_SET_TYPE,
             AbstractBlock.Settings.copy(Blocks.OAK_TRAPDOOR).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
         )
     );
@@ -376,7 +400,7 @@ public final class ModBlocks {
     public static final Block SHADOW_FENCE_GATE = registerBlock(
         "shadow_fence_gate",
         key -> new FenceGateBlock(
-            WoodType.OAK,
+            SHADOW_WOOD_TYPE,
             AbstractBlock.Settings.copy(Blocks.OAK_FENCE_GATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
@@ -384,7 +408,7 @@ public final class ModBlocks {
     public static final Block SHADOW_BUTTON = registerBlock(
         "shadow_button",
         key -> new ButtonBlock(
-            BlockSetType.OAK,
+            SHADOW_BLOCK_SET_TYPE,
             30,
             AbstractBlock.Settings.copy(Blocks.OAK_BUTTON).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
@@ -393,10 +417,16 @@ public final class ModBlocks {
     public static final Block SHADOW_PRESSURE_PLATE = registerBlock(
         "shadow_pressure_plate",
         key -> new PressurePlateBlock(
-            BlockSetType.OAK,
+            SHADOW_BLOCK_SET_TYPE,
             AbstractBlock.Settings.copy(Blocks.OAK_PRESSURE_PLATE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
+
+    // Shadow signs - must be declared before block entity registration
+    public static Block SHADOW_SIGN = null;
+    public static Block SHADOW_WALL_SIGN = null;
+    public static Block SHADOW_HANGING_SIGN = null;
+    public static Block SHADOW_WALL_HANGING_SIGN = null;
 
     // Shadow Claw sapling
     public static final Block SHADOW_CLAW = registerBlock(
@@ -489,7 +519,7 @@ public final class ModBlocks {
 
     public static final Block VOIDSTAR_BLOCK = registerBlock(
         "voidstar_block",
-        key -> new Block(
+        key -> new com.theendupdate.block.VoidstarBlock(
             AbstractBlock.Settings
                 .copy(Blocks.IRON_BLOCK)
                 .strength(50.0F, 6.0F) // Match Netherite hardness; keep iron-like blast resistance
@@ -499,7 +529,7 @@ public final class ModBlocks {
 
     public static final Block ASTRAL_REMNANT = registerBlock(
         "astral_remnant",
-        key -> new Block(
+        key -> new com.theendupdate.block.AstralRemnantBlock(
             AbstractBlock.Settings
                 .copy(Blocks.AMETHYST_BLOCK)
                 .strength(1.9F, 2.0F) // ~25% harder than amethyst, slightly more resistant
@@ -531,7 +561,7 @@ public final class ModBlocks {
     // Gravitite Ore: blast-proof like Netherite block; fireproof block item
     public static final Block GRAVITITE_ORE = registerBlockFireproofItem(
         "gravitite_ore",
-        key -> new Block(
+        key -> new com.theendupdate.block.GravititeOreBlock(
             AbstractBlock.Settings
                 .copy(Blocks.NETHERITE_BLOCK) // match netherite mining speed/requirements and blast resistance
                 .requiresTool()
@@ -553,6 +583,21 @@ public final class ModBlocks {
         )
     );
 
+    // Shelves - using vanilla ShelfBlock class for item display functionality
+    public static final Block ETHEREAL_SHELF = registerBlock(
+        "ethereal_shelf",
+        key -> new net.minecraft.block.ShelfBlock(
+            AbstractBlock.Settings.copy(Blocks.OAK_PLANKS).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
+        )
+    );
+
+    public static final Block SHADOW_SHELF = registerBlock(
+        "shadow_shelf",
+        key -> new net.minecraft.block.ShelfBlock(
+            AbstractBlock.Settings.copy(Blocks.OAK_PLANKS).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).nonOpaque().registryKey(key)
+        )
+    );
+
     private static Block registerBlock(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
@@ -569,25 +614,7 @@ public final class ModBlocks {
         item = isPlantLike ? new com.theendupdate.item.AdjacentPlantBlockItem(block, itemSettings)
                            : new BlockItem(block, itemSettings);
         Registry.register(Registries.ITEM, id, item);
-        // Add to a creative tab so it's visible in creative inventory
-        if (isPlantLike) {
-            ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
-        } else {
-            ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
-        }
-        // Special placements
-        Identifier blockId = Registries.BLOCK.getId(block);
-        if (blockId != null && TemplateMod.MOD_ID.equals(blockId.getNamespace())) {
-            String path = blockId.getPath();
-            if ("mold_crawl".equals(path)) {
-                // Ensure mold crawl appears under NATURAL (and not building)
-                ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
-            }
-            if ("mold_block".equals(path)) {
-                // Keep default BUILDING placement, and also add to NATURAL
-                ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
-            }
-        }
+        // NOTE: Creative tab population moved to registerModBlocks() for manual ordering
         return block;
     }
 
@@ -613,18 +640,180 @@ public final class ModBlocks {
         item = isPlantLike ? new com.theendupdate.item.AdjacentPlantBlockItem(block, itemSettings)
                            : new BlockItem(block, itemSettings);
         Registry.register(Registries.ITEM, id, item);
-        if (isPlantLike) {
-            ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
-        } else if (name.endsWith("_ore")) {
-            ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> entries.add(block));
-        } else {
-            ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> entries.add(block));
-        }
+        // NOTE: Creative tab population moved to registerModBlocks() for manual ordering
         return block;
+    }
+
+    // Register sign items (signs need special SignItem)
+    private static void registerSignItem(String name, Block standingSign, Block wallSign) {
+        Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
+        RegistryKey<Item> itemKey = RegistryKey.of(Registries.ITEM.getKey(), id);
+        Item.Settings itemSettings = new Item.Settings().registryKey(itemKey);
+        SignItem item = new SignItem(standingSign, wallSign, itemSettings);
+        Registry.register(Registries.ITEM, id, item);
+        // NOTE: Creative tab population moved to registerModBlocks() for manual ordering
+    }
+
+    // Register hanging sign items (hanging signs need special HangingSignItem)
+    private static void registerHangingSignItem(String name, Block hangingSign, Block wallHangingSign) {
+        Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
+        RegistryKey<Item> itemKey = RegistryKey.of(Registries.ITEM.getKey(), id);
+        Item.Settings itemSettings = new Item.Settings().registryKey(itemKey);
+        HangingSignItem item = new HangingSignItem(hangingSign, wallHangingSign, itemSettings);
+        Registry.register(Registries.ITEM, id, item);
+        // NOTE: Creative tab population moved to registerModBlocks() for manual ordering
     }
 
     public static void registerModBlocks() {
         // No-op, calling this ensures the class is loaded and static initializers run
+        
+        // Register sign blocks using VANILLA sign block classes - just like BOP does!
+        ETHEREAL_SIGN = registerBlockNoItem(
+            "ethereal_sign",
+            key -> new SignBlock(
+                ETHEREAL_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        
+        ETHEREAL_WALL_SIGN = registerBlockNoItem(
+            "ethereal_wall_sign",
+            key -> new WallSignBlock(
+                ETHEREAL_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_WALL_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        
+        ETHEREAL_HANGING_SIGN = registerBlockNoItem(
+            "ethereal_hanging_sign",
+            key -> new HangingSignBlock(
+                ETHEREAL_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_HANGING_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        net.minecraft.block.entity.BlockEntityType.HANGING_SIGN.addSupportedBlock(ETHEREAL_HANGING_SIGN);
+        
+        ETHEREAL_WALL_HANGING_SIGN = registerBlockNoItem(
+            "ethereal_wall_hanging_sign",
+            key -> new WallHangingSignBlock(
+                ETHEREAL_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_WALL_HANGING_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        net.minecraft.block.entity.BlockEntityType.HANGING_SIGN.addSupportedBlock(ETHEREAL_WALL_HANGING_SIGN);
+        
+        SHADOW_SIGN = registerBlockNoItem(
+            "shadow_sign",
+            key -> new SignBlock(
+                SHADOW_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        
+        SHADOW_WALL_SIGN = registerBlockNoItem(
+            "shadow_wall_sign",
+            key -> new WallSignBlock(
+                SHADOW_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_WALL_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        
+        SHADOW_HANGING_SIGN = registerBlockNoItem(
+            "shadow_hanging_sign",
+            key -> new HangingSignBlock(
+                SHADOW_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_HANGING_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        net.minecraft.block.entity.BlockEntityType.HANGING_SIGN.addSupportedBlock(SHADOW_HANGING_SIGN);
+        
+        SHADOW_WALL_HANGING_SIGN = registerBlockNoItem(
+            "shadow_wall_hanging_sign",
+            key -> new WallHangingSignBlock(
+                SHADOW_WOOD_TYPE,
+                AbstractBlock.Settings.copy(Blocks.OAK_WALL_HANGING_SIGN).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
+            )
+        );
+        net.minecraft.block.entity.BlockEntityType.HANGING_SIGN.addSupportedBlock(SHADOW_WALL_HANGING_SIGN);
+        
+        // Register sign items after block initialization
+        registerSignItem("ethereal_sign", ETHEREAL_SIGN, ETHEREAL_WALL_SIGN);
+        registerSignItem("shadow_sign", SHADOW_SIGN, SHADOW_WALL_SIGN);
+        registerHangingSignItem("ethereal_hanging_sign", ETHEREAL_HANGING_SIGN, ETHEREAL_WALL_HANGING_SIGN);
+        registerHangingSignItem("shadow_hanging_sign", SHADOW_HANGING_SIGN, SHADOW_WALL_HANGING_SIGN);
+        
+        // Manually populate vanilla creative tabs with proper ordering
+        populateVanillaCreativeTabs();
+    }
+    
+    private static void populateVanillaCreativeTabs() {
+        // BUILDING_BLOCKS tab - manually ordered
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> {
+            // Ethereal wood set
+            entries.add(ETHEREAL_SPOROCARP);
+            entries.add(ETHEREAL_PUSTULE);
+            entries.add(ETHEREAL_PLANKS);
+            entries.add(ETHEREAL_STAIRS);
+            entries.add(ETHEREAL_SLAB);
+            entries.add(ETHEREAL_DOOR);
+            entries.add(ETHEREAL_TRAPDOOR);
+            entries.add(ETHEREAL_FENCE);
+            entries.add(ETHEREAL_FENCE_GATE);
+            entries.add(ETHEREAL_BUTTON);
+            entries.add(ETHEREAL_PRESSURE_PLATE);
+            // Ethereal shelves, signs, hanging signs (after pressure plate, before bulb)
+            entries.add(ETHEREAL_SHELF);
+            entries.add(Registries.ITEM.get(Identifier.of(TemplateMod.MOD_ID, "ethereal_sign")));
+            entries.add(Registries.ITEM.get(Identifier.of(TemplateMod.MOD_ID, "ethereal_hanging_sign")));
+            entries.add(ETHEREAL_BULB);
+            
+            // Shadow wood set
+            entries.add(SHADOW_CRYPTOMYCOTA);
+            entries.add(SHADOW_UMBRACARP);
+            entries.add(STRIPPED_SHADOW_CRYPTOMYCOTA);
+            entries.add(STRIPPED_SHADOW_UMBRACARP);
+            entries.add(SHADOW_PLANKS);
+            entries.add(SHADOW_STAIRS);
+            entries.add(SHADOW_SLAB);
+            entries.add(SHADOW_DOOR);
+            entries.add(SHADOW_TRAPDOOR);
+            entries.add(SHADOW_FENCE);
+            entries.add(SHADOW_FENCE_GATE);
+            entries.add(SHADOW_BUTTON);
+            entries.add(SHADOW_PRESSURE_PLATE);
+            // Shadow shelves, signs, hanging signs (after pressure plate, before shadow claw)
+            entries.add(SHADOW_SHELF);
+            entries.add(Registries.ITEM.get(Identifier.of(TemplateMod.MOD_ID, "shadow_sign")));
+            entries.add(Registries.ITEM.get(Identifier.of(TemplateMod.MOD_ID, "shadow_hanging_sign")));
+            
+            // Other building blocks
+            entries.add(END_MIRE);
+            entries.add(END_MURK);
+            entries.add(MOLD_BLOCK);
+            entries.add(STELLARITH_CRYSTAL);
+            entries.add(VOIDSTAR_BLOCK);
+            entries.add(ASTRAL_REMNANT);
+            entries.add(SPECTRAL_BLOCK);
+            entries.add(QUANTUM_GATEWAY);
+            entries.add(SHADOW_ALTAR);
+        });
+        
+        // NATURAL tab - plants and natural items
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> {
+            entries.add(VOID_BLOOM);
+            entries.add(ENDER_CHRYSANTHEMUM);
+            entries.add(VOID_SAP);
+            entries.add(TENDRIL_SPROUT);
+            entries.add(TENDRIL_THREAD);
+            entries.add(TENDRIL_CORE);
+            entries.add(SHADOW_CLAW);
+            entries.add(MOLD_CRAWL);
+            entries.add(MOLD_SPORE);
+            entries.add(MOLD_SPORE_TUFT);
+            entries.add(MOLD_SPORE_SPROUT);
+            entries.add(MOLD_BLOCK); // Also appears in building blocks
+            entries.add(GRAVITITE_ORE);
+        });
     }
 }
 

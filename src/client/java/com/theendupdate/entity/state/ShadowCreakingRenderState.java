@@ -11,5 +11,6 @@ public class ShadowCreakingRenderState extends CreakingEntityRenderState {
     public boolean emergingActive;
     public boolean levitatingActive;
     public float levitatingMs;
+    public float lastLevitationAngle; // Per-entity rotation tracking to avoid shared state between entities
 }
 

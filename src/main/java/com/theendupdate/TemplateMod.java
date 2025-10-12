@@ -38,8 +38,9 @@ public class TemplateMod implements ModInitializer {
         
         // Initialize mod content
         com.theendupdate.registry.ModItemGroups.register();
-        com.theendupdate.registry.ModBlocks.registerModBlocks();
         com.theendupdate.registry.ModBlockEntities.register();
+        com.theendupdate.registry.ModBlocks.registerModBlocks(); // Register blocks first
+        com.theendupdate.registry.ModBlockEntities.registerSignBlockEntities(); // Register sign block entities AFTER sign blocks are created
         com.theendupdate.registry.ModScreenHandlers.register();
         com.theendupdate.registry.ModStructures.register();
         com.theendupdate.registry.ModItems.registerModItems();

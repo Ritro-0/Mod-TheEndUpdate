@@ -1,8 +1,8 @@
 {
   "variants": {
-    "axis=x": { "model": "theendupdate:block/shadow_umbracarp" },
+    "axis=x": { "model": "theendupdate:block/shadow_umbracarp", "x": 90, "y": 90 },
     "axis=y": { "model": "theendupdate:block/shadow_umbracarp" },
-    "axis=z": { "model": "theendupdate:block/shadow_umbracarp" }
+    "axis=z": { "model": "theendupdate:block/shadow_umbracarp", "x": 90 }
   }
 }
 

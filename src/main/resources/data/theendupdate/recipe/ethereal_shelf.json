@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "   ",
+    "LLL"
+  ],
+  "key": {
+    "L": "theendupdate:ethereal_sporocarp"
+  },
+  "result": {
+    "id": "theendupdate:ethereal_shelf",
+    "count": 6
+  }
+}
+

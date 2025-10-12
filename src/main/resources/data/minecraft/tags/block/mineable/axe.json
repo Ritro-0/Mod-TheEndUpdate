@@ -12,6 +12,11 @@
     "theendupdate:ethereal_trapdoor",
     "theendupdate:ethereal_button",
     "theendupdate:ethereal_pressure_plate",
+    "theendupdate:ethereal_sign",
+    "theendupdate:ethereal_wall_sign",
+    "theendupdate:ethereal_hanging_sign",
+    "theendupdate:ethereal_wall_hanging_sign",
+    "theendupdate:ethereal_shelf",
     "theendupdate:shadow_cryptomycota",
     "theendupdate:shadow_umbracarp",
     "theendupdate:stripped_shadow_cryptomycota",
@@ -25,6 +30,11 @@
     "theendupdate:shadow_trapdoor",
     "theendupdate:shadow_button",
     "theendupdate:shadow_pressure_plate",
+    "theendupdate:shadow_sign",
+    "theendupdate:shadow_wall_sign",
+    "theendupdate:shadow_hanging_sign",
+    "theendupdate:shadow_wall_hanging_sign",
+    "theendupdate:shadow_shelf",
     "theendupdate:shadow_altar"
   ]
 }

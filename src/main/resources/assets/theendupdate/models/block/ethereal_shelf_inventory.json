@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/template_shelf_inventory",
+  "textures": {
+    "all": "theendupdate:block/ethereal_shelf",
+    "particle": "theendupdate:block/ethereal_planks"
+  }
+}
+

@@ -5,6 +5,7 @@ import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
@@ -34,6 +35,12 @@ public class QuantumGatewayBlock extends BlockWithEntity {
     @Override
     public BlockRenderType getRenderType(BlockState state) {
         return BlockRenderType.MODEL;
+    }
+
+    // Mapping-safe: omit @Override for cross-version compatibility
+    public PistonBehavior getPistonBehavior(BlockState state) {
+        // Block entities with inventory should be immovable to prevent item loss
+        return PistonBehavior.BLOCK;
     }
 
     @Override

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "C C",
+    "LLL",
+    "LLL"
+  ],
+  "key": {
+    "C": "minecraft:chain",
+    "L": "theendupdate:shadow_cryptomycota"
+  },
+  "result": {
+    "id": "theendupdate:shadow_hanging_sign",
+    "count": 6
+  }
+}
+

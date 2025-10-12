@@ -22,6 +22,7 @@
 			"com.theendupdate.TemplateModClient"
 		]
 	},
+	"accessWidener": "theendupdate.accesswidener",
 	"mixins": [
 		"template-mod.mixins.json",
 		{

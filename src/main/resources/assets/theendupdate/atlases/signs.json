@@ -1,0 +1,21 @@
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "theendupdate:entity/signs/ethereal"
+    },
+    {
+      "type": "single",
+      "resource": "theendupdate:entity/signs/shadow"
+    },
+    {
+      "type": "single",
+      "resource": "theendupdate:entity/signs/hanging/ethereal"
+    },
+    {
+      "type": "single",
+      "resource": "theendupdate:entity/signs/hanging/shadow"
+    }
+  ]
+}
+

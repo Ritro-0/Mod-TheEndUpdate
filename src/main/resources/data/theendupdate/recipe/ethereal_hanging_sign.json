@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "C C",
+    "LLL",
+    "LLL"
+  ],
+  "key": {
+    "C": "minecraft:chain",
+    "L": "theendupdate:ethereal_sporocarp"
+  },
+  "result": {
+    "id": "theendupdate:ethereal_hanging_sign",
+    "count": 6
+  }
+}
+

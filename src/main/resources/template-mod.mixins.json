@@ -15,6 +15,7 @@
 		"SmithingForceTrimMixin",
 		"BrewingIngredientSlotMixin",
 		"BrewingStandBlockEntityTickMixin",
+		"ItemStackTrimMaterialsMixin",
 		"MobEntityAccessor",
 		"SpiderEntityAvoidChrysanthemumMixin",
 		"EndermanAvoidEtherealOrbMixin",
@@ -28,7 +29,9 @@
 		"FenceBlockConnectivityMixin",
 		"LeashKnotEntityMixin",
 		"CowEntityMixin",
-		"MooshroomEntityMixin"
+		"MooshroomEntityMixin",
+		"EtherealBulbSolidFaceMixin",
+		"WallBlockEtherealBulbMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -189,9 +189,6 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         // Ensure we never accumulate fall distance
         this.fallDistance = 0.0F;
         
-        // Handle bouncing when hitting surfaces
-        this.handleSurfaceBounce();
-
         // Server-side subtle particle hint when charged (moderate frequency)
         if (!this.getEntityWorld().isClient() && this.isCharged()) {
             // ~1 particle per second on average per orb
@@ -309,67 +306,11 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             double dz = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
             Vec3d target = new Vec3d(
                 pos.x + dx,
-                MathHelper.clamp(pos.y + dy, this.getEntityWorld().getBottomY() + 5, this.getEntityWorld().getBottomY() + 100),
+                pos.y + dy,
                 pos.z + dz
             );
             Vec3d safe = this.clampTargetToFreeSpace(pos, target);
             this.getMoveControl().moveTo(safe.x, safe.y, safe.z, 3.2);
-        }
-    }
-
-    /**
-     * Handles bouncing behavior when the orb collides with surfaces.
-     * This prevents orbs from getting stuck on the ground or bouncing ineffectively.
-     */
-    private void handleSurfaceBounce() {
-        if (this.getEntityWorld().isClient()) return;
-        
-        Vec3d velocity = this.getVelocity();
-        boolean hasCollision = false;
-        Vec3d newVelocity = velocity;
-        
-        // Check for ground collision
-        if (this.isOnGround() || this.verticalCollision) {
-            // Bounce upward with some energy retention
-            if (velocity.y <= 0.05) {
-                double bounceStrength = 0.25 + this.getRandom().nextDouble() * 0.15;
-                newVelocity = new Vec3d(
-                    velocity.x * 0.7,  // Dampen horizontal movement
-                    bounceStrength,     // Bounce upward
-                    velocity.z * 0.7
-                );
-                hasCollision = true;
-            }
-        }
-        
-        // Check for horizontal collisions (walls)
-        if (this.horizontalCollision) {
-            // Reverse horizontal velocity and add slight upward component
-            newVelocity = new Vec3d(
-                -velocity.x * 0.5 + (this.getRandom().nextDouble() - 0.5) * 0.1,
-                Math.max(velocity.y, 0.0) + 0.15,  // Add upward boost
-                -velocity.z * 0.5 + (this.getRandom().nextDouble() - 0.5) * 0.1
-            );
-            hasCollision = true;
-        }
-        
-        // Apply the bounce velocity if there was a collision
-        if (hasCollision) {
-            this.setVelocity(newVelocity);
-            this.velocityModified = true;
-        }
-        
-        // Prevent sinking by adding buoyancy when moving slowly near the ground
-        if (!this.isPanicking() && !this.isRotatingForSpawn()) {
-            double groundDistance = this.getY() - this.getEntityWorld().getBottomY();
-            BlockPos groundPos = this.getBlockPos().down();
-            boolean nearGround = !this.getEntityWorld().getBlockState(groundPos).isAir() && groundDistance < 3.0;
-            
-            if (nearGround && velocity.y < 0.05) {
-                // Add gentle upward float to prevent ground-hugging
-                this.addVelocity(0, 0.08, 0);
-                this.velocityModified = true;
-            }
         }
     }
 
@@ -751,6 +692,12 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         private static final int SCAN_CHUNKS = 6;
         private static final int REPATH_TICKS = 10;
         private static final int HOME_MAX_DISTANCE = 128;
+		
+		// Orbit radius progression - from default down to minimum
+		private static final double RADIUS_DEFAULT = 3.5;  // Normal comfortable orbit
+		private static final double RADIUS_MEDIUM = 2.5;   // Tighter when default blocked
+		private static final double RADIUS_SMALL = 2.0;    // Tighter
+		private static final double RADIUS_MINIMUM = 1.5;  // Surrounding 8 blocks (one block away from home)
 
         private final EtherealOrbEntity orb;
         private BlockPos homeCrystalPos;
@@ -759,13 +706,27 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         private Vec3d lastPosition;
         private int stuckCounter;
         private int repathCooldown;
-		// When horizontal circling is obstructed, allow a vertical orbit mode
+		
+		// Orbit mode: false = horizontal, true = vertical
 		private boolean verticalOrbitMode;
-		private boolean verticalOrbitLock;
-		private int orbitModeCooldown;
+		// Current orbit radius index (0=default, 1=medium, 2=small, 3=minimum)
+		private int currentRadiusLevel;
+		// Track failed radiuses for current mode
+		private boolean[] blockedRadiuses;
+		// Obstruction counter for current radius
 		private int obstructionCounter;
+		// Success counter to track if orbit is actually working
+		private int successCounter;
+		// Cooldown before trying to switch modes
+		private int modeSwitchCooldown;
+		// Cooldown before changing radius to prevent rapid cycling
+		private int radiusChangeCooldown;
 		// 0 = orbit in X-Y plane (vary x,y; z near home), 1 = orbit in Y-Z plane (vary y,z; x near home)
 		private int verticalPlaneAxis;
+		// Track consecutive mode switches to detect total blockage
+		private int modeSwitchCount;
+		// Bounce recovery state - disables navigation temporarily after radius change
+		private int bounceRecoveryTicks;
 
         MaintainHomeGoal(EtherealOrbEntity orb) {
             this.orb = orb;
@@ -788,27 +749,56 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             this.stuckCounter = 0;
             this.repathCooldown = 0;
 			this.verticalOrbitMode = false;
-			this.verticalOrbitLock = false;
+			this.currentRadiusLevel = 0;
+			this.blockedRadiuses = new boolean[4];
 			this.obstructionCounter = 0;
-			this.orbitModeCooldown = 0;
+			this.successCounter = 0;
+			this.modeSwitchCooldown = 0;
+			this.radiusChangeCooldown = 0;
 			this.verticalPlaneAxis = orb.getRandom().nextBoolean() ? 0 : 1;
+			this.modeSwitchCount = 0;
+			this.bounceRecoveryTicks = 0;
         }
 
         @Override
         public void tick() {
             if (repathCooldown > 0) repathCooldown--;
-			if (orbitModeCooldown > 0) orbitModeCooldown--;
+			if (modeSwitchCooldown > 0) modeSwitchCooldown--;
+			if (radiusChangeCooldown > 0) radiusChangeCooldown--;
+			if (bounceRecoveryTicks > 0) bounceRecoveryTicks--;
+			
+			// During bounce recovery, skip waypoint recalculation and obstruction detection
+			// but still navigate to the existing waypoint
+			if (bounceRecoveryTicks > 0) {
+				// Continue navigating to the waypoint
+				Vec3d cur = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
+				Vec3d desired = intermediateWaypoint != null ? intermediateWaypoint : Vec3d.ofCenter(homeCrystalPos);
+				double d2 = cur.squaredDistanceTo(desired);
+				double speed = d2 > 64 ? 2.8 : 2.0;
+				Vec3d safeTarget = orb.clampTargetToFreeSpace(cur, desired);
+				orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
+				return; // Skip normal orbit logic during recovery
+			}
 
 			// Validate or acquire home
-            if (homeCrystalPos == null || !isTargetBlock(homeCrystalPos)) {
+            if (homeCrystalPos == null) {
                 BlockPos found = findNearbyCrystal();
                 if (found == null) found = scanChunksForCrystal(SCAN_CHUNKS);
-                homeCrystalPos = found; // may be null
+                homeCrystalPos = found;
+            } else if (!isTargetBlock(homeCrystalPos)) {
+				BlockPos found = findNearbyCrystal();
+                if (found == null) found = scanChunksForCrystal(SCAN_CHUNKS);
+                homeCrystalPos = found;
             }
 			// Configure orbit mode when home changes
-			if (homeCrystalPos != null && (lastHomeCrystalPos == null || !homeCrystalPos.equals(lastHomeCrystalPos))) {
-				configureOrbitModeForHome(homeCrystalPos);
-				lastHomeCrystalPos = homeCrystalPos.toImmutable();
+			if (homeCrystalPos != null) {
+				if (lastHomeCrystalPos == null || 
+					lastHomeCrystalPos.getX() != homeCrystalPos.getX() || 
+					lastHomeCrystalPos.getY() != homeCrystalPos.getY() || 
+					lastHomeCrystalPos.getZ() != homeCrystalPos.getZ()) {
+					configureOrbitModeForHome(homeCrystalPos);
+					lastHomeCrystalPos = homeCrystalPos.toImmutable();
+				}
 			}
 
             Vec3d desired;
@@ -825,54 +815,146 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                     Vec3d target = home.add(dir.multiply(-Math.max(1.5, 0.5)));
                     desired = target;
                 } else {
-					// Idle around home: choose an orbit waypoint with clearance preference
-					if (repathCooldown == 0 || intermediateWaypoint == null || new Vec3d(orb.getX(), orb.getY(), orb.getZ()).squaredDistanceTo(intermediateWaypoint) < 1.0) {
-						double angle = (orb.age % 360) * 0.0174533;
-						// Keep same radius regardless of orbit mode
-						double radius = 3.0 + (orb.getRandom().nextDouble() * 2.0);
+					// Idle around home: choose an orbit waypoint with progressive radius fallback
+					// Skip waypoint recalculation during bounce recovery
+					if (bounceRecoveryTicks == 0 && (repathCooldown == 0 || intermediateWaypoint == null || new Vec3d(orb.getX(), orb.getY(), orb.getZ()).squaredDistanceTo(intermediateWaypoint) < 1.0)) {
 						Vec3d curPos = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
-						Vec3d candidate;
+						Vec3d candidate = null;
+						
+						// Get current radius based on level
+						double radius = getRadiusForLevel(currentRadiusLevel);
+						
+						// Calculate angle based on current position relative to home
+						// This ensures the orb picks the "next" point along the circle from where it currently is
+						Vec3d toOrb = curPos.subtract(home);
+						double currentAngle;
 						if (verticalOrbitMode) {
-							candidate = computeVerticalOrbit(home, radius, angle, verticalPlaneAxis);
-							// If chosen axis is not clear, try the other vertical axis before falling back
-							if (!isSegmentClear(curPos, candidate)) {
-								int other = verticalPlaneAxis == 0 ? 1 : 0;
-								Vec3d alt = computeVerticalOrbit(home, radius, angle, other);
-								if (isSegmentClear(curPos, alt)) {
-									verticalPlaneAxis = other;
-									candidate = alt;
-								} else {
-									// If both vertical planes are blocked, stay in place radius but nudge forward slightly
-									candidate = computeHorizontalOrbit(home, Math.max(2.5, radius - 1.0), angle);
-								}
-						} else {
-							// Once vertical is enabled and locked, do not revert to horizontal circling
-							// even if horizontal appears clear now.
-							if (verticalOrbitLock) {
-								// no-op; keep candidate as current vertical orbit
+							if (verticalPlaneAxis == 0) {
+								// X-Y plane: use atan2(y, x)
+								currentAngle = Math.atan2(toOrb.y, toOrb.x);
+							} else {
+								// Y-Z plane: use atan2(y, z)
+								currentAngle = Math.atan2(toOrb.y, toOrb.z);
 							}
-						}
 						} else {
-							candidate = computeHorizontalOrbit(home, radius, angle);
-							// If horizontal path is repeatedly obstructed, prefer switching to vertical when possible
+							// Horizontal: use atan2(z, x)
+							currentAngle = Math.atan2(toOrb.z, toOrb.x);
+						}
+						// Move forward along the circle (add ~30 degrees)
+						double angle = currentAngle + 0.5;
+						
+						// Try to compute orbit path for current mode and radius
+						// Use square pattern for minimum radius (surrounding 8 blocks)
+						if (currentRadiusLevel == 3) {
+							// Minimum radius: use square orbit around home
+							candidate = computeSquareOrbit(home, curPos);
+						} else if (verticalOrbitMode) {
+							candidate = computeVerticalOrbit(home, radius, angle, verticalPlaneAxis);
+							// Try alternate vertical axis if first is blocked
 							if (!isSegmentClear(curPos, candidate)) {
-								obstructionCounter++;
-								if (obstructionCounter >= 3 && orbitModeCooldown == 0) {
-									Vec3d v0 = computeVerticalOrbit(home, radius, angle, 0);
-									Vec3d v1 = computeVerticalOrbit(home, radius, angle, 1);
-									if (isSegmentClear(curPos, v0) || isSegmentClear(curPos, v1)) {
-										verticalOrbitMode = true;
-										verticalPlaneAxis = isSegmentClear(curPos, v0) ? 0 : 1;
-										verticalOrbitLock = true; // stick with vertical once switched due to obstruction
-										orbitModeCooldown = 100;
-										candidate = verticalPlaneAxis == 0 ? v0 : v1;
-										obstructionCounter = 0;
+								int otherAxis = verticalPlaneAxis == 0 ? 1 : 0;
+								Vec3d alt = computeVerticalOrbit(home, radius, angle, otherAxis);
+								if (isSegmentClear(curPos, alt)) {
+									verticalPlaneAxis = otherAxis;
+									candidate = alt;
+								}
+							}
+								} else {
+							candidate = computeHorizontalOrbit(home, radius, angle);
+						}
+						
+						// Check if path is clear (ignoring home block itself)
+						boolean pathClear = isSegmentClearExcludingHome(curPos, candidate, homeCrystalPos);
+						
+						if (!pathClear) {
+							// Path is obstructed by blocks other than home
+							obstructionCounter++;
+							successCounter = 0;
+							
+							// Require sustained obstruction (10 consecutive failures) AND cooldown expired before changing radius
+							if (obstructionCounter >= 10 && radiusChangeCooldown == 0) {
+								blockedRadiuses[currentRadiusLevel] = true;
+								obstructionCounter = 0;
+								
+								// Try next smaller radius
+								if (tryNextRadius()) {
+									// Successfully moved to next radius level
+									radius = getRadiusForLevel(currentRadiusLevel);
+									
+									// Apply bounce when switching radius
+									Vec3d toHome = home.subtract(curPos).normalize();
+									
+									if (verticalOrbitMode) {
+										// Vertical orbit: apply horizontal bounce to get around obstacle
+										Vec3d lateral = new Vec3d(-toHome.z, 0, toHome.x).normalize();
+										if (orb.getRandom().nextBoolean()) lateral = lateral.multiply(-1.0);
+										Vec3d bounceVelocity = new Vec3d(
+											lateral.x * 0.6,
+											0.0,
+											lateral.z * 0.6
+										);
+										orb.setVelocity(bounceVelocity);
+										orb.velocityModified = true;
+						} else {
+										// Horizontal orbit: apply bounce perpendicular to home with upward component
+										Vec3d lateral = new Vec3d(-toHome.z, 0, toHome.x).normalize();
+										if (orb.getRandom().nextBoolean()) lateral = lateral.multiply(-1.0);
+										Vec3d bounceVelocity = new Vec3d(
+											lateral.x * 0.6,
+											0.3, // Add upward component
+											lateral.z * 0.6
+										);
+										orb.setVelocity(bounceVelocity);
+										orb.velocityModified = true;
+									}
+									
+									// Stop current navigation
+									orb.getNavigation().stop();
+									
+									// Skip ahead to next waypoint on the new orbit (well past the blocked area)
+									Vec3d offsetFromHome = curPos.subtract(home);
+									double orbAngle;
+									if (verticalOrbitMode) {
+										orbAngle = verticalPlaneAxis == 0 ? Math.atan2(offsetFromHome.y, offsetFromHome.x) : Math.atan2(offsetFromHome.y, offsetFromHome.z);
+									} else {
+										orbAngle = Math.atan2(offsetFromHome.z, offsetFromHome.x);
+									}
+									double skipAngle = orbAngle + Math.PI; // Skip ahead 180 degrees - opposite side of orbit
+									
+									if (currentRadiusLevel == 3) {
+										intermediateWaypoint = computeSquareOrbit(home, curPos);
+									} else if (verticalOrbitMode) {
+										intermediateWaypoint = computeVerticalOrbit(home, radius, skipAngle, verticalPlaneAxis);
+									} else {
+										intermediateWaypoint = computeHorizontalOrbit(home, radius, skipAngle);
+									}
+									
+									// Enter bounce recovery state (3 seconds)
+									bounceRecoveryTicks = 60;
+									radiusChangeCooldown = 40;
+								} else {
+									// All radiuses blocked in current mode - switch modes
+									if (modeSwitchCooldown == 0) {
+										switchOrbitMode();
+										radius = getRadiusForLevel(currentRadiusLevel);
+										if (verticalOrbitMode) {
+											candidate = computeVerticalOrbit(home, radius, angle, verticalPlaneAxis);
+										} else {
+											candidate = computeHorizontalOrbit(home, radius, angle);
+										}
+									}
 									}
 								}
 							} else {
-								obstructionCounter = 0;
+							// Path is clear - increment success counter
+							successCounter++;
+							// Reset obstruction counter after sustained success
+							if (successCounter >= 5) {
+								obstructionCounter = Math.max(0, obstructionCounter - 1);
+								successCounter = 0;
 							}
 						}
+						
 						intermediateWaypoint = candidate;
 						repathCooldown = REPATH_TICKS;
 					}
@@ -903,7 +985,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                     double dz = (orb.getRandom().nextDouble() * 2.0 - 1.0) * range;
                     intermediateWaypoint = new Vec3d(
                         pos.x + dx,
-                        MathHelper.clamp(pos.y + dy, orb.getEntityWorld().getBottomY() + 5, orb.getEntityWorld().getBottomY() + 120),
+                        pos.y + dy,
                         pos.z + dz
                     );
                     repathCooldown = REPATH_TICKS;
@@ -911,63 +993,15 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 desired = intermediateWaypoint;
             }
 
-            // Movement + avoidance
+            // Movement
             Vec3d cur = new Vec3d(orb.getX(), orb.getY(), orb.getZ());
             double d2 = cur.squaredDistanceTo(desired);
             double speed = d2 > 64 ? 2.8 : 2.0;
 
-            HitResult hit = orb.getEntityWorld().raycast(new RaycastContext(
-                cur, desired, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, orb));
-            if (hit.getType() == HitResult.Type.BLOCK) {
-                Vec3d dir = desired.subtract(cur);
-                Vec3d horiz = new Vec3d(dir.x, 0.0, dir.z);
-                Vec3d lateral;
-                if (horiz.lengthSquared() < 1.0E-4) {
-                    lateral = new Vec3d(1.0, 0.0, 0.0);
-                } else {
-                    lateral = new Vec3d(-horiz.z, 0.0, horiz.x).normalize();
-                }
-                if (orb.getRandom().nextBoolean()) lateral = lateral.multiply(-1.0);
-                Vec3d forward = horiz.lengthSquared() > 1.0E-4 ? horiz.normalize().multiply(1.0) : Vec3d.ZERO;
-                desired = cur.add(forward).add(lateral.multiply(2.0));
-                // Avoid climbing into ceilings when rerouting
-                desired = new Vec3d(desired.x, Math.min(desired.y, cur.y + 0.5), desired.z);
-            }
-
-			// Stuck detection
-            if (lastPosition != null) {
-                double move = cur.squaredDistanceTo(lastPosition);
-                if (move < 0.01) {
-                    stuckCounter++;
-					if (stuckCounter > 10) {
-						// If near home and horizontal circling is failing, try enabling vertical orbit
-						if (homeCrystalPos != null && !verticalOrbitMode && orbitModeCooldown == 0) {
-							Vec3d home = Vec3d.ofCenter(homeCrystalPos);
-							double angle = (orb.age % 360) * 0.0174533;
-							double radius = 3.5;
-							Vec3d v0 = computeVerticalOrbit(home, radius, angle, 0);
-							Vec3d v1 = computeVerticalOrbit(home, radius, angle, 1);
-							if (isSegmentClear(cur, v0) || isSegmentClear(cur, v1)) {
-								verticalOrbitMode = true;
-								verticalPlaneAxis = isSegmentClear(cur, v0) ? 0 : 1;
-								verticalOrbitLock = true;
-								orbitModeCooldown = 120;
-								intermediateWaypoint = verticalPlaneAxis == 0 ? v0 : v1;
-							} else {
-								// As a fallback, climb a bit to escape local obstruction
-								desired = new Vec3d(desired.x, Math.max(desired.y + 4.0, cur.y + 6.0), desired.z);
-							}
-						} else {
-							// Default behavior: climb upwards to free space
-							desired = new Vec3d(desired.x, Math.max(desired.y + 4.0, cur.y + 6.0), desired.z);
-						}
-						stuckCounter = 0;
-					}
-                } else {
-                    stuckCounter = 0;
-                }
-            }
-            lastPosition = cur;
+			// Track position for stuck detection (only used during recovery)
+			if (bounceRecoveryTicks == 0) {
+				lastPosition = cur;
+			}
 
             Vec3d safeTarget = orb.clampTargetToFreeSpace(cur, desired);
             orb.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, speed);
@@ -975,70 +1009,129 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         }
 
 		private void configureOrbitModeForHome(BlockPos homePos) {
-			Direction.Axis axis = determineDominantSpikeAxis(homePos);
-			// If the crystal/spike is horizontal (X or Z), default to vertical circling and lock it
-			if (axis == Direction.Axis.X) {
-				verticalOrbitMode = true;
-				verticalOrbitLock = true;
-				verticalPlaneAxis = 1; // Y-Z plane to wrap around X-oriented spike
-			} else if (axis == Direction.Axis.Z) {
-				verticalOrbitMode = true;
-				verticalOrbitLock = true;
-				verticalPlaneAxis = 0; // X-Y plane to wrap around Z-oriented spike
-			} else {
-				// Likely vertical spike; allow normal behavior (start horizontal)
-				verticalOrbitMode = false;
-				verticalOrbitLock = false;
+			// Always start with horizontal orbit mode
+			// Vertical will only be used if horizontal gets completely blocked
+			verticalOrbitMode = false;
+			verticalPlaneAxis = orb.getRandom().nextBoolean() ? 0 : 1;
+			
+			// Reset radius tracking when home changes
+			currentRadiusLevel = 0;
+			blockedRadiuses = new boolean[4];
+			obstructionCounter = 0;
+			successCounter = 0;
+			radiusChangeCooldown = 0;
+			bounceRecoveryTicks = 0;
+		}
+		
+		/**
+		 * Get the orbit radius for a given level (0=default, 1=medium, 2=small, 3=minimum)
+		 * Progressively tries smaller radiuses when obstructed.
+		 */
+		private double getRadiusForLevel(int level) {
+			switch(level) {
+				case 0: return RADIUS_DEFAULT;
+				case 1: return RADIUS_MEDIUM;
+				case 2: return RADIUS_SMALL;
+				case 3: return RADIUS_MINIMUM;
+				default: return RADIUS_MINIMUM;
 			}
 		}
-
-		private Direction.Axis determineDominantSpikeAxis(BlockPos center) {
-			int lenX = countLine(center, Direction.EAST) + countLine(center, Direction.WEST);
-			int lenY = countLine(center, Direction.UP) + countLine(center, Direction.DOWN);
-			int lenZ = countLine(center, Direction.SOUTH) + countLine(center, Direction.NORTH);
-			if (lenX >= lenY && lenX >= lenZ) return Direction.Axis.X;
-			if (lenZ >= lenY && lenZ >= lenX) return Direction.Axis.Z;
-			return Direction.Axis.Y;
+		
+		/**
+		 * Try to move to the next smaller radius level.
+		 * Returns true if a smaller radius is available, false if all radiuses have been tried.
+		 */
+		private boolean tryNextRadius() {
+			// Look for next available (non-blocked) radius
+			for (int i = currentRadiusLevel + 1; i < 4; i++) {
+				if (!blockedRadiuses[i]) {
+					currentRadiusLevel = i;
+					obstructionCounter = 0;
+					successCounter = 0;
+					return true;
+				}
+			}
+			// All radiuses blocked or tried
+			return false;
+		}
+		
+		/**
+		 * Switch between horizontal and vertical orbit modes.
+		 * Resets blocked radius memory for the new mode and always starts at default radius.
+		 */
+		private void switchOrbitMode() {
+			// Toggle mode
+			verticalOrbitMode = !verticalOrbitMode;
+			
+			// Always reset to default radius (Level 0) when switching modes
+			currentRadiusLevel = 0;
+			blockedRadiuses = new boolean[4];
+			obstructionCounter = 0;
+			successCounter = 0;
+			bounceRecoveryTicks = 0;
+			
+			// Set cooldown to prevent rapid mode switching
+			modeSwitchCooldown = 100; // 5 seconds
+			
+			// Track mode switches
+			modeSwitchCount++;
 		}
 
-		private int countLine(BlockPos origin, Direction dir) {
-			int max = 6; // small local scan
-			int count = 0;
-			BlockPos.Mutable p = origin.mutableCopy();
-			for (int i = 1; i <= max; i++) {
-				p.move(dir);
-				if (isTargetBlock(p)) count++;
-				else break;
+		private Vec3d computeSquareOrbit(Vec3d home, Vec3d currentPos) {
+			// Create a square orbit around the home block (surrounding 8 blocks)
+			// Positions: directly adjacent blocks in X/Z, keeping Y at home level
+			double dx = currentPos.x - home.x;
+			double dz = currentPos.z - home.z;
+			
+			// Define the 8 positions around home in clockwise order
+			// Each position is 1.0 block from home center (tighter to avoid corner clipping)
+			Vec3d[] squarePositions = {
+				new Vec3d(home.x + 1.0, home.y, home.z),      // East
+				new Vec3d(home.x + 1.0, home.y, home.z + 1.0), // Southeast
+				new Vec3d(home.x, home.y, home.z + 1.0),       // South
+				new Vec3d(home.x - 1.0, home.y, home.z + 1.0), // Southwest
+				new Vec3d(home.x - 1.0, home.y, home.z),       // West
+				new Vec3d(home.x - 1.0, home.y, home.z - 1.0), // Northwest
+				new Vec3d(home.x, home.y, home.z - 1.0),       // North
+				new Vec3d(home.x + 1.0, home.y, home.z - 1.0)  // Northeast
+			};
+			
+			// Find which corner we're closest to
+			int closestIndex = 0;
+			double closestDist = currentPos.squaredDistanceTo(squarePositions[0]);
+			for (int i = 1; i < squarePositions.length; i++) {
+				double dist = currentPos.squaredDistanceTo(squarePositions[i]);
+				if (dist < closestDist) {
+					closestDist = dist;
+					closestIndex = i;
+				}
 			}
-			return count;
+			
+			// Move to the next corner in sequence (clockwise)
+			int nextIndex = (closestIndex + 1) % squarePositions.length;
+			return squarePositions[nextIndex];
 		}
 
 		private Vec3d computeHorizontalOrbit(Vec3d home, double radius, double angle) {
 			double x = home.x + Math.cos(angle) * radius;
-			double y = clampY(home.y + (orb.getRandom().nextDouble() * 1.5 - 0.75));
+			double y = home.y; // Keep at home height for horizontal orbit
 			double z = home.z + Math.sin(angle) * radius;
 			return new Vec3d(x, y, z);
 		}
 
 		private Vec3d computeVerticalOrbit(Vec3d home, double radius, double angle, int axis) {
-			// axis 0: X-Y plane (vary x,y; z ≈ constant), axis 1: Y-Z plane (vary y,z; x ≈ constant)
+		// axis 0: X-Y plane (vary x,y; z = constant), axis 1: Y-Z plane (vary y,z; x = constant)
 			if (axis == 0) {
 				double x = home.x + Math.cos(angle) * radius;
-				double y = clampY(home.y + Math.sin(angle) * radius);
-				double z = home.z + (orb.getRandom().nextDouble() * 1.5 - 0.75);
+			double y = home.y + Math.sin(angle) * radius;
+			double z = home.z; // Keep Z constant for X-Y plane orbit
 				return new Vec3d(x, y, z);
 			} else {
-				double x = home.x + (orb.getRandom().nextDouble() * 1.5 - 0.75);
-				double y = clampY(home.y + Math.sin(angle) * radius);
+			double x = home.x; // Keep X constant for Y-Z plane orbit
+			double y = home.y + Math.sin(angle) * radius;
 				double z = home.z + Math.cos(angle) * radius;
 				return new Vec3d(x, y, z);
 			}
-		}
-
-		private double clampY(double y) {
-			int bottom = orb.getEntityWorld().getBottomY() + 5;
-			int top = orb.getEntityWorld().getBottomY() + 100;
-			return MathHelper.clamp(y, bottom, top);
 		}
 
 		private boolean isSegmentClear(Vec3d from, Vec3d to) {
@@ -1054,6 +1147,44 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 				Vec3d delta = step.subtract(new Vec3d(orb.getX(), orb.getY(), orb.getZ()));
 				Box test = orb.getBoundingBox().offset(delta);
 				if (!orb.getEntityWorld().isSpaceEmpty(orb, test)) return false;
+			}
+			return true;
+		}
+		
+		private boolean isSegmentClearExcludingHome(Vec3d from, Vec3d to, BlockPos homePos) {
+			// Check path clearance but ignore collisions with the home crystal block
+			// Step with the entity's bounding box to ensure there is enough clearance to move
+			final int steps = 8;
+			for (int i = 1; i <= steps; i++) {
+				double t = i / (double) steps;
+				Vec3d step = from.lerp(to, t);
+				Vec3d delta = step.subtract(new Vec3d(orb.getX(), orb.getY(), orb.getZ()));
+				Box test = orb.getBoundingBox().offset(delta);
+				
+				// Check if this box collides with any blocks
+				int minX = MathHelper.floor(test.minX);
+				int minY = MathHelper.floor(test.minY);
+				int minZ = MathHelper.floor(test.minZ);
+				int maxX = MathHelper.floor(test.maxX);
+				int maxY = MathHelper.floor(test.maxY);
+				int maxZ = MathHelper.floor(test.maxZ);
+				
+				BlockPos.Mutable mutable = new BlockPos.Mutable();
+				for (int x = minX; x <= maxX; x++) {
+					for (int y = minY; y <= maxY; y++) {
+						for (int z = minZ; z <= maxZ; z++) {
+							mutable.set(x, y, z);
+							// Skip the home block itself
+							if (mutable.equals(homePos)) continue;
+							
+							// Check if this block would collide
+							var state = orb.getEntityWorld().getBlockState(mutable);
+							if (!state.isAir() && !state.getCollisionShape(orb.getEntityWorld(), mutable).isEmpty()) {
+								return false; // Obstruction found (not home block)
+							}
+						}
+					}
+				}
 			}
 			return true;
 		}
@@ -1086,11 +1217,13 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 int minZ = chunk.getPos().getStartZ();
                 int maxX = minX + 15;
                 int maxZ = minZ + 15;
+                // Use dimension's actual build height limits (Overworld: -64 to 320, Nether: 0 to 256, End: 0 to 256)
                 int bottomY = orb.getEntityWorld().getBottomY();
-                int topY = bottomY + 128;
+                int topY = bottomY + orb.getEntityWorld().getHeight();
+                // Scan every Y level (not y+=2) to ensure we don't miss crystals at odd coordinates
                 for (int x = minX; x <= maxX; x += 2) {
                     for (int z = minZ; z <= maxZ; z += 2) {
-                        for (int y = bottomY; y < topY; y += 2) {
+                        for (int y = bottomY; y < topY; y++) {
                             BlockPos p = new BlockPos(x, y, z);
                             if (isTargetBlock(p)) return p;
                         }

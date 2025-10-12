@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.StateManager;
 import net.minecraft.component.DataComponentTypes;
@@ -27,6 +28,12 @@ public class StellarithCrystalBlock extends Block {
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
         builder.add(NATURAL, ORBS_SPAWNED);
+    }
+
+    // Mapping-safe: omit @Override for cross-version compatibility
+    public PistonBehavior getPistonBehavior(BlockState state) {
+        // Explicitly set to NORMAL for consistent push/pull behavior
+        return PistonBehavior.NORMAL;
     }
 
     @Override

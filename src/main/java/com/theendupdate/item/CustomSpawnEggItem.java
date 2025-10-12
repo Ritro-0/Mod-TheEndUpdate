@@ -34,8 +34,6 @@ public class CustomSpawnEggItem extends Item {
         Direction direction = context.getSide();
         BlockPos spawnPos = blockPos.offset(direction);
         
-        TemplateMod.LOGGER.info("Attempting to spawn entity from spawn egg at {}", spawnPos);
-        
         Entity entity = this.entityType.create(serverWorld, 
             (e) -> {
                 if (e != null && itemStack.contains(net.minecraft.component.DataComponentTypes.CUSTOM_NAME)) {

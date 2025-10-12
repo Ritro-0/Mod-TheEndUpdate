@@ -17,6 +17,10 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.render.BlockRenderLayer; // This was the key!
 import net.minecraft.client.render.entity.model.EntityModelLayer;
+import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
+import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.HangingSignBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.ShelfBlockEntityRenderer;
 import net.minecraft.util.Identifier;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
 // predicate registration not needed since models use built-in trim_type predicate
@@ -38,9 +42,6 @@ public class TemplateModClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        com.theendupdate.TemplateMod.LOGGER.info("[DEBUG] TemplateModClient onInitializeClient starting");
-        
-        
         // Register transparent blocks
         BlockRenderLayerMap.putBlock(ModBlocks.VOID_BLOOM, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.ENDER_CHRYSANTHEMUM, BlockRenderLayer.CUTOUT);
@@ -71,6 +72,9 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.QUANTUM_GATEWAY, BlockRenderLayer.TRANSLUCENT);
         // Shadow altar uses cutout layer for spawner-like interior visibility
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_ALTAR, BlockRenderLayer.CUTOUT);
+        // Shelves need cutout for proper rendering
+        BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_SHELF, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_SHELF, BlockRenderLayer.CUTOUT);
         
         // TODO: Quantum Gateway wavy beacon beam is currently disabled for 1.21.10
         // Waiting for complete yarn mappings and stable Fabric API for the new render state system
@@ -87,7 +91,11 @@ public class TemplateModClient implements ClientModInitializer {
         // Register custom screen for Quantum Gateway
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
 
-
+        // Hanging signs use vanilla renderer and block entity type - no custom registration needed
+        
+        // Register shelf block entity renderers - uses vanilla renderer
+        BlockEntityRendererFactories.register(ModBlockEntities.ETHEREAL_SHELF, ShelfBlockEntityRenderer::new);
+        BlockEntityRendererFactories.register(ModBlockEntities.SHADOW_SHELF, ShelfBlockEntityRenderer::new);
 
         // Visual-only top handled via model geometry extending into y+1 (no extra block used)
 
