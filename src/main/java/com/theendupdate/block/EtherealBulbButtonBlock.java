@@ -31,29 +31,38 @@ public class EtherealBulbButtonBlock extends ButtonBlock {
     }
 
     @Override
-    protected VoxelShape getSidesShape(BlockState state, BlockView world, BlockPos pos) {
-        // Return a full cube shape on the attachment face so walls see it as solid
+    protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         var face = state.get(FACE);
         if (face.toString().equals("FLOOR")) {
-            // For floor-mounted, return a shape that fills the bottom so walls detect it
-            return VoxelShapes.cuboid(0, 0, 0, 1, 0.001, 1);
+            return VoxelShapes.cuboid(0.3125, 0.0, 0.3125, 0.6875, 0.375, 0.6875);
         }
-        return super.getSidesShape(state, world, pos);
+        return super.getCollisionShape(state, world, pos, context);
     }
 
     @Override
-    protected VoxelShape getCullingShape(BlockState state) {
-        // Return a full cube for culling purposes on the attachment face
-        var face = state.get(FACE);
-        if (face.toString().equals("FLOOR")) {
-            return VoxelShapes.fullCube();
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        super.onBlockAdded(state, world, pos, oldState, notify);
+        if (!world.isClient() && state.get(FACE).toString().equals("FLOOR")) {
+            BlockPos belowPos = pos.down();
+            BlockState belowState = world.getBlockState(belowPos);
+            world.setBlockState(belowPos, belowState, Block.NOTIFY_ALL);
         }
-        return super.getCullingShape(state);
+    }
+
+    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+        if (!state.isOf(newState.getBlock()) && !world.isClient() && state.get(FACE).toString().equals("FLOOR")) {
+            BlockPos belowPos = pos.down();
+            BlockState belowState = world.getBlockState(belowPos);
+            world.setBlockState(belowPos, belowState, Block.NOTIFY_ALL);
+        }
+        if (world instanceof ServerWorld sw) {
+            super.onStateReplaced(state, sw, pos, moved);
+        }
     }
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        var face = state.get(FACE); // BlockFace in this mappings
+        var face = state.get(FACE);
         Direction facing = state.get(FACING);
         BlockPos supportPos;
         Direction supportSide;
@@ -88,7 +97,6 @@ public class EtherealBulbButtonBlock extends ButtonBlock {
 
     private boolean isAllowedThinSupport(Object face, BlockState support, Direction supportSide) {
         // Chain ends: allow if axis matches the attachment direction axis
-        // Note: Blocks.CHAIN constant may have changed in 1.21.10, using alternative check
         if (support.contains(Properties.AXIS) && (support.getBlock().getTranslationKey().contains("chain"))) {
             var axis = support.get(Properties.AXIS);
             // Floor/Ceiling -> vertical chain only
@@ -111,72 +119,4 @@ public class EtherealBulbButtonBlock extends ButtonBlock {
         // Only allow on top or bottom (floor/ceiling), not on the sides of these blocks
         return face.toString().equals("FLOOR") || face.toString().equals("CEILING");
     }
-
-    @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
-        super.onBlockAdded(state, world, pos, oldState, notify);
-        // Notify the block we're attached to so walls/fences can update their connections
-        if (!world.isClient()) {
-            notifyAttachedBlock(state, world, pos);
-        }
-    }
-
-    // Mapping-safe: omit @Override and use broader signature
-    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        // Notify the block we were attached to so walls/fences can update their connections
-        if (!state.isOf(newState.getBlock()) && !world.isClient()) {
-            // Pass the new state (which is at our position after removal) for proper neighbor updates
-            notifyAttachedBlockRemoved(state, world, pos, newState);
-        }
-        if (world instanceof ServerWorld sw) {
-            super.onStateReplaced(state, sw, pos, moved);
-        }
-    }
-
-    // 1.21.8 superclass override variant
-    @Override
-    public void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
-        super.onStateReplaced(state, world, pos, moved);
-    }
-
-    private void notifyAttachedBlock(BlockState state, World world, BlockPos pos) {
-        var face = state.get(FACE);
-        Direction facing = state.get(FACING);
-        BlockPos attachedPos;
-        
-        switch (face) {
-            case FLOOR -> attachedPos = pos.down();
-            case CEILING -> attachedPos = pos.up();
-            default -> attachedPos = pos.offset(facing.getOpposite());
-        }
-        
-        // Get the attached block's state
-        BlockState attachedState = world.getBlockState(attachedPos);
-        
-        // Re-setting the block state forces visual updates on client
-        world.setBlockState(attachedPos, attachedState, Block.NOTIFY_ALL);
-        
-        // Update neighbors to ensure the wall recalculates
-        world.updateNeighbors(attachedPos, attachedState.getBlock());
-    }
-
-    private void notifyAttachedBlockRemoved(BlockState oldState, World world, BlockPos pos, BlockState replacementState) {
-        var face = oldState.get(FACE);
-        Direction facing = oldState.get(FACING);
-        BlockPos attachedPos;
-        
-        switch (face) {
-            case FLOOR -> attachedPos = pos.down();
-            case CEILING -> attachedPos = pos.up();
-            default -> attachedPos = pos.offset(facing.getOpposite());
-        }
-        
-        // Get the attached block's state and force it to recalculate by re-setting it
-        BlockState attachedState = world.getBlockState(attachedPos);
-        
-        // Re-setting the block state forces walls/fences to recalculate their connections
-        world.setBlockState(attachedPos, attachedState, Block.NOTIFY_ALL);
-    }
 }
-
-

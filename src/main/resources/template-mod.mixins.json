@@ -29,9 +29,7 @@
 		"FenceBlockConnectivityMixin",
 		"LeashKnotEntityMixin",
 		"CowEntityMixin",
-		"MooshroomEntityMixin",
-		"EtherealBulbSolidFaceMixin",
-		"WallBlockEtherealBulbMixin"
+		"MooshroomEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
