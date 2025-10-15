@@ -84,12 +84,21 @@ public class EtherealBulbButtonBlock extends ButtonBlock {
         if (support.isAir()) return false;
 
         if (isAllowedThinSupport(face, support, supportSide)) return true;
+        
         // Allow on end rod tips: rod facing must point toward button
         if (support.isOf(Blocks.END_ROD)) {
             Direction rodFacing = support.get(Properties.FACING);
             if (face.toString().equals("FLOOR")) return rodFacing == Direction.UP;
             if (face.toString().equals("CEILING")) return rodFacing == Direction.DOWN;
             return rodFacing == supportSide;
+        }
+
+        // Allow on lightning rod tips (all oxidation stages)
+        if (isLightningRod(support)) {
+            Direction rodFacing = support.get(Properties.FACING);
+            if (face.toString().equals("FLOOR")) return rodFacing == Direction.UP;
+            if (face.toString().equals("CEILING")) return rodFacing == Direction.DOWN;
+            return false;
         }
 
         return super.canPlaceAt(state, world, pos);
@@ -118,5 +127,16 @@ public class EtherealBulbButtonBlock extends ButtonBlock {
 
         // Only allow on top or bottom (floor/ceiling), not on the sides of these blocks
         return face.toString().equals("FLOOR") || face.toString().equals("CEILING");
+    }
+
+    private boolean isLightningRod(BlockState state) {
+        return state.isOf(Blocks.LIGHTNING_ROD)
+            || state.isOf(Blocks.EXPOSED_LIGHTNING_ROD)
+            || state.isOf(Blocks.WEATHERED_LIGHTNING_ROD)
+            || state.isOf(Blocks.OXIDIZED_LIGHTNING_ROD)
+            || state.isOf(Blocks.WAXED_LIGHTNING_ROD)
+            || state.isOf(Blocks.WAXED_EXPOSED_LIGHTNING_ROD)
+            || state.isOf(Blocks.WAXED_WEATHERED_LIGHTNING_ROD)
+            || state.isOf(Blocks.WAXED_OXIDIZED_LIGHTNING_ROD);
     }
 }

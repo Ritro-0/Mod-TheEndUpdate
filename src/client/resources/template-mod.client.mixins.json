@@ -14,7 +14,9 @@
 		"TexturedRenderLayersSignsMixin",
 		"TexturedRenderLayersHangingSignsMixin",
 		"SignBlockEntityRendererMixin",
-		"LoadedEntityModelsMixin"
+		"LoadedEntityModelsMixin",
+		"BeaconBlockEntityRenderStateMixin",
+		"BeaconBlockEntityRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

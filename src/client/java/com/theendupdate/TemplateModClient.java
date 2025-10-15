@@ -76,8 +76,7 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_SHELF, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_SHELF, BlockRenderLayer.CUTOUT);
         
-        // TODO: Quantum Gateway wavy beacon beam is currently disabled for 1.21.10
-        // Waiting for complete yarn mappings and stable Fabric API for the new render state system
+        // Quantum Gateway wavy beacon beam is handled via BeaconBlockEntityRendererMixin
         
         // Entity Initialization
         // Entity renderers updated for 1.21.10 rendering API (OrderedRenderCommandQueue)

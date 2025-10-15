@@ -727,6 +727,8 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 		private int modeSwitchCount;
 		// Bounce recovery state - disables navigation temporarily after radius change
 		private int bounceRecoveryTicks;
+		// Orbit direction: 1.0 for normal (stellarith), -1.0 for reversed (astral remnant)
+		private double orbitDirection;
 
         MaintainHomeGoal(EtherealOrbEntity orb) {
             this.orb = orb;
@@ -758,6 +760,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 			this.verticalPlaneAxis = orb.getRandom().nextBoolean() ? 0 : 1;
 			this.modeSwitchCount = 0;
 			this.bounceRecoveryTicks = 0;
+			this.orbitDirection = 1.0; // Default direction
         }
 
         @Override
@@ -840,14 +843,14 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 							// Horizontal: use atan2(z, x)
 							currentAngle = Math.atan2(toOrb.z, toOrb.x);
 						}
-						// Move forward along the circle (add ~30 degrees)
-						double angle = currentAngle + 0.5;
+						// Move forward along the circle (add ~30 degrees, or subtract if reversed)
+						double angle = currentAngle + (0.5 * orbitDirection);
 						
 						// Try to compute orbit path for current mode and radius
 						// Use square pattern for minimum radius (surrounding 8 blocks)
 						if (currentRadiusLevel == 3) {
 							// Minimum radius: use square orbit around home
-							candidate = computeSquareOrbit(home, curPos);
+							candidate = computeSquareOrbit(home, curPos, orbitDirection);
 						} else if (verticalOrbitMode) {
 							candidate = computeVerticalOrbit(home, radius, angle, verticalPlaneAxis);
 							// Try alternate vertical axis if first is blocked
@@ -922,7 +925,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 									double skipAngle = orbAngle + Math.PI; // Skip ahead 180 degrees - opposite side of orbit
 									
 									if (currentRadiusLevel == 3) {
-										intermediateWaypoint = computeSquareOrbit(home, curPos);
+										intermediateWaypoint = computeSquareOrbit(home, curPos, orbitDirection);
 									} else if (verticalOrbitMode) {
 										intermediateWaypoint = computeVerticalOrbit(home, radius, skipAngle, verticalPlaneAxis);
 									} else {
@@ -1021,6 +1024,14 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 			successCounter = 0;
 			radiusChangeCooldown = 0;
 			bounceRecoveryTicks = 0;
+			
+			// Set orbit direction based on home block type
+			var homeState = orb.getEntityWorld().getBlockState(homePos);
+			if (homeState.isOf(ModBlocks.ASTRAL_REMNANT)) {
+				orbitDirection = -1.0; // Reverse direction for astral remnant
+			} else {
+				orbitDirection = 1.0; // Normal direction for stellarith crystal
+			}
 		}
 		
 		/**
@@ -1077,7 +1088,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 			modeSwitchCount++;
 		}
 
-		private Vec3d computeSquareOrbit(Vec3d home, Vec3d currentPos) {
+		private Vec3d computeSquareOrbit(Vec3d home, Vec3d currentPos, double direction) {
 			// Create a square orbit around the home block (surrounding 8 blocks)
 			// Positions: directly adjacent blocks in X/Z, keeping Y at home level
 			double dx = currentPos.x - home.x;
@@ -1107,8 +1118,13 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 				}
 			}
 			
-			// Move to the next corner in sequence (clockwise)
-			int nextIndex = (closestIndex + 1) % squarePositions.length;
+			// Move to the next corner in sequence (clockwise if direction > 0, counter-clockwise if direction < 0)
+			int nextIndex;
+			if (direction > 0) {
+				nextIndex = (closestIndex + 1) % squarePositions.length;
+			} else {
+				nextIndex = (closestIndex - 1 + squarePositions.length) % squarePositions.length;
+			}
 			return squarePositions[nextIndex];
 		}
 

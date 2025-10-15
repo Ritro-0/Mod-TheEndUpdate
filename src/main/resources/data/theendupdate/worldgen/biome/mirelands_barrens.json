@@ -23,7 +23,12 @@
     "water_ambient": [],
     "misc": []
   },
-  "spawn_costs": {},
+  "spawn_costs": {
+    "minecraft:phantom": {
+      "energy_budget": 0.12,
+      "charge": 0.5
+    }
+  },
   "carvers": [],
   "features": []
 }
