@@ -6,6 +6,7 @@ import net.fabricmc.api.EnvType;
 
 import com.theendupdate.entity.model.EtherealOrbEntityModel;
 import com.theendupdate.entity.renderer.EtherealOrbEntityRenderer;
+import com.theendupdate.entity.renderer.KingPhantomEntityRenderer;
 import com.theendupdate.entity.renderer.ShadowCreakingEntityRenderer;
 import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.registry.ModBlockEntities;
@@ -21,6 +22,7 @@ import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.HangingSignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.ShelfBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.BedBlockEntityRenderer;
 import net.minecraft.util.Identifier;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
 // predicate registration not needed since models use built-in trim_type predicate
@@ -82,6 +84,8 @@ public class TemplateModClient implements ClientModInitializer {
         // Entity renderers updated for 1.21.10 rendering API (OrderedRenderCommandQueue)
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
+        // King Phantom renderer (uses vanilla phantom model, scaled 4x)
+        EntityRendererRegistry.register(ModEntities.KING_PHANTOM, KingPhantomEntityRenderer::new);
         // Shadow Creaking renderer (uses vanilla creaking model layer, inverted)
         EntityRendererRegistry.register(ModEntities.SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
         // Reuse same renderer for mini/tiny (uses scaled dimensions)

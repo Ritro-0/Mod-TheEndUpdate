@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "theendupdate:item/king_phantom_spawn_egg"
+  },
+  "minecraft:entity_type": "theendupdate:king_phantom"
+}
+
+

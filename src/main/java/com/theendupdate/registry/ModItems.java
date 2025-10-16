@@ -131,6 +131,15 @@ public final class ModItems {
         net.minecraft.item.ItemGroups.SPAWN_EGGS
     );
 
+    public static final Item KING_PHANTOM_SPAWN_EGG = registerItem(
+        "king_phantom_spawn_egg",
+        key -> new com.theendupdate.item.CustomSpawnEggItem(
+            ModEntities.KING_PHANTOM,
+            new Item.Settings().registryKey(key)
+        ),
+        net.minecraft.item.ItemGroups.SPAWN_EGGS
+    );
+
     public static final Item SHADOW_CREAKING_SPAWN_EGG = registerItem(
         "shadow_creaking_spawn_egg",
         key -> new com.theendupdate.item.CustomSpawnEggItem(
