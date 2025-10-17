@@ -1714,7 +1714,8 @@ protected boolean isWeepingAngelActive() {
 		}
 		Box box = new Box(cx - radius, cy - 1.5, cz - radius, cx + radius, cy + 3.5, cz + radius);
 		for (PlayerEntity e : sw.getEntitiesByClass(PlayerEntity.class, box, (pe) -> pe.isAlive())) {
-			e.damage(sw, sw.getDamageSources().mobAttack(this), damage);
+			// Use custom damage source for ranged beam attack
+			e.damage(sw, sw.getDamageSources().create(com.theendupdate.registry.ModDamageTypes.SHADOW_CREAKING_BEAM, this), damage);
 			double dx = e.getX() - cx;
 			double dz = e.getZ() - cz;
 			double len = Math.sqrt(dx * dx + dz * dz);

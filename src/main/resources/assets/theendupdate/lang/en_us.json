@@ -65,6 +65,8 @@
   "block.theendupdate.shadow_sign": "Shadow Sign",
   "block.theendupdate.shadow_hanging_sign": "Shadow Hanging Sign",
   "block.theendupdate.shadow_shelf": "Shadow Shelf",
+  "block.theendupdate.membrane_block": "Membrane Block",
+  "item.theendupdate.membrane_block": "Membrane Block",
   "block.theendupdate.shadow_claw": "Shadow Claw",
   "block.theendupdate.potted_shadow_claw": "Potted Shadow Claw",
   "block.theendupdate.mold_crawl": "Mold Crawl",
@@ -152,5 +154,6 @@
   "item.theendupdate.shadow_hunters_tracker.pointing_to": "Shadow Hunter's Tracker is pointing to hollow shadow tree at %d, %d, %d",
   "item.theendupdate.shadow_hunters_tracker.precise_mode": "Now pointing to Shadow Altar at %d, %d, %d",
   "item.theendupdate.shadow_hunters_tracker.structure_mode": "Now pointing to structure at %d, %d, %d",
-  "item.theendupdate.shadow_hunters_tracker.no_altar_nearby": "No Shadow Altar found within range"
+  "item.theendupdate.shadow_hunters_tracker.no_altar_nearby": "No Shadow Altar found within range",
+  "death.attack.shadow_creaking_beam": "There's a pile of dust where %1$s used to be"
 }

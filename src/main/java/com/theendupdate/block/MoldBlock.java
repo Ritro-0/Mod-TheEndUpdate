@@ -57,12 +57,19 @@ public class MoldBlock extends Block implements Fertilizable {
             if (targetState.isOf(Blocks.BEDROCK)) continue;
             if (targetState.isOf(Blocks.REINFORCED_DEEPSLATE)) continue;
             
-            // Skip doors, signs, and hanging signs
+            // Skip doors, signs, hanging signs, and trapdoors
             if (targetState.isIn(BlockTags.DOORS)) continue;
+            if (targetState.isIn(BlockTags.TRAPDOORS)) continue;
             if (targetState.isIn(BlockTags.STANDING_SIGNS)) continue;
             if (targetState.isIn(BlockTags.WALL_SIGNS)) continue;
             if (targetState.isIn(BlockTags.CEILING_HANGING_SIGNS)) continue;
             if (targetState.isIn(BlockTags.WALL_HANGING_SIGNS)) continue;
+            
+            // Custom mod doors and trapdoors
+            if (targetState.isOf(ModBlocks.ETHEREAL_DOOR)) continue;
+            if (targetState.isOf(ModBlocks.ETHEREAL_TRAPDOOR)) continue;
+            if (targetState.isOf(ModBlocks.SHADOW_DOOR)) continue;
+            if (targetState.isOf(ModBlocks.SHADOW_TRAPDOOR)) continue;
             
             // Skip short grass and snow layers
             if (targetState.isOf(Blocks.SHORT_GRASS)) continue;
@@ -224,6 +231,10 @@ public class MoldBlock extends Block implements Fertilizable {
 			if (targetState.isOf(Blocks.CHISELED_BOOKSHELF)) continue;
 			if (targetState.isOf(Blocks.BOOKSHELF)) continue;
 			if (targetState.isOf(Blocks.DECORATED_POT)) continue;
+			
+			// Custom mod shelves
+			if (targetState.isOf(ModBlocks.ETHEREAL_SHELF)) continue;
+			if (targetState.isOf(ModBlocks.SHADOW_SHELF)) continue;
 			if (targetState.isOf(Blocks.BEEHIVE)) continue;
 			if (targetState.isOf(Blocks.BEE_NEST)) continue;
             
@@ -370,53 +381,8 @@ public class MoldBlock extends Block implements Fertilizable {
 			if (targetState.isOf(Blocks.LAVA_CAULDRON)) continue;
 			if (targetState.isOf(Blocks.POWDER_SNOW_CAULDRON)) continue;
 			
-			// Copper chains (all oxidation stages)
-			if (targetState.isOf(Blocks.EXPOSED_COPPER_GRATE)) continue;
-			if (targetState.isOf(Blocks.WEATHERED_COPPER_GRATE)) continue;
-			if (targetState.isOf(Blocks.OXIDIZED_COPPER_GRATE)) continue;
-			if (targetState.isOf(Blocks.WAXED_COPPER_GRATE)) continue;
-			if (targetState.isOf(Blocks.WAXED_EXPOSED_COPPER_GRATE)) continue;
-			if (targetState.isOf(Blocks.WAXED_WEATHERED_COPPER_GRATE)) continue;
-			if (targetState.isOf(Blocks.WAXED_OXIDIZED_COPPER_GRATE)) continue;
-			
-			// Copper doors (all oxidation stages)
-			if (targetState.isOf(Blocks.COPPER_DOOR)) continue;
-			if (targetState.isOf(Blocks.EXPOSED_COPPER_DOOR)) continue;
-			if (targetState.isOf(Blocks.WEATHERED_COPPER_DOOR)) continue;
-			if (targetState.isOf(Blocks.OXIDIZED_COPPER_DOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_COPPER_DOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_EXPOSED_COPPER_DOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_WEATHERED_COPPER_DOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_OXIDIZED_COPPER_DOOR)) continue;
-			
-			// Copper trapdoors (all oxidation stages)
-			if (targetState.isOf(Blocks.COPPER_TRAPDOOR)) continue;
-			if (targetState.isOf(Blocks.EXPOSED_COPPER_TRAPDOOR)) continue;
-			if (targetState.isOf(Blocks.WEATHERED_COPPER_TRAPDOOR)) continue;
-			if (targetState.isOf(Blocks.OXIDIZED_COPPER_TRAPDOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_COPPER_TRAPDOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_EXPOSED_COPPER_TRAPDOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_WEATHERED_COPPER_TRAPDOOR)) continue;
-			if (targetState.isOf(Blocks.WAXED_OXIDIZED_COPPER_TRAPDOOR)) continue;
-			
-			// Chiseled copper (all oxidation stages)
-			if (targetState.isOf(Blocks.CHISELED_COPPER)) continue;
-			if (targetState.isOf(Blocks.EXPOSED_CHISELED_COPPER)) continue;
-			if (targetState.isOf(Blocks.WEATHERED_CHISELED_COPPER)) continue;
-			if (targetState.isOf(Blocks.OXIDIZED_CHISELED_COPPER)) continue;
-			if (targetState.isOf(Blocks.WAXED_CHISELED_COPPER)) continue;
-			if (targetState.isOf(Blocks.WAXED_EXPOSED_CHISELED_COPPER)) continue;
-			if (targetState.isOf(Blocks.WAXED_WEATHERED_CHISELED_COPPER)) continue;
-			if (targetState.isOf(Blocks.WAXED_OXIDIZED_CHISELED_COPPER)) continue;
-			
-			// Creaking heart and resin blocks (1.21 Pale Garden)
+			// Creaking heart (Pale Garden)
 			if (targetState.isOf(Blocks.CREAKING_HEART)) continue;
-			if (targetState.isOf(Blocks.RESIN_BLOCK)) continue;
-			if (targetState.isOf(Blocks.RESIN_BRICKS)) continue;
-			if (targetState.isOf(Blocks.RESIN_BRICK_SLAB)) continue;
-			if (targetState.isOf(Blocks.RESIN_BRICK_STAIRS)) continue;
-			if (targetState.isOf(Blocks.RESIN_BRICK_WALL)) continue;
-			if (targetState.isOf(Blocks.CHISELED_RESIN_BRICKS)) continue;
 			
 			// Check by registry ID for blocks not yet in Blocks class (1.21.9+ blocks)
 			Identifier blockId = Registries.BLOCK.getId(targetState.getBlock());
@@ -425,8 +391,8 @@ public class MoldBlock extends Block implements Fertilizable {
 			// Dried ghast decorative block
 			if (blockIdString.equals("minecraft:dried_ghast")) continue;
 			
-			// Copper chains (all oxidation stages)
-			if (blockIdString.contains("copper_chain")) continue;
+			// Iron chains and copper chains (all oxidation stages)
+			if (blockIdString.contains("chain") && !blockIdString.contains("command")) continue;
 			
 			// Copper chests (all oxidation stages)
 			if (blockIdString.contains("copper_chest")) continue;

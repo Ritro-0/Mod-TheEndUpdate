@@ -141,6 +141,7 @@ public class TemplateMod implements ModInitializer {
             for (ServerWorld world : server.getWorlds()) {
                 if (world != null) {
                     com.theendupdate.entity.ShadowCreakingBossBarRegistry.tickAll(world);
+                    com.theendupdate.entity.KingPhantomBossBarRegistry.tickAll(world);
                 }
                 
                 // Handle cow and mooshroom milking animation  

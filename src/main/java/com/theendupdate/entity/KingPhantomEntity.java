@@ -5,6 +5,9 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.PhantomEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -27,12 +30,36 @@ import java.util.EnumSet;
  */
 public class KingPhantomEntity extends PhantomEntity {
     
+    // Data tracker for persistent phase state
+    private static final TrackedData<Integer> CURRENT_PHASE = DataTracker.registerData(KingPhantomEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Boolean> HAS_TRIGGERED_PHASE_TRANSITION = DataTracker.registerData(KingPhantomEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    
     // Boss bar management
     public KingPhantomBossBarManager bossBarManager;
     
+    // Phase tracking
+    private static final int PHASE_1 = 1;
+    private static final int PHASE_2 = 2;
+    
+    // Phase transition tracking
+    private boolean isInPhaseTransition = false;
+    private int phaseTransitionTicks = 0;
+    private static final int PHASE_TRANSITION_DURATION = 100; // 5 seconds
+    private Vec3d phaseTransitionPosition = null;
+    
     // Attack tracking
-    private static final int ATTACK_INTERVAL = 200; // 10 seconds (200 ticks)
-    private int attackCooldown = ATTACK_INTERVAL; // Start with full cooldown for initial hover phase
+    private static final int ATTACK_INTERVAL_PHASE_1 = 200; // 10 seconds (200 ticks)
+    private static final int ATTACK_INTERVAL_PHASE_2 = 100; // 5 seconds (100 ticks)
+    private int attackCooldown = ATTACK_INTERVAL_PHASE_1; // Start with full cooldown for initial hover phase
+    private boolean isSwooping = false; // Track if currently executing a swoop attack
+    
+    // Summon attack tracking
+    private boolean isSummoning = false;
+    private int summonPhase = 0; // 0 = not summoning, 1 = descending, 2 = ascending after summon
+    private PlayerEntity summonTarget = null;
+    private Vec3d summonTargetPos = null;
+    private Vec3d summonReturnPos = null;
+    private boolean hasSummoned = false; // Track if we've already summoned phantoms
     
     // Ranged beam attack tracking
     private int rangedBeamTravelTicks = 0;
@@ -46,10 +73,14 @@ public class KingPhantomEntity extends PhantomEntity {
         this.setPersistent(); // Persistent to avoid chunk unload despawn, but still despawns in peaceful
         this.setNoGravity(true); // Ensure no gravity for proper flying
         
-        // Get or create boss bar manager from registry (prevents duplicates on reload)
-        if (!world.isClient()) {
-            this.bossBarManager = KingPhantomBossBarManager.getOrCreate(this.getUuid());
-        }
+        // Boss bar will be initialized in tick() method (lazy init, like Shadow Creaking)
+    }
+    
+    @Override
+    protected void initDataTracker(DataTracker.Builder builder) {
+        super.initDataTracker(builder);
+        builder.add(CURRENT_PHASE, PHASE_1);
+        builder.add(HAS_TRIGGERED_PHASE_TRANSITION, Boolean.FALSE);
     }
     
     @Override
@@ -101,6 +132,12 @@ public class KingPhantomEntity extends PhantomEntity {
     }
     
     @Override
+    public boolean isInvulnerable() {
+        // Invulnerable during phase transition
+        return super.isInvulnerable() || this.isInPhaseTransition;
+    }
+    
+    @Override
     public void travel(Vec3d movementInput) {
         // Override travel to have complete control over movement
         // Vanilla phantoms have special flight physics we want to bypass
@@ -111,51 +148,244 @@ public class KingPhantomEntity extends PhantomEntity {
             return;
         }
         
-        // Server side - use our velocity directly without phantom flight physics
+        // Server side - use our velocity with proper collision detection
         Vec3d velocity = this.getVelocity();
         
-        // Apply velocity to position
-        this.setPosition(this.getX() + velocity.x, this.getY() + velocity.y, this.getZ() + velocity.z);
+        // Only prevent downward velocity when NOT swooping or summoning
+        if (!this.isSwooping && !this.isSummoning) {
+            // Prevent downward velocity from pushing the entity into the ground
+            // This is especially important on entity load/reload
+            if (velocity.y < -0.1) {
+                velocity = new Vec3d(velocity.x, -0.1, velocity.z);
+            }
+            
+            // If close to ground, don't apply downward velocity at all
+            if (this.isOnGround() || this.getY() - Math.floor(this.getY()) < 0.5) {
+                if (velocity.y < 0) {
+                    velocity = new Vec3d(velocity.x, 0, velocity.z);
+                }
+            }
+        }
         
-        // Apply air friction (0.91 is vanilla air resistance)
+        // Update velocity for friction
         this.setVelocity(velocity.multiply(0.91, 0.91, 0.91));
+        
+        // Use vanilla entity movement with collision detection
+        // This respects block collisions while still allowing our custom velocity control
+        this.move(net.minecraft.entity.MovementType.SELF, velocity);
     }
     
     @Override
     public void tick() {
         super.tick();
         
-        // Ensure the phantom never lands - always keep it slightly off the ground for animations
-        if (this.isOnGround()) {
-            // If somehow on ground, push upward
-            this.setVelocity(this.getVelocity().add(0, 0.2, 0));
-            this.velocityModified = true;
-        }
-        
-        // Update boss bar on server side
-        if (!this.getEntityWorld().isClient() && this.bossBarManager != null) {
-            // Start boss bar on first tick
-            if (!this.bossBarManager.isActive() && this.age == 1) {
-                this.bossBarManager.startBossFight(this);
-            }
-            
-            // Update boss bar every tick
-            if (this.getEntityWorld() instanceof ServerWorld serverWorld) {
-                this.bossBarManager.tick(serverWorld, this);
-            }
-        }
-        
-        // Server: advance any active ranged beam
+        // Sync phase state from command tags on server (persists across saves)
         if (!this.getEntityWorld().isClient()) {
-            if (this.rangedBeamTravelTicks > 0 && this.rangedBeamStart != null && this.rangedBeamEnd != null) {
-                advanceRangedBeam();
+            if (this.getCommandTags().contains("theendupdate:phase_transition_triggered") && !this.dataTracker.get(HAS_TRIGGERED_PHASE_TRANSITION)) {
+                this.dataTracker.set(HAS_TRIGGERED_PHASE_TRANSITION, true);
             }
-            
-            // Decrement attack cooldown
-            if (this.attackCooldown > 0) {
-                this.attackCooldown--;
+            if (this.getCommandTags().contains("theendupdate:phase_2") && this.dataTracker.get(CURRENT_PHASE) != PHASE_2) {
+                this.dataTracker.set(CURRENT_PHASE, PHASE_2);
             }
         }
+        
+        // Ensure the phantom never lands - but NOT during swoop or summon attacks!
+        if (!this.isSwooping && !this.isSummoning) {
+            if (this.isOnGround()) {
+                // If somehow on ground, push upward strongly
+                this.setVelocity(this.getVelocity().add(0, 0.5, 0));
+                this.velocityModified = true;
+            } else if (!this.getEntityWorld().isClient()) {
+                // Also check if we're too close to blocks below
+                net.minecraft.util.math.BlockPos posBelow = this.getBlockPos().down();
+                if (!this.getEntityWorld().getBlockState(posBelow).isAir()) {
+                    // There's a block directly below - apply gentle upward force
+                    double distanceToGround = this.getY() - posBelow.getY() - 1.0;
+                    if (distanceToGround < 2.0) {
+                        this.setVelocity(this.getVelocity().add(0, 0.1, 0));
+                        this.velocityModified = true;
+                    }
+                }
+            }
+        }
+        
+        // Note: Boss bar ticking is handled by KingPhantomBossBarRegistry, not here
+        if (!this.getEntityWorld().isClient()) {
+            // Initialize boss bar if not already done (fallback for any spawn method)
+            if (this.bossBarManager == null && this.age <= 5) {
+                this.initializeBossBar();
+            }
+        }
+        
+        // Server: Handle phase transition and attacks
+        if (!this.getEntityWorld().isClient()) {
+            // Check for phase 2 transition (at 50% health)
+            if (this.dataTracker.get(CURRENT_PHASE) == PHASE_1 && !this.dataTracker.get(HAS_TRIGGERED_PHASE_TRANSITION)) {
+                float healthPercent = this.getHealth() / this.getMaxHealth();
+                if (healthPercent <= 0.5f) {
+                    startPhaseTransition();
+                }
+            }
+            
+            // Handle phase transition
+            if (this.isInPhaseTransition) {
+                handlePhaseTransition();
+            } else {
+                // Handle summon attack
+                if (this.isSummoning) {
+                    handleSummonAttack();
+                }
+                
+                // Normal behavior: advance ranged beam and cooldown
+                if (this.rangedBeamTravelTicks > 0 && this.rangedBeamStart != null && this.rangedBeamEnd != null) {
+                    advanceRangedBeam();
+                }
+                
+                // Decrement attack cooldown
+                if (this.attackCooldown > 0) {
+                    this.attackCooldown--;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Starts the phase 2 transition sequence
+     */
+    private void startPhaseTransition() {
+        this.dataTracker.set(HAS_TRIGGERED_PHASE_TRANSITION, true);
+        this.isInPhaseTransition = true;
+        this.phaseTransitionTicks = 0;
+        this.phaseTransitionPosition = new Vec3d(this.getX(), this.getY(), this.getZ());
+        
+        // Add command tag for persistence across saves
+        if (!this.getEntityWorld().isClient()) {
+            this.addCommandTag("theendupdate:phase_transition_triggered");
+        }
+        
+        // Stop all movement
+        this.setVelocity(Vec3d.ZERO);
+        this.velocityModified = true;
+    }
+    
+    /**
+     * Handles the phase transition animation and effects
+     */
+    private void handlePhaseTransition() {
+        if (!(this.getEntityWorld() instanceof ServerWorld sw)) return;
+        
+        this.phaseTransitionTicks++;
+        
+        // Freeze in place
+        this.setVelocity(Vec3d.ZERO);
+        this.velocityModified = true;
+        
+        // Snap to transition position to prevent any drift
+        if (this.phaseTransitionPosition != null) {
+            this.setPosition(this.phaseTransitionPosition.x, this.phaseTransitionPosition.y, this.phaseTransitionPosition.z);
+        }
+        
+        // Spawn particle bubble every tick
+        double radius = 3.0; // Radius of particle sphere
+        int particlesPerTick = 10;
+        
+        for (int i = 0; i < particlesPerTick; i++) {
+            // Random points on sphere surface
+            double theta = this.getRandom().nextDouble() * 2 * Math.PI;
+            double phi = Math.acos(2 * this.getRandom().nextDouble() - 1);
+            
+            double x = radius * Math.sin(phi) * Math.cos(theta);
+            double y = radius * Math.sin(phi) * Math.sin(theta);
+            double z = radius * Math.cos(phi);
+            
+            // Crying obsidian particle (purple drip)
+            sw.spawnParticles(
+                ParticleTypes.DRIPPING_OBSIDIAN_TEAR,
+                this.getX() + x,
+                this.getY() + y,
+                this.getZ() + z,
+                1, 0, 0, 0, 0.0
+            );
+            
+            // Spore blossom particle (green falling)
+            sw.spawnParticles(
+                ParticleTypes.SPORE_BLOSSOM_AIR,
+                this.getX() + x,
+                this.getY() + y,
+                this.getZ() + z,
+                1, 0, 0, 0, 0.0
+            );
+        }
+        
+        // At the end of transition, spawn burst and enter phase 2
+        if (this.phaseTransitionTicks >= PHASE_TRANSITION_DURATION) {
+            // Big burst of particles
+            for (int i = 0; i < 100; i++) {
+                double theta = this.getRandom().nextDouble() * 2 * Math.PI;
+                double phi = Math.acos(2 * this.getRandom().nextDouble() - 1);
+                
+                double x = radius * Math.sin(phi) * Math.cos(theta);
+                double y = radius * Math.sin(phi) * Math.sin(theta);
+                double z = radius * Math.cos(phi);
+                
+                // Velocity outward
+                double vx = x * 0.2;
+                double vy = y * 0.2;
+                double vz = z * 0.2;
+                
+                sw.spawnParticles(
+                    ParticleTypes.DRIPPING_OBSIDIAN_TEAR,
+                    this.getX() + x,
+                    this.getY() + y,
+                    this.getZ() + z,
+                    0, vx, vy, vz, 1.0
+                );
+                
+                sw.spawnParticles(
+                    ParticleTypes.SPORE_BLOSSOM_AIR,
+                    this.getX() + x,
+                    this.getY() + y,
+                    this.getZ() + z,
+                    0, vx, vy, vz, 1.0
+                );
+            }
+            
+            // Add explosion particles
+            sw.spawnParticles(ParticleTypes.EXPLOSION, this.getX(), this.getY(), this.getZ(), 5, 0.5, 0.5, 0.5, 0.0);
+            sw.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, this.getX(), this.getY(), this.getZ(), 2, 0.0, 0.0, 0.0, 0.0);
+            
+            // Enter phase 2
+            this.dataTracker.set(CURRENT_PHASE, PHASE_2);
+            this.isInPhaseTransition = false;
+            this.phaseTransitionPosition = null;
+            
+            // Add command tag for persistence across saves
+            this.addCommandTag("theendupdate:phase_2");
+            
+            // Reset attack cooldown to the new phase 2 interval
+            this.attackCooldown = ATTACK_INTERVAL_PHASE_2;
+        }
+    }
+    
+    /**
+     * Returns whether the King Phantom is currently in phase transition
+     */
+    public boolean isInPhaseTransition() {
+        return this.isInPhaseTransition;
+    }
+    
+    /**
+     * Returns the current phase (1 or 2)
+     */
+    public int getCurrentPhase() {
+        return this.dataTracker.get(CURRENT_PHASE);
+    }
+    
+    /**
+     * Returns the attack interval for the current phase
+     */
+    public int getAttackInterval() {
+        return this.dataTracker.get(CURRENT_PHASE) == PHASE_1 ? ATTACK_INTERVAL_PHASE_1 : ATTACK_INTERVAL_PHASE_2;
     }
     
     /**
@@ -171,6 +401,227 @@ public class KingPhantomEntity extends PhantomEntity {
         
         double distance = this.rangedBeamStart.distanceTo(this.rangedBeamEnd);
         this.rangedBeamTravelTicks = Math.max(1, (int)Math.ceil(distance / this.rangedBeamSpeedPerTick));
+    }
+    
+    /**
+     * Starts a summon attack targeting the specified player
+     */
+    public void startSummonAttack(PlayerEntity target) {
+        if (target == null || !target.isAlive()) return;
+        if (this.getEntityWorld().isClient()) return;
+        
+        // Don't summon on creative or spectator players
+        if (target.isCreative() || target.isSpectator()) return;
+        
+        this.isSummoning = true;
+        this.summonPhase = 1; // Start descending
+        this.summonTarget = target;
+        this.hasSummoned = false; // Reset summon flag
+        
+        // Store current position as return point
+        this.summonReturnPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+        
+        // Dive toward the player with predictive targeting
+        Vec3d playerPos = new Vec3d(target.getX(), target.getY(), target.getZ());
+        Vec3d playerVel = target.getVelocity();
+        
+        this.summonTargetPos = playerPos.add(playerVel.multiply(0.5));
+        
+        // Spawn red particles to show summon attack started
+        if (this.getEntityWorld() instanceof ServerWorld sw) {
+            sw.spawnParticles(ParticleTypes.FLAME, this.getX(), this.getY(), this.getZ(), 50, 1.0, 1.0, 1.0, 0.1);
+        }
+    }
+    
+    /**
+     * Handles summon attack logic each tick
+     */
+    private void handleSummonAttack() {
+        if (!this.isSummoning || this.summonPhase == 0) return;
+        
+        if (this.summonPhase == 1) {
+            // Phase 1: Descending toward player
+            handleSummonDescent();
+        } else if (this.summonPhase == 2) {
+            // Phase 2: Ascending after summon
+            handleSummonAscent();
+        }
+    }
+    
+    /**
+     * Handles the descent phase of summon attack
+     */
+    private void handleSummonDescent() {
+        if (this.summonTarget == null || !this.summonTarget.isAlive() || this.summonTargetPos == null) {
+            endSummonAttack();
+            return;
+        }
+        
+        // Safety check: if player became creative/spectator, end summon
+        if (this.summonTarget.isCreative() || this.summonTarget.isSpectator()) {
+            endSummonAttack();
+            return;
+        }
+        
+        // Move toward the target position at high speed
+        Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+        Vec3d direction = this.summonTargetPos.subtract(currentPos).normalize();
+        
+        double speed = 0.8; // Very fast dive
+        Vec3d velocity = direction.multiply(speed);
+        this.setVelocity(velocity);
+        this.velocityDirty = true;
+        
+        // Spawn dramatic particles during descent
+        if (this.getEntityWorld() instanceof ServerWorld sw) {
+            sw.spawnParticles(ParticleTypes.ELECTRIC_SPARK, this.getX(), this.getY(), this.getZ(), 3, 0.3, 0.3, 0.3, 0.05);
+            sw.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, this.getX(), this.getY(), this.getZ(), 2, 0.2, 0.2, 0.2, 0.02);
+            
+            // When close to player, spawn even more dramatic particles
+            double distance = this.squaredDistanceTo(this.summonTarget);
+            if (distance < 16.0) { // Within 4 blocks
+                sw.spawnParticles(ParticleTypes.END_ROD, this.getX(), this.getY(), this.getZ(), 5, 0.5, 0.5, 0.5, 0.1);
+                sw.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, this.getX(), this.getY(), this.getZ(), 3, 0.3, 0.3, 0.3, 0.05);
+            }
+            
+            // Check for contact with player
+            if (distance < 4.0 && !this.hasSummoned) { // Within 2 blocks and haven't summoned yet
+                // Summon 4 phantoms around the player!
+                summonPhantoms();
+                this.hasSummoned = true;
+                
+                this.summonPhase = 2; // Switch to ascending
+                return;
+            }
+        }
+        
+        // End attack if we've reached target or hit ground
+        if (currentPos.distanceTo(this.summonTargetPos) < 1.0 || this.isOnGround()) {
+            endSummonAttack();
+        }
+    }
+    
+    /**
+     * Summons 4 regular phantoms around the target player
+     */
+    private void summonPhantoms() {
+        if (this.summonTarget == null || !this.summonTarget.isAlive()) return;
+        if (!(this.getEntityWorld() instanceof ServerWorld serverWorld)) return;
+        
+        Vec3d playerPos = new Vec3d(this.summonTarget.getX(), this.summonTarget.getY(), this.summonTarget.getZ());
+        
+        // Spawn 4 regular phantoms in a circle around the player
+        double radius = 5.0; // 5 blocks away from player
+        double heightAbove = 8.0; // 8 blocks above player
+        
+        for (int i = 0; i < 4; i++) {
+            double angle = (i * Math.PI / 2.0); // 0°, 90°, 180°, 270°
+            double xOffset = Math.cos(angle) * radius;
+            double zOffset = Math.sin(angle) * radius;
+            
+            double spawnX = playerPos.x + xOffset;
+            double spawnY = playerPos.y + heightAbove;
+            double spawnZ = playerPos.z + zOffset;
+            
+            // Create and spawn regular phantom
+            PhantomEntity phantom = new PhantomEntity(EntityType.PHANTOM, serverWorld);
+            phantom.refreshPositionAndAngles(spawnX, spawnY, spawnZ, 0.0f, 0.0f);
+            phantom.setTarget(this.summonTarget); // Make them immediately target the player
+            serverWorld.spawnEntity(phantom);
+            
+            // Spawn dramatic summon particles at spawn location
+            serverWorld.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, 
+                spawnX, spawnY, spawnZ, 
+                20, 0.5, 0.5, 0.5, 0.1);
+            serverWorld.spawnParticles(ParticleTypes.ELECTRIC_SPARK, 
+                spawnX, spawnY, spawnZ, 
+                15, 0.3, 0.3, 0.3, 0.05);
+        }
+        
+        // Create actual explosion (damage only, no block destruction)
+        serverWorld.createExplosion(
+            this,
+            null, // No damage source - use default
+            new net.minecraft.world.explosion.ExplosionBehavior() {
+                @Override
+                public boolean canDestroyBlock(net.minecraft.world.explosion.Explosion explosion, 
+                                               net.minecraft.world.BlockView world, 
+                                               net.minecraft.util.math.BlockPos pos, 
+                                               net.minecraft.block.BlockState state, 
+                                               float power) {
+                    return false; // Don't destroy blocks
+                }
+            },
+            playerPos.x,
+            playerPos.y,
+            playerPos.z,
+            3.0F, // TNT explosion power (TNT is 4.0, this is slightly less)
+            false, // No fire
+            net.minecraft.world.World.ExplosionSourceType.MOB
+        );
+        
+        // Spawn dramatic particles at player location
+        serverWorld.spawnParticles(ParticleTypes.CLOUD, 
+            playerPos.x, playerPos.y, playerPos.z, 
+            50, 1.0, 1.0, 1.0, 0.2);
+        serverWorld.spawnParticles(ParticleTypes.EXPLOSION, 
+            playerPos.x, playerPos.y, playerPos.z, 
+            10, 0.5, 0.5, 0.5, 0.0);
+        serverWorld.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, 
+            playerPos.x, playerPos.y, playerPos.z, 
+            3, 0.0, 0.0, 0.0, 0.0);
+        
+        // Play ominous sound
+        serverWorld.playSound(null, 
+            playerPos.x, playerPos.y, playerPos.z,
+            net.minecraft.sound.SoundEvents.ENTITY_PHANTOM_AMBIENT, 
+            net.minecraft.sound.SoundCategory.HOSTILE, 
+            2.0F, 0.5F); // Lower pitch for more dramatic effect
+    }
+    
+    /**
+     * Handles the ascent phase after summoning phantoms
+     */
+    private void handleSummonAscent() {
+        Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+        if (this.summonReturnPos == null) {
+            endSummonAttack();
+            return;
+        }
+        
+        Vec3d direction = this.summonReturnPos.subtract(currentPos);
+        double distanceToReturn = direction.length();
+        
+        // If close to return position, end attack
+        if (distanceToReturn < 2.0) {
+            endSummonAttack();
+            return;
+        }
+        
+        // Ascend back to hovering position
+        double speed = 0.4;
+        Vec3d velocity = direction.normalize().multiply(speed);
+        this.setVelocity(velocity);
+        this.velocityDirty = true;
+    }
+    
+    /**
+     * Ends the summon attack and resets state
+     */
+    private void endSummonAttack() {
+        this.isSummoning = false;
+        this.summonPhase = 0;
+        this.summonTarget = null;
+        this.summonTargetPos = null;
+        this.summonReturnPos = null;
+        this.hasSummoned = false;
+    }
+    
+    /**
+     * Returns whether currently executing a summon attack
+     */
+    public boolean isSummoning() {
+        return this.isSummoning;
     }
     
     /**
@@ -307,28 +758,16 @@ public class KingPhantomEntity extends PhantomEntity {
         this.attackCooldown = cooldown;
     }
     
-    @Override
-    public void remove(net.minecraft.entity.Entity.RemovalReason reason) {
-        super.remove(reason);
+    /**
+     * Initializes the boss bar for this entity
+     */
+    public void initializeBossBar() {
+        if (this.bossBarManager != null) return;
         
-        // Handle boss bar cleanup based on removal reason
-        if (!this.getEntityWorld().isClient() && this.bossBarManager != null) {
-            if (reason == net.minecraft.entity.Entity.RemovalReason.KILLED) {
-                // Normal death - permanently end boss bar
-                this.bossBarManager.permanentlyEnd();
-            } else if (reason == net.minecraft.entity.Entity.RemovalReason.DISCARDED) {
-                // Entity discarded (commands, peaceful mode, etc.) - permanently end
-                this.bossBarManager.permanentlyEnd();
-            } else if (reason == net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK) {
-                // Chunk unloaded - just pause boss bar (keep in registry for reload)
-                this.bossBarManager.endBossFight();
-            } else if (reason == net.minecraft.entity.Entity.RemovalReason.CHANGED_DIMENSION) {
-                // Dimension change - just pause boss bar (entity will reload in new dimension)
-                this.bossBarManager.endBossFight();
-            } else {
-                // Other reasons - permanently end to be safe
-                this.bossBarManager.permanentlyEnd();
-            }
+        try {
+            this.bossBarManager = KingPhantomBossBarRegistry.createBossBar(this);
+        } catch (Exception e) {
+            // Silent fail
         }
     }
     
@@ -336,10 +775,23 @@ public class KingPhantomEntity extends PhantomEntity {
     public void onDeath(net.minecraft.entity.damage.DamageSource damageSource) {
         super.onDeath(damageSource);
         
-        // Permanently clean up boss bar when entity dies
-        // Note: remove() will also be called with KILLED reason, but this ensures cleanup
+        // Clean up boss bar on death
+        if (!this.getEntityWorld().isClient()) {
+            KingPhantomBossBarRegistry.removeBossBar(this.getUuid());
+        }
+    }
+    
+    @Override
+    public void remove(net.minecraft.entity.Entity.RemovalReason reason) {
+        super.remove(reason);
+        
+        // Clean up boss bar when entity is removed for any reason (peaceful mode, dimension change, etc.)
+        // Note: Registry handles cleanup when entity is gone
         if (!this.getEntityWorld().isClient() && this.bossBarManager != null) {
-            this.bossBarManager.permanentlyEnd();
+            if (reason != net.minecraft.entity.Entity.RemovalReason.KILLED) {
+                // Removed by peaceful mode, dimension change, etc.
+                // Registry will detect entity is gone and clean up
+            }
         }
     }
     
@@ -417,6 +869,25 @@ public class KingPhantomEntity extends PhantomEntity {
             this.idleCircleCenter = null;
         }
         
+        /**
+         * Finds the ground level below a given position by scanning downward
+         */
+        private double findGroundLevel(double x, double y, double z) {
+            net.minecraft.util.math.BlockPos.Mutable pos = new net.minecraft.util.math.BlockPos.Mutable(x, y, z);
+            
+            // Scan downward up to 50 blocks to find solid ground
+            for (int i = 0; i < 50; i++) {
+                pos.setY((int)y - i);
+                if (!this.phantom.getEntityWorld().getBlockState(pos).isAir()) {
+                    // Found a solid block, return the Y position above it
+                    return pos.getY() + 1.0;
+                }
+            }
+            
+            // If no ground found within 50 blocks, just use current Y position
+            return y;
+        }
+        
         @Override
         public boolean canStart() {
             return true; // Always active when not attacking
@@ -429,6 +900,11 @@ public class KingPhantomEntity extends PhantomEntity {
         
         @Override
         public void tick() {
+            // Don't hover during phase transition or summon attack
+            if (this.phantom.isInPhaseTransition() || this.phantom.isSummoning()) {
+                return;
+            }
+            
             // Find nearest valid player every tick to keep tracking (exclude creative/spectator)
             PlayerEntity targetPlayer = null;
             double closestDistance = 64.0;
@@ -447,9 +923,15 @@ public class KingPhantomEntity extends PhantomEntity {
             
             if (targetPlayer == null) {
                 // No player nearby - circle around idle position
-                // Set idle circle center to current position if not set
+                // Set idle circle center to current position if not set, but maintain proper height
                 if (this.idleCircleCenter == null) {
-                    this.idleCircleCenter = new Vec3d(this.phantom.getX(), this.phantom.getY(), this.phantom.getZ());
+                    // Find the ground level below the phantom and hover HOVER_HEIGHT blocks above it
+                    double groundY = findGroundLevel(this.phantom.getX(), this.phantom.getY(), this.phantom.getZ());
+                    this.idleCircleCenter = new Vec3d(
+                        this.phantom.getX(), 
+                        groundY + HOVER_HEIGHT, 
+                        this.phantom.getZ()
+                    );
                 }
                 circleCenter = this.idleCircleCenter;
             } else {
@@ -459,7 +941,7 @@ public class KingPhantomEntity extends PhantomEntity {
                     targetPlayer.getY() + HOVER_HEIGHT,
                     targetPlayer.getZ()
                 );
-                // Update idle circle center to current position for when player leaves
+                // Update idle circle center to player's position for when player leaves
                 this.idleCircleCenter = circleCenter;
             }
             
@@ -537,6 +1019,9 @@ public class KingPhantomEntity extends PhantomEntity {
         
         @Override
         public boolean canStart() {
+            // Don't attack during phase transition or while summoning
+            if (this.phantom.isInPhaseTransition() || this.phantom.isSummoning()) return false;
+            
             // Only start if attack cooldown is finished
             if (this.phantom.getAttackCooldown() > 0) return false;
             
@@ -559,46 +1044,90 @@ public class KingPhantomEntity extends PhantomEntity {
         
         @Override
         public boolean shouldContinue() {
-            return this.isSwooping && this.swoopTimer > 0;
+            // Continue if swooping OR if phantom is summoning (so goal doesn't stop mid-summon)
+            return (this.isSwooping && this.swoopTimer > 0) || this.phantom.isSummoning();
         }
         
         @Override
         public void start() {
             if (this.targetPlayer == null) return;
             
-            // 50% chance for each attack type
-            boolean useSwoop = this.phantom.getRandom().nextBoolean();
+            int currentPhase = this.phantom.getCurrentPhase();
             
-            if (useSwoop) {
-                // Swoop attack
-                this.isSwooping = true;
-                this.swoopTimer = SWOOP_DURATION;
-                this.hasDamagedThisSwoop = false; // Reset damage flag for new swoop
+            if (currentPhase == PHASE_1) {
+                // Phase 1: 50% swoop, 50% ranged
+                boolean useSwoop = this.phantom.getRandom().nextBoolean();
                 
-                // Target slightly in front of player to account for movement
-                Vec3d playerVel = this.targetPlayer.getVelocity();
-                Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
-                this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
+                if (useSwoop) {
+                    // Swoop attack
+                    this.isSwooping = true;
+                    this.phantom.isSwooping = true; // Update entity flag
+                    this.swoopTimer = SWOOP_DURATION;
+                    this.hasDamagedThisSwoop = false;
+                    
+                    // Target slightly in front of player to account for movement
+                    Vec3d playerVel = this.targetPlayer.getVelocity();
+                    Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
+                    this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
+                } else {
+                    // Ranged beam attack
+                    this.isSwooping = false;
+                    this.phantom.isSwooping = false; // Update entity flag
+                    
+                    // Fire at player's current position
+                    Vec3d targetPos = new Vec3d(
+                        this.targetPlayer.getX(),
+                        this.targetPlayer.getY() + this.targetPlayer.getStandingEyeHeight() * 0.5,
+                        this.targetPlayer.getZ()
+                    );
+                    
+                    this.phantom.startRangedBeamAttack(targetPos);
+                }
             } else {
-                // Ranged beam attack
-                this.isSwooping = false;
+                // Phase 2: 40% swoop, 40% ranged, 20% summon
+                int attackChoice = this.phantom.getRandom().nextInt(100);
                 
-                // Fire at player's current position
-                Vec3d targetPos = new Vec3d(
-                    this.targetPlayer.getX(),
-                    this.targetPlayer.getY() + this.targetPlayer.getStandingEyeHeight() * 0.5,
-                    this.targetPlayer.getZ()
-                );
-                
-                this.phantom.startRangedBeamAttack(targetPos);
+                if (attackChoice < 40) {
+                    // Swoop attack (40%)
+                    this.isSwooping = true;
+                    this.phantom.isSwooping = true; // Update entity flag
+                    this.swoopTimer = SWOOP_DURATION;
+                    this.hasDamagedThisSwoop = false;
+                    
+                    // Target slightly in front of player to account for movement
+                    Vec3d playerVel = this.targetPlayer.getVelocity();
+                    Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
+                    this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
+                } else if (attackChoice < 80) {
+                    // Ranged beam attack (40%)
+                    this.isSwooping = false;
+                    this.phantom.isSwooping = false; // Update entity flag
+                    
+                    // Fire at player's current position
+                    Vec3d targetPos = new Vec3d(
+                        this.targetPlayer.getX(),
+                        this.targetPlayer.getY() + this.targetPlayer.getStandingEyeHeight() * 0.5,
+                        this.targetPlayer.getZ()
+                    );
+                    
+                    this.phantom.startRangedBeamAttack(targetPos);
+                } else {
+                    // Summon attack (20%)
+                    this.isSwooping = false;
+                    this.phantom.isSwooping = false; // Update entity flag
+                    this.phantom.startSummonAttack(this.targetPlayer);
+                }
             }
             
-            // Set cooldown for next attack (10 seconds)
-            this.phantom.setAttackCooldown(ATTACK_INTERVAL);
+            // Set cooldown for next attack based on current phase
+            this.phantom.setAttackCooldown(this.phantom.getAttackInterval());
         }
         
         @Override
         public void tick() {
+            // Don't tick swoop if summoning
+            if (this.phantom.isSummoning()) return;
+            
             if (!this.isSwooping) return;
             
             this.swoopTimer--;
@@ -634,6 +1163,7 @@ public class KingPhantomEntity extends PhantomEntity {
                                 // End the swoop immediately after landing a hit
                                 this.swoopTimer = 0;
                                 this.isSwooping = false;
+                                this.phantom.isSwooping = false; // Update entity flag
                             }
                         }
                     }
@@ -643,16 +1173,19 @@ public class KingPhantomEntity extends PhantomEntity {
             // End swoop early if we've passed the target
             if (this.swoopTimer <= 0) {
                 this.isSwooping = false;
+                this.phantom.isSwooping = false; // Update entity flag
             }
         }
         
         @Override
         public void stop() {
             this.isSwooping = false;
+            this.phantom.isSwooping = false; // Update entity flag
             this.swoopTimer = 0;
             this.swoopTarget = null;
             this.hasDamagedThisSwoop = false; // Reset damage flag when swoop ends
         }
     }
 }
+
 

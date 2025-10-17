@@ -93,6 +93,9 @@ public final class ModItemGroups {
                 entries.add(Registries.ITEM.get(Identifier.of(TemplateMod.MOD_ID, "shadow_hanging_sign")));
             }
             
+            // Membrane Block - crafted from phantom membranes
+            entries.add(ModBlocks.MEMBRANE_BLOCK);
+            
             entries.add(ModBlocks.SHADOW_CLAW);
             
             // Mold variants

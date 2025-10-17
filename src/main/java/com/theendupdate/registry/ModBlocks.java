@@ -599,6 +599,18 @@ public final class ModBlocks {
         )
     );
 
+    // Membrane Block - crafted from 9 phantom membranes
+    public static final Block MEMBRANE_BLOCK = registerBlock(
+        "membrane_block",
+        key -> new com.theendupdate.block.MembraneBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.RESIN_BLOCK)
+                .sounds(BlockSoundGroup.RESIN_BRICKS)
+                .strength(0.8F, 0.8F)
+                .registryKey(key)
+        )
+    );
+
     private static Block registerBlock(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
@@ -791,6 +803,7 @@ public final class ModBlocks {
             entries.add(END_MIRE);
             entries.add(END_MURK);
             entries.add(MOLD_BLOCK);
+            entries.add(MEMBRANE_BLOCK);
             entries.add(STELLARITH_CRYSTAL);
             entries.add(VOIDSTAR_BLOCK);
             entries.add(ASTRAL_REMNANT);

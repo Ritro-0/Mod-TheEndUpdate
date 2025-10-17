@@ -5,6 +5,7 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.api.EnvType;
 
 import com.theendupdate.entity.model.EtherealOrbEntityModel;
+import com.theendupdate.entity.model.KingPhantomEntityModel;
 import com.theendupdate.entity.renderer.EtherealOrbEntityRenderer;
 import com.theendupdate.entity.renderer.KingPhantomEntityRenderer;
 import com.theendupdate.entity.renderer.ShadowCreakingEntityRenderer;
@@ -104,7 +105,8 @@ public class TemplateModClient implements ClientModInitializer {
         // Entity renderers updated for 1.21.10 rendering API (OrderedRenderCommandQueue)
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
-        // King Phantom renderer (uses vanilla phantom model, scaled 4x)
+        // King Phantom renderer (custom phantom model, scaled 4x)
+        EntityModelLayerRegistry.registerModelLayer(KingPhantomEntityModel.LAYER_LOCATION, KingPhantomEntityModel::getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.KING_PHANTOM, KingPhantomEntityRenderer::new);
         // Shadow Creaking renderer (uses vanilla creaking model layer, inverted)
         EntityRendererRegistry.register(ModEntities.SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
