@@ -47,7 +47,7 @@ public class EnderChrysanthemumBlock extends PlantBlock {
 
 	@Override
 	protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-		return Block.createCuboidShape(6.0, 0.0, 6.0, 10.0, 6.0, 10.0);
+		return Block.createCuboidShape(5.0, 0.0, 5.0, 11.0, 14.0, 11.0);
 	}
 
 	@Override

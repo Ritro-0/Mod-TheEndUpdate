@@ -35,8 +35,8 @@ public class TendrilSproutBlock extends PlantBlock implements Fertilizable {
     // Whether growth has been stunted with shears
     public static final BooleanProperty STUNTED = BooleanProperty.of("stunted");
     
-    // Shape for the small plant
-    private static final VoxelShape SHAPE = VoxelShapes.cuboid(0.25, 0.0, 0.25, 0.75, 0.4, 0.75);
+    // Shape for the small plant (4x4 by 14 pixels)
+    private static final VoxelShape SHAPE = VoxelShapes.cuboid(0.375, 0.0, 0.375, 0.625, 0.875, 0.625);
 
     public TendrilSproutBlock(Settings settings) {
         super(settings);
@@ -96,12 +96,13 @@ public class TendrilSproutBlock extends PlantBlock implements Fertilizable {
         ItemStack heldItem = player.getStackInHand(player.getActiveHand());
         
         // Right-click with shears to stunt growth
-        if (heldItem.isOf(Items.SHEARS)) {
+        if (heldItem.isOf(Items.SHEARS) && !state.get(STUNTED)) {
             if (!world.isClient()) {
                 world.setBlockState(pos, state.with(STUNTED, true));
                 
                 // Damage the shears
                 heldItem.damage(1, player, player.getActiveHand());
+                world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_GROWING_PLANT_CROP, net.minecraft.sound.SoundCategory.BLOCKS, 1.0F, 1.0F);
             }
             return ActionResult.SUCCESS;
         }

@@ -30,11 +30,16 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.equipment.trim.ArmorTrim;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.SpawnGroup;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
+import net.minecraft.world.Difficulty;
 // predicate registration removed; compass logic handled via mixins
 
 @Environment(EnvType.CLIENT)  
@@ -78,6 +83,21 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.ETHEREAL_SHELF, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_SHELF, BlockRenderLayer.CUTOUT);
         
+        // Register tooltip callback for spawn eggs to show "Disabled in Peaceful"
+        ItemTooltipCallback.EVENT.register((stack, tooltipContext, tooltipType, lines) -> {
+            if (stack.getItem() instanceof com.theendupdate.item.CustomSpawnEggItem spawnEgg) {
+                // Check if it's a hostile mob spawn egg
+                if (spawnEgg.getEntityType().getSpawnGroup() == SpawnGroup.MONSTER) {
+                    // Check if world is in peaceful mode using MinecraftClient
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    if (client != null && client.world != null && 
+                        client.world.getDifficulty() == Difficulty.PEACEFUL) {
+                        lines.add(Text.translatable("item.disabled_in_peaceful").formatted(Formatting.RED));
+                    }
+                }
+            }
+        });
+        
         // Quantum Gateway wavy beacon beam is handled via BeaconBlockEntityRendererMixin
         
         // Entity Initialization
@@ -111,109 +131,63 @@ public class TemplateModClient implements ClientModInitializer {
             try {
                 MinecraftClient mc = client;
                 if (mc == null || mc.world == null || mc.player == null) return;
-                if (mc.options.getPerspective() == Perspective.FIRST_PERSON) return; // hide in first-person only
                 if (mc.world.getTime() % 10 != 0) return; // match server cadence
 
-                var player = mc.player;
-                boolean hasHead = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.HEAD));
-                boolean hasChest = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.CHEST));
-                boolean hasLegs = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.LEGS));
-                boolean hasFeet = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.FEET));
+                // Handle player spectral armor particles (hide in first-person)
+                if (mc.options.getPerspective() != Perspective.FIRST_PERSON) {
+                    var player = mc.player;
+                    boolean hasHead = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.HEAD));
+                    boolean hasChest = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.CHEST));
+                    boolean hasLegs = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.LEGS));
+                    boolean hasFeet = theendupdate$isSpectralTrimClient(player.getEquippedStack(EquipmentSlot.FEET));
 
-                int spectralPieces = 0;
-                if (hasHead) spectralPieces++;
-                if (hasChest) spectralPieces++;
-                if (hasLegs) spectralPieces++;
-                if (hasFeet) spectralPieces++;
-                if (spectralPieces <= 0) return;
+                    int spectralPieces = 0;
+                    if (hasHead) spectralPieces++;
+                    if (hasChest) spectralPieces++;
+                    if (hasLegs) spectralPieces++;
+                    if (hasFeet) spectralPieces++;
 
-                float spawnChance = switch (spectralPieces) {
-                    case 1 -> 0.5f;
-                    case 2 -> 0.7f;
-                    case 3 -> 0.85f;
-                    default -> 1.0f;
-                };
-                if (mc.world.random.nextFloat() > spawnChance) return;
-
-                double yawRad = Math.toRadians(player.getYaw());
-                double fwdX = -Math.sin(yawRad);
-                double fwdZ =  Math.cos(yawRad);
-                double rightX =  Math.cos(yawRad);
-                double rightZ =  Math.sin(yawRad);
-                boolean phase = ((mc.world.getTime() / 20) % 2) == 0;
-
-                if (hasChest) {
-                    double baseY = player.getY() + 1.30;
-                    double fbMag = 0.85;
-                    double lrMag = 0.45;
-                    double yMag  = 0.28;
-                    double offX = (phase ? fwdX : -fwdX) * fbMag;
-                    double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
-                    boolean lateralLeft = mc.world.random.nextBoolean();
-                    double latScale = lrMag * mc.world.random.nextDouble();
-                    double latX = (lateralLeft ? -rightX : rightX) * latScale;
-                    double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
-                    double spreadFB = (mc.world.random.nextDouble() - 0.5) * 0.6;
-                    double sprX = fwdX * spreadFB;
-                    double sprZ = fwdZ * spreadFB;
-                    double x = player.getX() + offX + latX + sprX + (mc.world.random.nextDouble() - 0.5) * 0.14;
-                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
-                    double z = player.getZ() + offZ + latZ + sprZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
-                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+                    if (spectralPieces > 0) {
+                        float spawnChance = switch (spectralPieces) {
+                            case 1 -> 0.5f;
+                            case 2 -> 0.7f;
+                            case 3 -> 0.85f;
+                            default -> 1.0f;
+                        };
+                        if (mc.world.random.nextFloat() <= spawnChance) {
+                            theendupdate$spawnParticlesForEntity(mc, player, hasHead, hasChest, hasLegs, hasFeet, spectralPieces);
+                        }
+                    }
                 }
 
-                if (hasHead) {
-                    double baseY = player.getEyeY() + 0.00;
-                    double fbMag = 0.55;
-                    double lrMag = 0.30;
-                    double yMag  = 0.22;
-                    double offX = (phase ? fwdX : -fwdX) * fbMag;
-                    double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
-                    boolean lateralLeft = mc.world.random.nextBoolean();
-                    double latScale = lrMag * mc.world.random.nextDouble();
-                    double latX = (lateralLeft ? -rightX : rightX) * latScale;
-                    double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
-                    double spreadFB = (mc.world.random.nextDouble() - 0.5) * 0.5;
-                    double sprX = fwdX * spreadFB;
-                    double sprZ = fwdZ * spreadFB;
-                    double x = player.getX() + offX + latX + sprX + (mc.world.random.nextDouble() - 0.5) * 0.14;
-                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
-                    double z = player.getZ() + offZ + latZ + sprZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
-                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
-                }
+                // Handle armor stand spectral armor particles
+                for (net.minecraft.entity.decoration.ArmorStandEntity armorStand : mc.world.getEntitiesByClass(
+                        net.minecraft.entity.decoration.ArmorStandEntity.class,
+                        mc.player.getBoundingBox().expand(32.0),
+                        entity -> entity != null && entity.isAlive())) {
+                    
+                    boolean hasHead = theendupdate$isSpectralTrimClient(armorStand.getEquippedStack(EquipmentSlot.HEAD));
+                    boolean hasChest = theendupdate$isSpectralTrimClient(armorStand.getEquippedStack(EquipmentSlot.CHEST));
+                    boolean hasLegs = theendupdate$isSpectralTrimClient(armorStand.getEquippedStack(EquipmentSlot.LEGS));
+                    boolean hasFeet = theendupdate$isSpectralTrimClient(armorStand.getEquippedStack(EquipmentSlot.FEET));
 
-                if (hasLegs) {
-                    double baseY = player.getY() + 0.95;
-                    double lrMag = 0.55;
-                    double fbMag = 0.35;
-                    double yMag  = 0.18;
-                    double offX = (phase ? rightX : -rightX) * lrMag;
-                    double offZ = (phase ? rightZ : -rightZ) * lrMag;
-                    boolean forwardSide = mc.world.random.nextBoolean();
-                    double swayScale = fbMag * mc.world.random.nextDouble();
-                    double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
-                    double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
-                    double x = player.getX() + offX + swayX + (mc.world.random.nextDouble() - 0.5) * 0.16;
-                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
-                    double z = player.getZ() + offZ + swayZ + (mc.world.random.nextDouble() - 0.5) * 0.16;
-                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
-                }
+                    int spectralPieces = 0;
+                    if (hasHead) spectralPieces++;
+                    if (hasChest) spectralPieces++;
+                    if (hasLegs) spectralPieces++;
+                    if (hasFeet) spectralPieces++;
 
-                if (hasFeet) {
-                    double baseY = player.getY() + 0.25;
-                    double lrMag = 0.45;
-                    double fbMag = 0.28;
-                    double yMag  = 0.14;
-                    double offX = (phase ? rightX : -rightX) * lrMag;
-                    double offZ = (phase ? rightZ : -rightZ) * lrMag;
-                    boolean forwardSide = mc.world.random.nextBoolean();
-                    double swayScale = fbMag * mc.world.random.nextDouble();
-                    double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
-                    double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
-                    double x = player.getX() + offX + swayX + (mc.world.random.nextDouble() - 0.5) * 0.14;
-                    double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
-                    double z = player.getZ() + offZ + swayZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
-                    mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+                    if (spectralPieces > 0) {
+                        float spawnChance = switch (spectralPieces) {
+                            case 1 -> 0.5f;
+                            case 2 -> 0.7f;
+                            case 3 -> 0.85f;
+                            default -> 1.0f;
+                        };
+                        if (mc.world.random.nextFloat() <= spawnChance) {
+                            theendupdate$spawnParticlesForEntity(mc, armorStand, hasHead, hasChest, hasLegs, hasFeet, spectralPieces);
+                        }
+                    }
                 }
             } catch (Throwable ignored) {}
         });
@@ -231,6 +205,92 @@ public class TemplateModClient implements ClientModInitializer {
             return "spectral".equals(path) || "spectral_cluster".equals(path);
         } catch (Throwable ignored) {}
         return false;
+    }
+
+    private static void theendupdate$spawnParticlesForEntity(MinecraftClient mc, net.minecraft.entity.LivingEntity entity, 
+            boolean hasHead, boolean hasChest, boolean hasLegs, boolean hasFeet, int spectralPieces) {
+        try {
+            double yawRad = Math.toRadians(entity.getYaw());
+            double fwdX = -Math.sin(yawRad);
+            double fwdZ =  Math.cos(yawRad);
+            double rightX =  Math.cos(yawRad);
+            double rightZ =  Math.sin(yawRad);
+            boolean phase = ((mc.world.getTime() / 20) % 2) == 0;
+
+            if (hasChest) {
+                double baseY = entity.getY() + 1.30;
+                double fbMag = 0.85;
+                double lrMag = 0.45;
+                double yMag  = 0.28;
+                double offX = (phase ? fwdX : -fwdX) * fbMag;
+                double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
+                boolean lateralLeft = mc.world.random.nextBoolean();
+                double latScale = lrMag * mc.world.random.nextDouble();
+                double latX = (lateralLeft ? -rightX : rightX) * latScale;
+                double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
+                double spreadFB = (mc.world.random.nextDouble() - 0.5) * 0.6;
+                double sprX = fwdX * spreadFB;
+                double sprZ = fwdZ * spreadFB;
+                double x = entity.getX() + offX + latX + sprX + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                double z = entity.getZ() + offZ + latZ + sprZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+            }
+
+            if (hasHead) {
+                double baseY = entity.getEyeY() + 0.00;
+                double fbMag = 0.55;
+                double lrMag = 0.30;
+                double yMag  = 0.22;
+                double offX = (phase ? fwdX : -fwdX) * fbMag;
+                double offZ = (phase ? fwdZ : -fwdZ) * fbMag;
+                boolean lateralLeft = mc.world.random.nextBoolean();
+                double latScale = lrMag * mc.world.random.nextDouble();
+                double latX = (lateralLeft ? -rightX : rightX) * latScale;
+                double latZ = (lateralLeft ? -rightZ : rightZ) * latScale;
+                double spreadFB = (mc.world.random.nextDouble() - 0.5) * 0.5;
+                double sprX = fwdX * spreadFB;
+                double sprZ = fwdZ * spreadFB;
+                double x = entity.getX() + offX + latX + sprX + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                double z = entity.getZ() + offZ + latZ + sprZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+            }
+
+            if (hasLegs) {
+                double baseY = entity.getY() + 0.95;
+                double lrMag = 0.55;
+                double fbMag = 0.35;
+                double yMag  = 0.18;
+                double offX = (phase ? rightX : -rightX) * lrMag;
+                double offZ = (phase ? rightZ : -rightZ) * lrMag;
+                boolean forwardSide = mc.world.random.nextBoolean();
+                double swayScale = fbMag * mc.world.random.nextDouble();
+                double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
+                double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
+                double x = entity.getX() + offX + swayX + (mc.world.random.nextDouble() - 0.5) * 0.16;
+                double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                double z = entity.getZ() + offZ + swayZ + (mc.world.random.nextDouble() - 0.5) * 0.16;
+                mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+            }
+
+            if (hasFeet) {
+                double baseY = entity.getY() + 0.25;
+                double lrMag = 0.45;
+                double fbMag = 0.28;
+                double yMag  = 0.14;
+                double offX = (phase ? rightX : -rightX) * lrMag;
+                double offZ = (phase ? rightZ : -rightZ) * lrMag;
+                boolean forwardSide = mc.world.random.nextBoolean();
+                double swayScale = fbMag * mc.world.random.nextDouble();
+                double swayX = (forwardSide ? fwdX : -fwdX) * swayScale;
+                double swayZ = (forwardSide ? fwdZ : -fwdZ) * swayScale;
+                double x = entity.getX() + offX + swayX + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                double y = baseY + (mc.world.random.nextDouble() - 0.5) * yMag;
+                double z = entity.getZ() + offZ + swayZ + (mc.world.random.nextDouble() - 0.5) * 0.14;
+                mc.particleManager.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+            }
+        } catch (Throwable ignored) {}
     }
 
 }

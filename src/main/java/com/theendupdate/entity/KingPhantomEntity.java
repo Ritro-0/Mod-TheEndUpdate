@@ -23,7 +23,7 @@ import java.util.EnumSet;
  * - Uses custom king_phantom.png and king_phantom_eyes.png textures
  * - Increased health and damage compared to normal phantoms
  * - Deep blood red boss bar
- * - Custom AI: hovers 10 blocks above players, alternates between swoop attacks and ranged beam attacks
+ * - Custom AI: hovers 25 blocks above players, alternates between swoop attacks and ranged beam attacks
  */
 public class KingPhantomEntity extends PhantomEntity {
     
@@ -31,8 +31,8 @@ public class KingPhantomEntity extends PhantomEntity {
     public KingPhantomBossBarManager bossBarManager;
     
     // Attack tracking
-    private int attackCooldown = 0;
     private static final int ATTACK_INTERVAL = 200; // 10 seconds (200 ticks)
+    private int attackCooldown = ATTACK_INTERVAL; // Start with full cooldown for initial hover phase
     
     // Ranged beam attack tracking
     private int rangedBeamTravelTicks = 0;
@@ -43,12 +43,12 @@ public class KingPhantomEntity extends PhantomEntity {
     public KingPhantomEntity(EntityType<? extends PhantomEntity> entityType, World world) {
         super(entityType, world);
         this.experiencePoints = 20; // More XP than regular phantom (5)
-        this.setPersistent();
+        this.setPersistent(); // Persistent to avoid chunk unload despawn, but still despawns in peaceful
         this.setNoGravity(true); // Ensure no gravity for proper flying
         
-        // Initialize boss bar on server side
+        // Get or create boss bar manager from registry (prevents duplicates on reload)
         if (!world.isClient()) {
-            this.bossBarManager = new KingPhantomBossBarManager(this.getUuid());
+            this.bossBarManager = KingPhantomBossBarManager.getOrCreate(this.getUuid());
         }
     }
     
@@ -62,14 +62,63 @@ public class KingPhantomEntity extends PhantomEntity {
         this.goalSelector.add(1, new PeriodicAttackGoal(this)); // Attacks take priority
         this.goalSelector.add(2, new HoverAbovePlayerGoal(this)); // Hover when not attacking
         
-        // Add targeting
-        this.targetSelector.add(1, new ActiveTargetGoal<>(this, PlayerEntity.class, true));
+        // Add targeting - only target players in Survival/Adventure mode
+        this.targetSelector.add(1, new ActiveTargetGoal<>(this, PlayerEntity.class, true) {
+            @Override
+            public boolean canStart() {
+                // Only target players who are not in creative or spectator mode
+                if (!super.canStart()) return false;
+                PlayerEntity target = KingPhantomEntity.this.getEntityWorld().getClosestPlayer(
+                    KingPhantomEntity.this, 64.0
+                );
+                return target != null && !target.isCreative() && !target.isSpectator();
+            }
+        });
     }
     
     @Override
     public ItemStack getPickBlockStack() {
         // Return the spawn egg when middle-clicked in creative mode
         return new ItemStack(com.theendupdate.registry.ModItems.KING_PHANTOM_SPAWN_EGG);
+    }
+    
+    @Override
+    public void checkDespawn() {
+        // Despawn in peaceful mode (like other hostile mobs)
+        if (this.getEntityWorld().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
+            this.discard();
+            return;
+        }
+        
+        // Otherwise, don't despawn (persistent boss)
+        // Don't call super.checkDespawn() to prevent normal despawn logic
+    }
+    
+    @Override
+    public boolean isFireImmune() {
+        // King Phantom is immune to all fire damage
+        return true;
+    }
+    
+    @Override
+    public void travel(Vec3d movementInput) {
+        // Override travel to have complete control over movement
+        // Vanilla phantoms have special flight physics we want to bypass
+        
+        if (this.getEntityWorld().isClient()) {
+            // Client side - just do normal travel
+            super.travel(movementInput);
+            return;
+        }
+        
+        // Server side - use our velocity directly without phantom flight physics
+        Vec3d velocity = this.getVelocity();
+        
+        // Apply velocity to position
+        this.setPosition(this.getX() + velocity.x, this.getY() + velocity.y, this.getZ() + velocity.z);
+        
+        // Apply air friction (0.91 is vanilla air resistance)
+        this.setVelocity(velocity.multiply(0.91, 0.91, 0.91));
     }
     
     @Override
@@ -150,8 +199,40 @@ public class KingPhantomEntity extends PhantomEntity {
         double headDistance = Math.min(totalDistance, ticksElapsed * this.rangedBeamSpeedPerTick);
         Vec3d head = this.rangedBeamStart.add(dir.multiply(headDistance));
         
-        // Spawn MORE particles along the beam for better visibility
-        int segmentPoints = 20; // Increased from 6
+        // Check for block collision along the beam's path for this tick
+        double nextHeadDistance = Math.min(totalDistance, (ticksElapsed + 1) * this.rangedBeamSpeedPerTick);
+        Vec3d nextHead = this.rangedBeamStart.add(dir.multiply(nextHeadDistance));
+        net.minecraft.util.hit.HitResult blockHit = sw.raycast(new net.minecraft.world.RaycastContext(
+            head,
+            nextHead,
+            net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+            net.minecraft.world.RaycastContext.FluidHandling.NONE,
+            this
+        ));
+        
+        // If we hit a block, detonate at the impact point
+        if (blockHit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+            Vec3d impactPos = blockHit.getPos();
+            // Spawn particles along the path up to the impact point
+            int segmentPoints = 20;
+            for (int i = 0; i < segmentPoints; i++) {
+                double t = i / (double)segmentPoints;
+                Vec3d p = head.lerp(impactPos, t);
+                sw.spawnParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 3, 0.1, 0.1, 0.1, 0.0);
+                sw.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0.0);
+            }
+            // Detonate at impact point
+            spawnBeamExplosion(impactPos.x, impactPos.y, impactPos.z);
+            // Clean up beam state
+            this.rangedBeamStart = null;
+            this.rangedBeamEnd = null;
+            this.rangedBeamTravelTicks = 0;
+            return;
+        }
+        
+        // No block hit - continue beam normally
+        // Spawn particles along the beam for better visibility
+        int segmentPoints = 20;
         for (int i = 0; i < segmentPoints; i++) {
             double offset = (i / (double)segmentPoints) * this.rangedBeamSpeedPerTick;
             Vec3d p = head.add(dir.multiply(offset));
@@ -183,13 +264,15 @@ public class KingPhantomEntity extends PhantomEntity {
         sw.spawnParticles(ParticleTypes.END_ROD, cx, cy, cz, 50, 0.5, 0.5, 0.5, 0.1);
         sw.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, cx, cy, cz, 30, 0.5, 0.5, 0.5, 0.05);
         
-        // Area damage
-        float damage = 10.0f;
+        // Area damage - scale based on difficulty
+        float baseDamage = 10.0f;
+        float damage = getDifficultyScaledDamage(baseDamage);
         double radius = 4.0; // Increased radius
         Box box = new Box(cx - radius, cy - radius, cz - radius, cx + radius, cy + radius, cz + radius);
         
-        // Only target players like the Shadow Creaking does
-        for (PlayerEntity player : sw.getEntitiesByClass(PlayerEntity.class, box, (pe) -> pe.isAlive())) {
+        // Only target players (excluding creative/spectator) like the Shadow Creaking does
+        for (PlayerEntity player : sw.getEntitiesByClass(PlayerEntity.class, box, 
+                (pe) -> pe.isAlive() && !pe.isCreative() && !pe.isSpectator())) {
             Vec3d playerPos = new Vec3d(player.getX(), player.getY(), player.getZ());
             double distance = playerPos.distanceTo(new Vec3d(cx, cy, cz));
             if (distance <= radius) {
@@ -225,12 +308,27 @@ public class KingPhantomEntity extends PhantomEntity {
     }
     
     @Override
-    public void onRemoved() {
-        super.onRemoved();
+    public void remove(net.minecraft.entity.Entity.RemovalReason reason) {
+        super.remove(reason);
         
-        // Clean up boss bar when entity is removed
+        // Handle boss bar cleanup based on removal reason
         if (!this.getEntityWorld().isClient() && this.bossBarManager != null) {
-            this.bossBarManager.endBossFight();
+            if (reason == net.minecraft.entity.Entity.RemovalReason.KILLED) {
+                // Normal death - permanently end boss bar
+                this.bossBarManager.permanentlyEnd();
+            } else if (reason == net.minecraft.entity.Entity.RemovalReason.DISCARDED) {
+                // Entity discarded (commands, peaceful mode, etc.) - permanently end
+                this.bossBarManager.permanentlyEnd();
+            } else if (reason == net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK) {
+                // Chunk unloaded - just pause boss bar (keep in registry for reload)
+                this.bossBarManager.endBossFight();
+            } else if (reason == net.minecraft.entity.Entity.RemovalReason.CHANGED_DIMENSION) {
+                // Dimension change - just pause boss bar (entity will reload in new dimension)
+                this.bossBarManager.endBossFight();
+            } else {
+                // Other reasons - permanently end to be safe
+                this.bossBarManager.permanentlyEnd();
+            }
         }
     }
     
@@ -238,9 +336,10 @@ public class KingPhantomEntity extends PhantomEntity {
     public void onDeath(net.minecraft.entity.damage.DamageSource damageSource) {
         super.onDeath(damageSource);
         
-        // Clean up boss bar when entity dies
+        // Permanently clean up boss bar when entity dies
+        // Note: remove() will also be called with KILLED reason, but this ensures cleanup
         if (!this.getEntityWorld().isClient() && this.bossBarManager != null) {
-            this.bossBarManager.endBossFight();
+            this.bossBarManager.permanentlyEnd();
         }
     }
     
@@ -248,7 +347,14 @@ public class KingPhantomEntity extends PhantomEntity {
     public boolean tryAttack(net.minecraft.server.world.ServerWorld world, net.minecraft.entity.Entity target) {
         // Override to ensure we can always attack (bypass phantom's restrictions)
         if (target instanceof LivingEntity livingTarget) {
-            float damage = (float)this.getAttributeValue(EntityAttributes.ATTACK_DAMAGE);
+            // Don't attack creative/spectator players
+            if (target instanceof PlayerEntity player && (player.isCreative() || player.isSpectator())) {
+                return false;
+            }
+            
+            // Scale damage based on difficulty
+            float baseDamage = (float)this.getAttributeValue(EntityAttributes.ATTACK_DAMAGE);
+            float damage = getDifficultyScaledDamage(baseDamage);
             
             // Try with generic damage source (works reliably)
             boolean hit = livingTarget.damage(world, world.getDamageSources().generic(), damage);
@@ -269,28 +375,46 @@ public class KingPhantomEntity extends PhantomEntity {
         return false;
     }
     
+    /**
+     * Scales damage based on world difficulty.
+     * Easy: 50% damage, Normal: 100% damage, Hard: 150% damage
+     */
+    private float getDifficultyScaledDamage(float baseDamage) {
+        if (this.getEntityWorld() == null) return baseDamage;
+        
+        return switch (this.getEntityWorld().getDifficulty()) {
+            case PEACEFUL -> 0.0f; // No damage in peaceful (shouldn't happen since mob despawns)
+            case EASY -> baseDamage * 0.5f;
+            case NORMAL -> baseDamage;
+            case HARD -> baseDamage * 1.5f;
+        };
+    }
+    
     public static DefaultAttributeContainer.Builder createKingPhantomAttributes() {
         // Phantom base stats: 20 HP, 6 damage, 0.4 follow range
-        // King Phantom: 4x scaling
+        // King Phantom: 32x health, 2x damage
         return net.minecraft.entity.mob.HostileEntity.createHostileAttributes()
-            .add(EntityAttributes.MAX_HEALTH, 80.0) // 4x normal phantom health (20)
+            .add(EntityAttributes.MAX_HEALTH, 640.0) // 32x normal phantom health (20)
             .add(EntityAttributes.ATTACK_DAMAGE, 12.0) // 2x normal phantom damage (6)
             .add(EntityAttributes.FOLLOW_RANGE, 64.0) // Extended range for larger mob
             .add(EntityAttributes.FLYING_SPEED, 0.6); // Flying speed
     }
     
     /**
-     * Custom AI Goal: Hovers approximately 10 blocks above the nearest player's head
+     * Custom AI Goal: Hovers approximately 25 blocks above the nearest player's head
      */
     static class HoverAbovePlayerGoal extends Goal {
         private final KingPhantomEntity phantom;
-        private static final double HOVER_HEIGHT = 10.0;
+        private static final double HOVER_HEIGHT = 25.0;
         private static final double HOVER_RADIUS = 3.0; // Circle around the player
         private Vec3d targetPosition;
+        private Vec3d idleCircleCenter; // Position to circle around when no target
         
         public HoverAbovePlayerGoal(KingPhantomEntity phantom) {
             this.phantom = phantom;
             this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
+            // Initialize idle circle center to phantom's spawn position
+            this.idleCircleCenter = null;
         }
         
         @Override
@@ -305,28 +429,50 @@ public class KingPhantomEntity extends PhantomEntity {
         
         @Override
         public void tick() {
-            // Find nearest player every tick to keep tracking
-            PlayerEntity targetPlayer = this.phantom.getEntityWorld().getClosestPlayer(
-                this.phantom, 64.0
-            );
+            // Find nearest valid player every tick to keep tracking (exclude creative/spectator)
+            PlayerEntity targetPlayer = null;
+            double closestDistance = 64.0;
             
-            if (targetPlayer == null || !targetPlayer.isAlive()) {
-                // No player nearby, just hover in place
-                Vec3d currentPos = new Vec3d(this.phantom.getX(), this.phantom.getY(), this.phantom.getZ());
-                this.targetPosition = currentPos;
-                return;
+            for (PlayerEntity player : this.phantom.getEntityWorld().getPlayers()) {
+                if (player.isSpectator() || player.isCreative() || !player.isAlive()) continue;
+                double distance = this.phantom.distanceTo(player);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    targetPlayer = player;
+                }
             }
             
-            // Calculate a position 10 blocks above the player
+            // Determine the center point to circle around
+            Vec3d circleCenter;
+            
+            if (targetPlayer == null) {
+                // No player nearby - circle around idle position
+                // Set idle circle center to current position if not set
+                if (this.idleCircleCenter == null) {
+                    this.idleCircleCenter = new Vec3d(this.phantom.getX(), this.phantom.getY(), this.phantom.getZ());
+                }
+                circleCenter = this.idleCircleCenter;
+            } else {
+                // Player found - circle around player position (25 blocks above)
+                circleCenter = new Vec3d(
+                    targetPlayer.getX(),
+                    targetPlayer.getY() + HOVER_HEIGHT,
+                    targetPlayer.getZ()
+                );
+                // Update idle circle center to current position for when player leaves
+                this.idleCircleCenter = circleCenter;
+            }
+            
+            // Calculate a position around the circle center
             // Add some horizontal offset so it circles like a vulture
             double angle = (this.phantom.age * 0.05) % (2 * Math.PI);
             double offsetX = Math.cos(angle) * HOVER_RADIUS;
             double offsetZ = Math.sin(angle) * HOVER_RADIUS;
             
             this.targetPosition = new Vec3d(
-                targetPlayer.getX() + offsetX,
-                targetPlayer.getY() + HOVER_HEIGHT,
-                targetPlayer.getZ() + offsetZ
+                circleCenter.x + offsetX,
+                circleCenter.y,
+                circleCenter.z + offsetZ
             );
             
             // Calculate direction to target
@@ -355,12 +501,20 @@ public class KingPhantomEntity extends PhantomEntity {
                 this.phantom.bodyYaw = (float)yaw;
             }
             
-            // Look at the player
-            this.phantom.getLookControl().lookAt(
-                targetPlayer.getX(),
-                targetPlayer.getEyeY(),
-                targetPlayer.getZ()
-            );
+            // Look at the player if there is one, otherwise look at circle center
+            if (targetPlayer != null) {
+                this.phantom.getLookControl().lookAt(
+                    targetPlayer.getX(),
+                    targetPlayer.getEyeY(),
+                    targetPlayer.getZ()
+                );
+            } else {
+                this.phantom.getLookControl().lookAt(
+                    circleCenter.x,
+                    circleCenter.y,
+                    circleCenter.z
+                );
+            }
         }
     }
     
@@ -373,6 +527,7 @@ public class KingPhantomEntity extends PhantomEntity {
         private boolean isSwooping = false;
         private Vec3d swoopTarget;
         private int swoopTimer = 0;
+        private boolean hasDamagedThisSwoop = false; // Track if we've already hit during this swoop
         private static final int SWOOP_DURATION = 40; // 2 seconds
         
         public PeriodicAttackGoal(KingPhantomEntity phantom) {
@@ -385,10 +540,21 @@ public class KingPhantomEntity extends PhantomEntity {
             // Only start if attack cooldown is finished
             if (this.phantom.getAttackCooldown() > 0) return false;
             
-            this.targetPlayer = this.phantom.getEntityWorld().getClosestPlayer(
-                this.phantom, 64.0
-            );
-            return this.targetPlayer != null && this.targetPlayer.isAlive();
+            // Find closest valid target (exclude creative/spectator)
+            PlayerEntity closestPlayer = null;
+            double closestDistance = 64.0;
+            
+            for (PlayerEntity player : this.phantom.getEntityWorld().getPlayers()) {
+                if (player.isSpectator() || player.isCreative() || !player.isAlive()) continue;
+                double distance = this.phantom.distanceTo(player);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestPlayer = player;
+                }
+            }
+            
+            this.targetPlayer = closestPlayer;
+            return this.targetPlayer != null;
         }
         
         @Override
@@ -407,6 +573,7 @@ public class KingPhantomEntity extends PhantomEntity {
                 // Swoop attack
                 this.isSwooping = true;
                 this.swoopTimer = SWOOP_DURATION;
+                this.hasDamagedThisSwoop = false; // Reset damage flag for new swoop
                 
                 // Target slightly in front of player to account for movement
                 Vec3d playerVel = this.targetPlayer.getVelocity();
@@ -455,12 +622,20 @@ public class KingPhantomEntity extends PhantomEntity {
                 this.phantom.headYaw = (float)yaw;
                 this.phantom.bodyYaw = (float)yaw;
                 
-                // Try to damage player if close enough (increased range)
-                double distance = this.phantom.squaredDistanceTo(this.targetPlayer);
-                if (distance < 9.0) { // 3 blocks radius
-                    if (this.phantom.getEntityWorld() instanceof ServerWorld serverWorld) {
-                        // Use the vanilla tryAttack method like other mobs do
-                        this.phantom.tryAttack(serverWorld, this.targetPlayer);
+                // Try to damage player if close enough (increased range) - but only once per swoop!
+                if (!this.hasDamagedThisSwoop) {
+                    double distance = this.phantom.squaredDistanceTo(this.targetPlayer);
+                    if (distance < 9.0) { // 3 blocks radius
+                        if (this.phantom.getEntityWorld() instanceof ServerWorld serverWorld) {
+                            // Use the vanilla tryAttack method like other mobs do
+                            boolean didDamage = this.phantom.tryAttack(serverWorld, this.targetPlayer);
+                            if (didDamage) {
+                                this.hasDamagedThisSwoop = true; // Mark that we've damaged during this swoop
+                                // End the swoop immediately after landing a hit
+                                this.swoopTimer = 0;
+                                this.isSwooping = false;
+                            }
+                        }
                     }
                 }
             }
@@ -476,6 +651,7 @@ public class KingPhantomEntity extends PhantomEntity {
             this.isSwooping = false;
             this.swoopTimer = 0;
             this.swoopTarget = null;
+            this.hasDamagedThisSwoop = false; // Reset damage flag when swoop ends
         }
     }
 }

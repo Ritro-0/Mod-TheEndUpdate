@@ -187,10 +187,11 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         ItemStack stack = player.getStackInHand(hand);
         // Shears stunt the tip, switching it to the "vines" texture
-        if (stack.isOf(Items.SHEARS) && state.get(TIP)) {
+        if (stack.isOf(Items.SHEARS) && state.get(TIP) && !state.get(STUNTED)) {
             if (!world.isClient()) {
                 world.setBlockState(pos, state.with(STUNTED, true).with(TIP_VINES, true));
                 stack.damage(1, player, hand);
+                world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_GROWING_PLANT_CROP, net.minecraft.sound.SoundCategory.BLOCKS, 1.0F, 1.0F);
             }
             return ActionResult.SUCCESS;
         }
@@ -200,10 +201,11 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
     // Mapping-safe override variant used by 1.21.8 that omits Hand param
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         ItemStack stack = player.getMainHandStack();
-        if (stack.isOf(Items.SHEARS) && state.get(TIP)) {
+        if (stack.isOf(Items.SHEARS) && state.get(TIP) && !state.get(STUNTED)) {
             if (!world.isClient()) {
                 world.setBlockState(pos, state.with(STUNTED, true).with(TIP_VINES, true));
                 stack.damage(1, player, Hand.MAIN_HAND);
+                world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_GROWING_PLANT_CROP, net.minecraft.sound.SoundCategory.BLOCKS, 1.0F, 1.0F);
             }
             return ActionResult.SUCCESS;
         }

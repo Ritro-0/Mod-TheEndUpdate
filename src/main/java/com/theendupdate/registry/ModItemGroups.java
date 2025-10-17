@@ -131,6 +131,7 @@ public final class ModItemGroups {
             
             // Spawn eggs
             entries.add(ModItems.ETHEREAL_ORB_SPAWN_EGG);
+            entries.add(ModItems.KING_PHANTOM_SPAWN_EGG);
             entries.add(ModItems.SHADOW_CREAKING_SPAWN_EGG);
             entries.add(ModItems.MINI_SHADOW_CREAKING_SPAWN_EGG);
             entries.add(ModItems.TINY_SHADOW_CREAKING_SPAWN_EGG);

@@ -9,6 +9,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.entity.player.PlayerEntity;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages the boss bar for the King Phantom.
@@ -18,11 +19,14 @@ public class KingPhantomBossBarManager {
     private static final Text BOSS_BAR_NAME = Text.translatable("entity.theendupdate.king_phantom");
     private static final int VIEW_DISTANCE = 64; // Distance within which players see the boss bar
     
+    // Static registry to prevent duplicate boss bars when entities are unloaded/reloaded
+    private static final Map<UUID, KingPhantomBossBarManager> MANAGER_REGISTRY = new ConcurrentHashMap<>();
+    
     private final ServerBossBar bossBar;
     private final UUID entityUuid;
     private boolean isActive;
     
-    public KingPhantomBossBarManager(UUID entityUuid) {
+    private KingPhantomBossBarManager(UUID entityUuid) {
         this.entityUuid = entityUuid;
         // RED color for deep blood red appearance
         this.bossBar = new ServerBossBar(BOSS_BAR_NAME, BossBar.Color.RED, BossBar.Style.PROGRESS);
@@ -33,6 +37,25 @@ public class KingPhantomBossBarManager {
         this.bossBar.setDarkenSky(false);
         this.bossBar.setDragonMusic(false);
         this.bossBar.setThickenFog(false);
+    }
+    
+    /**
+     * Gets or creates a boss bar manager for the given entity UUID.
+     * This prevents duplicate boss bars when entities are unloaded and reloaded.
+     */
+    public static KingPhantomBossBarManager getOrCreate(UUID entityUuid) {
+        return MANAGER_REGISTRY.computeIfAbsent(entityUuid, KingPhantomBossBarManager::new);
+    }
+    
+    /**
+     * Removes a boss bar manager from the registry and cleans it up.
+     * Should be called when the entity is permanently removed (death or despawn).
+     */
+    public static void remove(UUID entityUuid) {
+        KingPhantomBossBarManager manager = MANAGER_REGISTRY.remove(entityUuid);
+        if (manager != null) {
+            manager.endBossFight();
+        }
     }
     
     /**
@@ -78,12 +101,18 @@ public class KingPhantomBossBarManager {
     private void updateNearbyPlayers(ServerWorld world, KingPhantomEntity entity) {
         if (!this.isActive || entity == null) return;
         
-        // Get all players within view distance
+        // Get all players within view distance IN THE SAME DIMENSION
         Set<ServerPlayerEntity> nearbyPlayers = new HashSet<>();
         
         Box searchBox = Box.of(new Vec3d(entity.getX(), entity.getY(), entity.getZ()), VIEW_DISTANCE * 2, VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
         List<PlayerEntity> playersInRange = world.getEntitiesByClass(PlayerEntity.class, searchBox, 
-            p -> new Vec3d(p.getX(), p.getY(), p.getZ()).distanceTo(new Vec3d(entity.getX(), entity.getY(), entity.getZ())) <= VIEW_DISTANCE);
+            p -> {
+                // Check if player is in the same world/dimension
+                if (!p.getEntityWorld().equals(entity.getEntityWorld())) {
+                    return false;
+                }
+                return new Vec3d(p.getX(), p.getY(), p.getZ()).distanceTo(new Vec3d(entity.getX(), entity.getY(), entity.getZ())) <= VIEW_DISTANCE;
+            });
         
         for (PlayerEntity player : playersInRange) {
             if (player instanceof ServerPlayerEntity serverPlayer) {
@@ -101,7 +130,7 @@ public class KingPhantomBossBarManager {
             }
         }
         
-        // Remove players who are no longer nearby
+        // Remove players who are no longer nearby or in different dimension
         for (ServerPlayerEntity player : currentPlayers) {
             if (!nearbyPlayers.contains(player)) {
                 this.bossBar.removePlayer(player);
@@ -110,11 +139,21 @@ public class KingPhantomBossBarManager {
     }
     
     /**
-     * Ends the boss fight and cleans up
+     * Ends the boss fight and cleans up (but doesn't remove from registry).
+     * Use this when the entity is temporarily unloaded (chunk unload).
      */
     public void endBossFight() {
         this.isActive = false;
         this.bossBar.clearPlayers();
+    }
+    
+    /**
+     * Permanently ends the boss fight and removes from registry.
+     * Use this when the entity is permanently removed (death or despawn).
+     */
+    public void permanentlyEnd() {
+        this.endBossFight();
+        MANAGER_REGISTRY.remove(this.entityUuid);
     }
     
     /**

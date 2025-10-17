@@ -6,6 +6,8 @@ import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
@@ -53,14 +55,33 @@ public class MoldBlock extends Block implements Fertilizable {
             if (targetState.isIn(BlockTags.SAPLINGS)) continue;
             if (targetState.isIn(BlockTags.LEAVES)) continue;
             if (targetState.isOf(Blocks.BEDROCK)) continue;
+            if (targetState.isOf(Blocks.REINFORCED_DEEPSLATE)) continue;
+            
+            // Skip doors, signs, and hanging signs
+            if (targetState.isIn(BlockTags.DOORS)) continue;
+            if (targetState.isIn(BlockTags.STANDING_SIGNS)) continue;
+            if (targetState.isIn(BlockTags.WALL_SIGNS)) continue;
+            if (targetState.isIn(BlockTags.CEILING_HANGING_SIGNS)) continue;
+            if (targetState.isIn(BlockTags.WALL_HANGING_SIGNS)) continue;
+            
+            // Skip short grass and snow layers
+            if (targetState.isOf(Blocks.SHORT_GRASS)) continue;
+            if (targetState.isOf(Blocks.SNOW)) continue;
+            
+            // Skip ladders, scaffolding, and TNT
+            if (targetState.isIn(BlockTags.CLIMBABLE)) continue;
+            if (targetState.isOf(Blocks.SCAFFOLDING)) continue;
+            if (targetState.isOf(Blocks.TNT)) continue;
             
             // Protect specific plants that aren't covered by tags
             if (targetState.isOf(Blocks.CACTUS)) continue;
             if (targetState.isOf(Blocks.SUGAR_CANE)) continue;
             if (targetState.isOf(Blocks.BAMBOO)) continue;
+            if (targetState.isOf(Blocks.BAMBOO_SAPLING)) continue;
             if (targetState.isOf(Blocks.CHORUS_PLANT)) continue;
             if (targetState.isOf(Blocks.CHORUS_FLOWER)) continue;
             if (targetState.isOf(Blocks.SWEET_BERRY_BUSH)) continue;
+            if (targetState.isOf(Blocks.COCOA)) continue;
 			// Vines (all)
 			if (targetState.isOf(Blocks.CAVE_VINES)) continue;
 			if (targetState.isOf(Blocks.CAVE_VINES_PLANT)) continue;
@@ -85,6 +106,7 @@ public class MoldBlock extends Block implements Fertilizable {
             if (targetState.isOf(Blocks.MOSS_BLOCK)) continue;
             if (targetState.isOf(Blocks.MOSS_CARPET)) continue;
             if (targetState.isOf(Blocks.GLOW_LICHEN)) continue;
+            if (targetState.isOf(Blocks.DRIED_KELP_BLOCK)) continue;
 			// Dripleafs and pale moss
 			if (targetState.isOf(Blocks.SMALL_DRIPLEAF)) continue;
 			if (targetState.isOf(Blocks.BIG_DRIPLEAF)) continue;
@@ -169,6 +191,10 @@ public class MoldBlock extends Block implements Fertilizable {
 			if (targetState.isOf(Blocks.RED_WALL_BANNER)) continue;
 			if (targetState.isOf(Blocks.BLACK_WALL_BANNER)) continue;
             
+            // Protect our custom blocks
+            if (targetState.isOf(ModBlocks.QUANTUM_GATEWAY)) continue;
+            if (targetState.isOf(ModBlocks.SHADOW_ALTAR)) continue;
+            
             // Protect our custom plants
             if (targetState.isOf(ModBlocks.VOID_BLOOM)) continue;
             if (targetState.isOf(ModBlocks.ENDER_CHRYSANTHEMUM)) continue;
@@ -196,6 +222,10 @@ public class MoldBlock extends Block implements Fertilizable {
             if (targetState.isOf(Blocks.BARREL)) continue;
 			if (targetState.isOf(Blocks.LECTERN)) continue;
 			if (targetState.isOf(Blocks.CHISELED_BOOKSHELF)) continue;
+			if (targetState.isOf(Blocks.BOOKSHELF)) continue;
+			if (targetState.isOf(Blocks.DECORATED_POT)) continue;
+			if (targetState.isOf(Blocks.BEEHIVE)) continue;
+			if (targetState.isOf(Blocks.BEE_NEST)) continue;
             
             // Protect all shulker box variants (including colored ones)
             if (targetState.isOf(Blocks.SHULKER_BOX)) continue;
@@ -333,6 +363,76 @@ public class MoldBlock extends Block implements Fertilizable {
 			// Slime/honey used for contraptions
 			if (targetState.isOf(Blocks.SLIME_BLOCK)) continue;
 			if (targetState.isOf(Blocks.HONEY_BLOCK)) continue;
+			
+			// Cauldrons (all variants)
+			if (targetState.isOf(Blocks.CAULDRON)) continue;
+			if (targetState.isOf(Blocks.WATER_CAULDRON)) continue;
+			if (targetState.isOf(Blocks.LAVA_CAULDRON)) continue;
+			if (targetState.isOf(Blocks.POWDER_SNOW_CAULDRON)) continue;
+			
+			// Copper chains (all oxidation stages)
+			if (targetState.isOf(Blocks.EXPOSED_COPPER_GRATE)) continue;
+			if (targetState.isOf(Blocks.WEATHERED_COPPER_GRATE)) continue;
+			if (targetState.isOf(Blocks.OXIDIZED_COPPER_GRATE)) continue;
+			if (targetState.isOf(Blocks.WAXED_COPPER_GRATE)) continue;
+			if (targetState.isOf(Blocks.WAXED_EXPOSED_COPPER_GRATE)) continue;
+			if (targetState.isOf(Blocks.WAXED_WEATHERED_COPPER_GRATE)) continue;
+			if (targetState.isOf(Blocks.WAXED_OXIDIZED_COPPER_GRATE)) continue;
+			
+			// Copper doors (all oxidation stages)
+			if (targetState.isOf(Blocks.COPPER_DOOR)) continue;
+			if (targetState.isOf(Blocks.EXPOSED_COPPER_DOOR)) continue;
+			if (targetState.isOf(Blocks.WEATHERED_COPPER_DOOR)) continue;
+			if (targetState.isOf(Blocks.OXIDIZED_COPPER_DOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_COPPER_DOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_EXPOSED_COPPER_DOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_WEATHERED_COPPER_DOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_OXIDIZED_COPPER_DOOR)) continue;
+			
+			// Copper trapdoors (all oxidation stages)
+			if (targetState.isOf(Blocks.COPPER_TRAPDOOR)) continue;
+			if (targetState.isOf(Blocks.EXPOSED_COPPER_TRAPDOOR)) continue;
+			if (targetState.isOf(Blocks.WEATHERED_COPPER_TRAPDOOR)) continue;
+			if (targetState.isOf(Blocks.OXIDIZED_COPPER_TRAPDOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_COPPER_TRAPDOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_EXPOSED_COPPER_TRAPDOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_WEATHERED_COPPER_TRAPDOOR)) continue;
+			if (targetState.isOf(Blocks.WAXED_OXIDIZED_COPPER_TRAPDOOR)) continue;
+			
+			// Chiseled copper (all oxidation stages)
+			if (targetState.isOf(Blocks.CHISELED_COPPER)) continue;
+			if (targetState.isOf(Blocks.EXPOSED_CHISELED_COPPER)) continue;
+			if (targetState.isOf(Blocks.WEATHERED_CHISELED_COPPER)) continue;
+			if (targetState.isOf(Blocks.OXIDIZED_CHISELED_COPPER)) continue;
+			if (targetState.isOf(Blocks.WAXED_CHISELED_COPPER)) continue;
+			if (targetState.isOf(Blocks.WAXED_EXPOSED_CHISELED_COPPER)) continue;
+			if (targetState.isOf(Blocks.WAXED_WEATHERED_CHISELED_COPPER)) continue;
+			if (targetState.isOf(Blocks.WAXED_OXIDIZED_CHISELED_COPPER)) continue;
+			
+			// Creaking heart and resin blocks (1.21 Pale Garden)
+			if (targetState.isOf(Blocks.CREAKING_HEART)) continue;
+			if (targetState.isOf(Blocks.RESIN_BLOCK)) continue;
+			if (targetState.isOf(Blocks.RESIN_BRICKS)) continue;
+			if (targetState.isOf(Blocks.RESIN_BRICK_SLAB)) continue;
+			if (targetState.isOf(Blocks.RESIN_BRICK_STAIRS)) continue;
+			if (targetState.isOf(Blocks.RESIN_BRICK_WALL)) continue;
+			if (targetState.isOf(Blocks.CHISELED_RESIN_BRICKS)) continue;
+			
+			// Check by registry ID for blocks not yet in Blocks class (1.21.9+ blocks)
+			Identifier blockId = Registries.BLOCK.getId(targetState.getBlock());
+			String blockIdString = blockId.toString();
+			
+			// Dried ghast decorative block
+			if (blockIdString.equals("minecraft:dried_ghast")) continue;
+			
+			// Copper chains (all oxidation stages)
+			if (blockIdString.contains("copper_chain")) continue;
+			
+			// Copper chests (all oxidation stages)
+			if (blockIdString.contains("copper_chest")) continue;
+			
+			// Copper golem statues (all oxidation stages)
+			if (blockIdString.contains("copper_golem_statue")) continue;
             
             // Protect command exclusive blocks
             if (targetState.isOf(Blocks.COMMAND_BLOCK)) continue;

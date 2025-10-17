@@ -114,6 +114,7 @@ public final class ModBlocks {
         key -> new com.theendupdate.block.VoidSapBlock(
             AbstractBlock.Settings
                 .copy(Blocks.GLOW_LICHEN)
+                .luminance(state -> 0) // Remove light emission
                 .nonOpaque()
                 .slipperiness(0.4F) // Honey block value for movement reduction
                 .sounds(BlockSoundGroup.SLIME)
