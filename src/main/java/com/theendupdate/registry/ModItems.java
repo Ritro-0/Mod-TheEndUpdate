@@ -120,6 +120,11 @@ public final class ModItems {
         key -> new Item(new Item.Settings().registryKey(key).fireproof())
     );
 
+    // King Phantom drop - essence used for brewing Phantom Ward potion
+    public static final Item KING_PHANTOM_ESSENCE = registerItem(
+        "king_phantom_essence",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
     
     // Spawn eggs - Using custom spawn egg class to properly associate entity types
     public static final Item ETHEREAL_ORB_SPAWN_EGG = registerItem(

@@ -43,7 +43,23 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModBlockEntities.registerSignBlockEntities(); // Register sign block entities AFTER sign blocks are created
         com.theendupdate.registry.ModScreenHandlers.register();
         com.theendupdate.registry.ModStructures.register();
+        com.theendupdate.registry.ModStatusEffects.register(); // Register status effects before potions
+        com.theendupdate.registry.ModPotions.register(); // Register potions
         com.theendupdate.registry.ModItems.registerModItems();
+        
+        // Register custom brewing recipes (must be after potions are registered)
+        net.fabricmc.fabric.api.registry.FabricBrewingRecipeRegistryBuilder.BUILD.register(builder -> {
+            builder.registerPotionRecipe(
+                net.minecraft.potion.Potions.AWKWARD,
+                net.minecraft.item.Items.SLIME_BALL,
+                com.theendupdate.registry.ModPotions.PHANTOM_WARD
+            );
+            builder.registerPotionRecipe(
+                com.theendupdate.registry.ModPotions.PHANTOM_WARD,
+                net.minecraft.item.Items.REDSTONE,
+                com.theendupdate.registry.ModPotions.LONG_PHANTOM_WARD
+            );
+        });
         com.theendupdate.registry.ModSounds.register();
         com.theendupdate.registry.ModEntities.registerModEntities();
         com.theendupdate.registry.ModWorldgen.registerAll();

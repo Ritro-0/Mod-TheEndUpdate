@@ -74,7 +74,7 @@ public abstract class BeaconBlockEntityRendererMixin {
             
             // Spawn glowing spiral particles around the beam (only if not redstone powered)
             if (!powered) {
-                spawnSpiralParticles(world, beacon.getPos(), accessor.theendupdate$getBeamTint(), beacon.getPos().getY() + 2048);
+                spawnSpiralParticles(world, beacon.getPos(), accessor.theendupdate$getBeamTint(), beacon.getPos().getY() + 2048, cameraPos);
             }
         } else {
             accessor.theendupdate$setHasQuantumGateway(false);
@@ -86,7 +86,7 @@ public abstract class BeaconBlockEntityRendererMixin {
     /**
      * Spawns glowing particles in a spiral pattern around the beacon beam
      */
-    private static void spawnSpiralParticles(World world, BlockPos beaconPos, float[] tint, int topY) {
+    private static void spawnSpiralParticles(World world, BlockPos beaconPos, float[] tint, int topY, Vec3d cameraPos) {
         // Only spawn particles occasionally to avoid performance issues
         if (world.getTime() % 2 != 0) return; // Spawn every other tick
         
@@ -96,15 +96,16 @@ public abstract class BeaconBlockEntityRendererMixin {
         double spiralRadius = 0.6; // Radius of spiral around beam center
         double spiralTightness = 0.4; // How tight the spiral is (radians per block)
         int particlesPerSpiral = 3; // Number of spiral arms
-        double verticalSpacing = 0.5; // Blocks between particle layers
+        double verticalSpacing = 0.8; // Blocks between particle layers
         
         // Beam center
         double centerX = beaconPos.getX() + 0.5;
         double centerZ = beaconPos.getZ() + 0.5;
         
-        // Spawn particles from beacon up to sky
-        int startY = beaconPos.getY() + 2; // Start above beacon base
-        int endY = topY;
+        // Only spawn particles within a reasonable distance from the camera (vertical range)
+        double maxVerticalDistance = 64.0; // Only render particles within 64 blocks vertically from camera
+        int startY = Math.max(beaconPos.getY() + 2, (int)(cameraPos.y - maxVerticalDistance));
+        int endY = Math.min(topY, (int)(cameraPos.y + maxVerticalDistance));
         
         // Spawn multiple spirals at different heights
         for (double y = startY; y < endY; y += verticalSpacing) {

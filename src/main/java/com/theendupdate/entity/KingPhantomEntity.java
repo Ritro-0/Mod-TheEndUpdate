@@ -69,7 +69,7 @@ public class KingPhantomEntity extends PhantomEntity {
     
     public KingPhantomEntity(EntityType<? extends PhantomEntity> entityType, World world) {
         super(entityType, world);
-        this.experiencePoints = 20; // More XP than regular phantom (5)
+        this.experiencePoints = 35; // 70% of Wither XP (Wither drops 50, 70% = 35)
         this.setPersistent(); // Persistent to avoid chunk unload despawn, but still despawns in peaceful
         this.setNoGravity(true); // Ensure no gravity for proper flying
         
@@ -778,6 +778,14 @@ public class KingPhantomEntity extends PhantomEntity {
         // Clean up boss bar on death
         if (!this.getEntityWorld().isClient()) {
             KingPhantomBossBarRegistry.removeBossBar(this.getUuid());
+            
+            // Drop 12 King Phantom's Essence items
+            if (this.getEntityWorld() instanceof ServerWorld serverWorld) {
+                for (int i = 0; i < 12; i++) {
+                    ItemStack essence = new ItemStack(com.theendupdate.registry.ModItems.KING_PHANTOM_ESSENCE);
+                    this.dropStack(serverWorld, essence);
+                }
+            }
         }
     }
     

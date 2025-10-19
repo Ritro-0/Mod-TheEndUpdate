@@ -12,7 +12,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class BrewingIngredientSlotMixin {
     @Inject(method = "canInsert", at = @At("HEAD"), cancellable = true)
     private void theendupdate$acceptChrysanthemum(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-        if (stack != null && stack.isOf(Registries.ITEM.get(Identifier.of("theendupdate", "ender_chrysanthemum")))) {
+        if (stack != null && (
+            stack.isOf(Registries.ITEM.get(Identifier.of("theendupdate", "ender_chrysanthemum"))) ||
+            stack.isOf(Registries.ITEM.get(Identifier.of("theendupdate", "king_phantom_essence")))
+        )) {
             cir.setReturnValue(true);
         }
     }

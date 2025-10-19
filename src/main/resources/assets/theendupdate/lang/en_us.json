@@ -90,6 +90,7 @@
   "item.theendupdate.gravitite_ore": "Gravitite Ore",
   "item.theendupdate.gravitite_essence": "Gravitite Essence",
   "item.theendupdate.pure_gravitite": "Pure Gravitite",
+  "item.theendupdate.king_phantom_essence": "King Phantom's Essence",
   "trim_material.theendupdate.gravitite": "Gravitite Material",
   "item.theendupdate.end_mire": "End Mire",
   "item.theendupdate.end_murk": "End Murk",
@@ -155,5 +156,16 @@
   "item.theendupdate.shadow_hunters_tracker.precise_mode": "Now pointing to Shadow Altar at %d, %d, %d",
   "item.theendupdate.shadow_hunters_tracker.structure_mode": "Now pointing to structure at %d, %d, %d",
   "item.theendupdate.shadow_hunters_tracker.no_altar_nearby": "No Shadow Altar found within range",
-  "death.attack.shadow_creaking_beam": "There's a pile of dust where %1$s used to be"
+  "death.attack.shadow_creaking_beam": "There's a pile of dust where %1$s used to be",
+  "effect.theendupdate.phantom_ward": "Phantom Ward",
+  "potion.effect.theendupdate.phantom_ward": "Phantom Ward",
+  "item.minecraft.potion.effect.phantom_ward": "Potion of Phantom Ward",
+  "item.minecraft.splash_potion.effect.phantom_ward": "Splash Potion of Phantom Ward",
+  "item.minecraft.lingering_potion.effect.phantom_ward": "Lingering Potion of Phantom Ward",
+  "item.minecraft.tipped_arrow.effect.phantom_ward": "Arrow of Phantom Ward",
+  "potion.effect.theendupdate.long_phantom_ward": "Phantom Ward",
+  "item.minecraft.potion.effect.long_phantom_ward": "Potion of Phantom Ward",
+  "item.minecraft.splash_potion.effect.long_phantom_ward": "Splash Potion of Phantom Ward",
+  "item.minecraft.lingering_potion.effect.long_phantom_ward": "Lingering Potion of Phantom Ward",
+  "item.minecraft.tipped_arrow.effect.long_phantom_ward": "Arrow of Phantom Ward"
 }

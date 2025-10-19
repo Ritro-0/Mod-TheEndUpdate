@@ -1,7 +1,6 @@
 package com.theendupdate.mixin;
 
-import com.theendupdate.block.EtherealFenceBlock;
-import com.theendupdate.block.ShadowFenceBlock;
+import com.theendupdate.registry.ModBlocks;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.util.math.BlockPos;
@@ -27,7 +26,7 @@ public abstract class LeashKnotEntityMixin {
         BlockState state = self.getEntityWorld().getBlockState(pos);
         
         // If attached to our custom fences, force it to stay attached
-        if (state.getBlock() instanceof EtherealFenceBlock || state.getBlock() instanceof ShadowFenceBlock) {
+        if (state.isOf(ModBlocks.ETHEREAL_FENCE) || state.isOf(ModBlocks.SHADOW_FENCE)) {
             cir.setReturnValue(true);
         }
     }

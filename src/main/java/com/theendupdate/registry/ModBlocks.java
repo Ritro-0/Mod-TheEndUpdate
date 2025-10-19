@@ -12,6 +12,7 @@ import net.minecraft.block.PressurePlateBlock;
 import net.minecraft.block.BlockSetType;
 import net.minecraft.block.DoorBlock;
 import net.minecraft.block.TrapdoorBlock;
+import net.minecraft.block.FenceBlock;
 import net.minecraft.block.FenceGateBlock;
 import net.minecraft.block.WoodType;
 import net.minecraft.block.PlantBlock;
@@ -250,7 +251,7 @@ public final class ModBlocks {
 
     public static final Block ETHEREAL_FENCE = registerBlock(
         "ethereal_fence",
-        key -> new com.theendupdate.block.EtherealFenceBlock(
+        key -> new FenceBlock(
             AbstractBlock.Settings.copy(Blocks.OAK_FENCE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );
@@ -393,7 +394,7 @@ public final class ModBlocks {
 
     public static final Block SHADOW_FENCE = registerBlock(
         "shadow_fence",
-        key -> new com.theendupdate.block.ShadowFenceBlock(
+        key -> new FenceBlock(
             AbstractBlock.Settings.copy(Blocks.OAK_FENCE).sounds(BlockSoundGroup.WOOD).luminance(state -> 2).registryKey(key)
         )
     );

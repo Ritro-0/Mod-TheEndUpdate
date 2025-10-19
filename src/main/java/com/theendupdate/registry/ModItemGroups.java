@@ -132,6 +132,9 @@ public final class ModItemGroups {
             entries.add(ModItems.GRAVITITE_ESSENCE);
             entries.add(ModItems.PURE_GRAVITITE);
             
+            // Items - King Phantom drop
+            entries.add(ModItems.KING_PHANTOM_ESSENCE);
+            
             // Spawn eggs
             entries.add(ModItems.ETHEREAL_ORB_SPAWN_EGG);
             entries.add(ModItems.KING_PHANTOM_SPAWN_EGG);

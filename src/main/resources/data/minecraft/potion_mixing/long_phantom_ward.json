@@ -1,0 +1,6 @@
+{
+  "base": { "potion": "theendupdate:phantom_ward" },
+  "ingredient": { "item": "minecraft:redstone" },
+  "result": { "potion": "theendupdate:long_phantom_ward" }
+}
+

@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(BrewingStandBlockEntity.class)
 public class BrewingStandBlockEntityTickMixin {
     private static final Identifier ENDER_CHRYS = Identifier.of("theendupdate", "ender_chrysanthemum");
+    private static final Identifier KING_PHANTOM_ESSENCE = Identifier.of("theendupdate", "king_phantom_essence");
 
     @Shadow
     private static boolean canCraft(BrewingRecipeRegistry recipes, DefaultedList<ItemStack> slots) { return false; }
@@ -28,11 +29,20 @@ public class BrewingStandBlockEntityTickMixin {
     private static DefaultedList<ItemStack> theendupdate$effectiveSlots(DefaultedList<ItemStack> slots) {
         try {
             ItemStack reagent = slots.get(3);
-            if (!reagent.isEmpty() && reagent.isOf(Registries.ITEM.get(ENDER_CHRYS))) {
+            if (!reagent.isEmpty()) {
                 DefaultedList<ItemStack> copy = DefaultedList.ofSize(slots.size(), ItemStack.EMPTY);
                 for (int i = 0; i < slots.size(); i++) copy.set(i, slots.get(i));
-                copy.set(3, new ItemStack(Items.COBWEB));
-                return copy;
+                
+                // Substitute ender chrysanthemum with cobweb
+                if (reagent.isOf(Registries.ITEM.get(ENDER_CHRYS))) {
+                    copy.set(3, new ItemStack(Items.COBWEB));
+                    return copy;
+                }
+                // Substitute king phantom essence with slime ball (has no vanilla recipes)
+                else if (reagent.isOf(Registries.ITEM.get(KING_PHANTOM_ESSENCE))) {
+                    copy.set(3, new ItemStack(Items.SLIME_BALL));
+                    return copy;
+                }
             }
         } catch (Throwable ignored) {}
         return slots;
@@ -47,32 +57,46 @@ public class BrewingStandBlockEntityTickMixin {
     private static void theendupdate$redirectCraft(World world, BlockPos pos, DefaultedList<ItemStack> slots, World world2, BlockPos pos2, BlockState state, BrewingStandBlockEntity self) {
         // Perform craft, substituting reagent in-place so outputs are written back to the real slots
         boolean substituted = false;
-        ItemStack savedChrys = ItemStack.EMPTY;
-        int cobInit = 0;
+        ItemStack savedReagent = ItemStack.EMPTY;
+        int vanillaInit = 0;
+        net.minecraft.item.Item substituteItem = null;
+        
         try {
             ItemStack top = slots.get(3);
-            if (!top.isEmpty() && top.isOf(Registries.ITEM.get(ENDER_CHRYS))) {
-                savedChrys = top.copy();
-                cobInit = 1;
-                slots.set(3, new ItemStack(Items.COBWEB, cobInit));
-                substituted = true;
+            if (!top.isEmpty()) {
+                // Handle ender chrysanthemum -> cobweb
+                if (top.isOf(Registries.ITEM.get(ENDER_CHRYS))) {
+                    savedReagent = top.copy();
+                    substituteItem = Items.COBWEB;
+                    vanillaInit = 1;
+                    slots.set(3, new ItemStack(substituteItem, vanillaInit));
+                    substituted = true;
+                }
+                // Handle king phantom essence -> slime ball (has no vanilla recipes)
+                else if (top.isOf(Registries.ITEM.get(KING_PHANTOM_ESSENCE))) {
+                    savedReagent = top.copy();
+                    substituteItem = Items.SLIME_BALL;
+                    vanillaInit = 1;
+                    slots.set(3, new ItemStack(substituteItem, vanillaInit));
+                    substituted = true;
+                }
             }
         } catch (Throwable ignored) {}
 
         craft(world, pos, slots);
 
         // Restore reagent and propagate consumption
-        if (substituted) {
+        if (substituted && substituteItem != null) {
             try {
-                int cobAfter = 0;
+                int vanillaAfter = 0;
                 ItemStack topAfter = slots.get(3);
-                if (!topAfter.isEmpty() && topAfter.isOf(Items.COBWEB)) {
-                    cobAfter = topAfter.getCount();
+                if (!topAfter.isEmpty() && topAfter.isOf(substituteItem)) {
+                    vanillaAfter = topAfter.getCount();
                 }
-                int consumed = Math.max(0, cobInit - cobAfter);
-                int newCount = Math.max(0, savedChrys.getCount() - consumed);
+                int consumed = Math.max(0, vanillaInit - vanillaAfter);
+                int newCount = Math.max(0, savedReagent.getCount() - consumed);
                 if (newCount > 0) {
-                    slots.set(3, new ItemStack(savedChrys.getItem(), newCount));
+                    slots.set(3, new ItemStack(savedReagent.getItem(), newCount));
                 } else {
                     slots.set(3, ItemStack.EMPTY);
                 }

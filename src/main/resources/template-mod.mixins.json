@@ -19,6 +19,7 @@
 		"MobEntityAccessor",
 		"SpiderEntityAvoidChrysanthemumMixin",
 		"EndermanAvoidEtherealOrbMixin",
+		"PhantomAvoidPhantomWardMixin",
 		"BiomeAccessMixin",
 		"ShadowCreakingGazeMixin",
 		"ShadowCreakingDamageMixin",
@@ -26,7 +27,6 @@
 		"EntityNavigationStopMixin",
 		"PlayerEntityMiningSpeedMixin",
 		"ItemStackMiningSpeedMixin",
-		"FenceBlockConnectivityMixin",
 		"LeashKnotEntityMixin",
 		"CowEntityMixin",
 		"MooshroomEntityMixin"
