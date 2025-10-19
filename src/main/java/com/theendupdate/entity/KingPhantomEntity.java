@@ -1192,6 +1192,10 @@ public class KingPhantomEntity extends PhantomEntity {
             this.swoopTimer = 0;
             this.swoopTarget = null;
             this.hasDamagedThisSwoop = false; // Reset damage flag when swoop ends
+            
+            // Reset velocity when swoop ends to prevent phantom from continuing to descend
+            this.phantom.setVelocity(Vec3d.ZERO);
+            this.phantom.velocityModified = true;
         }
     }
 }

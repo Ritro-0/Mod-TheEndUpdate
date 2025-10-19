@@ -87,16 +87,18 @@ public abstract class BeaconBlockEntityRendererMixin {
      * Spawns glowing particles in a spiral pattern around the beacon beam
      */
     private static void spawnSpiralParticles(World world, BlockPos beaconPos, float[] tint, int topY, Vec3d cameraPos) {
-        // Only spawn particles occasionally to avoid performance issues
-        if (world.getTime() % 2 != 0) return; // Spawn every other tick
+        // Offset spawning based on beacon position so multiple beams don't all spawn on the same tick
+        // This prevents hitting particle budget limits when multiple beams are active
+        long tickOffset = (beaconPos.getX() + beaconPos.getY() + beaconPos.getZ()) % 3; // 0, 1, or 2
+        if ((world.getTime() + tickOffset) % 3 != 0) return; // Spawn every 3 ticks, offset per beacon
         
         double time = world.getTime() * 0.05; // Animation time
         
         // Spiral parameters
         double spiralRadius = 0.6; // Radius of spiral around beam center
         double spiralTightness = 0.4; // How tight the spiral is (radians per block)
-        int particlesPerSpiral = 3; // Number of spiral arms
-        double verticalSpacing = 0.8; // Blocks between particle layers
+        int particlesPerSpiral = 2; // Number of spiral arms
+        double verticalSpacing = 2.4; // Blocks between particle layers (every 3rd row)
         
         // Beam center
         double centerX = beaconPos.getX() + 0.5;
@@ -126,7 +128,7 @@ public abstract class BeaconBlockEntityRendererMixin {
                     );
                     
                     // Add extra glow with ELECTRIC_SPARK particles occasionally
-                    if (world.getRandom().nextFloat() < 0.2f) {
+                    if (world.getRandom().nextFloat() < 0.12f) {
                         client.particleManager.addParticle(
                             ParticleTypes.ELECTRIC_SPARK,
                             x, y, z,

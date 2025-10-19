@@ -13,7 +13,7 @@ public final class ModPotions {
     public static final RegistryEntry<Potion> PHANTOM_WARD = register(
         "phantom_ward",
         new Potion(
-            null, // No base potion name
+            "phantom_ward", // Base potion name
             new StatusEffectInstance(
                 ModStatusEffects.PHANTOM_WARD,
                 3600, // 3 minutes (3 * 60 * 20 ticks)
