@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SSS"
+  ],
+  "key": {
+    "S": "theendupdate:smooth_ash_stone"
+  },
+  "result": {
+    "id": "theendupdate:smooth_ash_stone_slab",
+    "count": 6
+  }
+}
+

@@ -60,6 +60,7 @@ public class MoldSporeBlock extends PlantBlock {
 		// Prevent replacement of this plant by other placements; force adjacency attempts
 		return false;
 	}
+
 }
 
 

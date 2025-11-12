@@ -6,6 +6,14 @@
     "theendupdate:stellarith_crystal",
     "theendupdate:voidstar_block",
     "theendupdate:astral_remnant",
-    "theendupdate:gravitite_ore"
+    "theendupdate:gravitite_ore",
+    "theendupdate:ash_stone",
+    "theendupdate:ash_stone_stairs",
+    "theendupdate:ash_stone_slab",
+    "theendupdate:ash_stone_wall",
+    "theendupdate:smooth_ash_stone",
+    "theendupdate:smooth_ash_stone_stairs",
+    "theendupdate:smooth_ash_stone_slab",
+    "theendupdate:smooth_ash_stone_wall"
   ]
 }

@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AA",
+    "AA"
+  ],
+  "key": {
+    "A": "theendupdate:ash_stone"
+  },
+  "result": {
+    "id": "theendupdate:smooth_ash_stone",
+    "count": 4
+  }
+}
+

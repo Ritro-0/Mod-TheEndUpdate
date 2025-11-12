@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "type=bottom": { "model": "theendupdate:block/smooth_ash_stone_slab" },
+    "type=double": { "model": "theendupdate:block/smooth_ash_stone" },
+    "type=top": { "model": "theendupdate:block/smooth_ash_stone_slab_top" }
+  }
+}
+

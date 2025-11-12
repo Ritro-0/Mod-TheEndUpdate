@@ -23,6 +23,7 @@ import net.minecraft.block.WallSignBlock;
 import net.minecraft.block.HangingSignBlock;
 import net.minecraft.block.WallHangingSignBlock;
 import net.minecraft.block.ShelfBlock;
+import net.minecraft.block.WallBlock;
 
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -74,6 +75,96 @@ public final class ModBlocks {
         key -> new com.theendupdate.block.MoldBlock(
             AbstractBlock.Settings
                 .copy(Blocks.MOSS_BLOCK)
+                .registryKey(key)
+        )
+    );
+
+    public static final Block ASH_STONE = registerBlock(
+        "ash_stone",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.BASALT)
+                .strength(0.625F, 2.1F) // Half the hardness and blast resistance of basalt (1.25, 4.2)
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block ASH_STONE_STAIRS = registerBlock(
+        "ash_stone_stairs",
+        key -> new StairsBlock(
+            ModBlocks.ASH_STONE.getDefaultState(),
+            AbstractBlock.Settings
+                .copy(Blocks.BASALT)
+                .strength(0.625F, 2.1F)
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block ASH_STONE_SLAB = registerBlock(
+        "ash_stone_slab",
+        key -> new SlabBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.BASALT)
+                .strength(0.625F, 2.1F)
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block ASH_STONE_WALL = registerBlock(
+        "ash_stone_wall",
+        key -> new WallBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.COBBLESTONE_WALL)
+                .strength(0.625F, 2.1F)
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block SMOOTH_ASH_STONE = registerBlock(
+        "smooth_ash_stone",
+        key -> new Block(
+            AbstractBlock.Settings
+                .copy(Blocks.SMOOTH_STONE)
+                .strength(0.75F, 2.4F) // Slightly tougher than ash stone to mirror vanilla smooth stone behavior
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block SMOOTH_ASH_STONE_STAIRS = registerBlock(
+        "smooth_ash_stone_stairs",
+        key -> new StairsBlock(
+            ModBlocks.SMOOTH_ASH_STONE.getDefaultState(),
+            AbstractBlock.Settings
+                .copy(Blocks.SMOOTH_STONE)
+                .strength(0.75F, 2.4F)
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block SMOOTH_ASH_STONE_SLAB = registerBlock(
+        "smooth_ash_stone_slab",
+        key -> new SlabBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.SMOOTH_STONE)
+                .strength(0.75F, 2.4F)
+                .requiresTool()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block SMOOTH_ASH_STONE_WALL = registerBlock(
+        "smooth_ash_stone_wall",
+        key -> new WallBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.COBBLESTONE_WALL)
+                .strength(0.75F, 2.4F)
+                .requiresTool()
                 .registryKey(key)
         )
     );
@@ -840,6 +931,14 @@ public final class ModBlocks {
             entries.add(Registries.ITEM.get(Identifier.of(TemplateMod.MOD_ID, "shadow_hanging_sign")));
             
             // Other building blocks
+            entries.add(ASH_STONE);
+            entries.add(ASH_STONE_STAIRS);
+            entries.add(ASH_STONE_SLAB);
+            entries.add(ASH_STONE_WALL);
+            entries.add(SMOOTH_ASH_STONE);
+            entries.add(SMOOTH_ASH_STONE_STAIRS);
+            entries.add(SMOOTH_ASH_STONE_SLAB);
+            entries.add(SMOOTH_ASH_STONE_WALL);
             entries.add(END_MIRE);
             entries.add(END_MURK);
             entries.add(MOLD_BLOCK);

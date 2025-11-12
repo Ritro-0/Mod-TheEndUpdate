@@ -5,3 +5,4 @@ ALWAYS, ALWAYS, ALWAYS DOUBLE CHECK THE INTERNET TO BE SURE THAT THE METHODS YOU
 I'm fairly new to coding. Please simplify your answers to accomidate, then provide brief explanations as to what the more technical side of it means.
 Use data/<modid>/recipe/ (singular). Do not keep duplicates under data/<modid>/recipes/.-
 After editing resources, restart the dev client (or run gradlew processResources and relaunch). /reload does not rebuild mod resources.
+Fabric 1.21 needs a little “item asset” stub in assets/<modid>/items/ for every item that should use a model.

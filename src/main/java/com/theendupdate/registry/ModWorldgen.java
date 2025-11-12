@@ -7,6 +7,7 @@ import com.theendupdate.world.feature.ShadowlandsGroundCoverFeature;
 import com.theendupdate.world.feature.ShadowlandsChorusCleanupFeature;
 import com.theendupdate.world.feature.ShadowlandsHugeTreeFeature;
 import com.theendupdate.world.feature.ShadowClawScatterFeature;
+import com.theendupdate.world.feature.NebulaCraterFeature;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.minecraft.registry.Registries;
@@ -80,6 +81,13 @@ public final class ModWorldgen {
         new BlueIceRiverFeature(DefaultFeatureConfig.CODEC)
     );
 
+    // Nebula crater bowls across End islands
+    public static final Feature<DefaultFeatureConfig> NEBULA_CRATER = Registry.register(
+        Registries.FEATURE,
+        id("nebula_crater"),
+        new NebulaCraterFeature(DefaultFeatureConfig.CODEC)
+    );
+
     // Shadowlands features
     public static final Feature<DefaultFeatureConfig> SHADOWLANDS_GROUND_COVER = Registry.register(
         Registries.FEATURE,
@@ -124,6 +132,9 @@ public final class ModWorldgen {
 
     public static final RegistryKey<PlacedFeature> BLUE_ICE_RIVER_PLACED_KEY = RegistryKey.of(
         RegistryKeys.PLACED_FEATURE, id("blue_ice_river"));
+
+    public static final RegistryKey<PlacedFeature> NEBULA_CRATER_PLACED_KEY = RegistryKey.of(
+        RegistryKeys.PLACED_FEATURE, id("nebula_crater"));
 
     // Ores
     public static final RegistryKey<PlacedFeature> GRAVITITE_ORE_PLACED_KEY = RegistryKey.of(
@@ -189,6 +200,12 @@ public final class ModWorldgen {
             BiomeSelectors.foundInTheEnd(),
             GenerationStep.Feature.LOCAL_MODIFICATIONS,
             BLUE_ICE_RIVER_PLACED_KEY
+        );
+
+        BiomeModifications.addFeature(
+            BiomeSelectors.foundInTheEnd(),
+            GenerationStep.Feature.LOCAL_MODIFICATIONS,
+            NEBULA_CRATER_PLACED_KEY
         );
 
         // Inject Gravitite ore into End biomes during underground ore generation

@@ -55,6 +55,7 @@ public class MoldSporeTuftBlock extends PlantBlock {
 		// Prevent other blocks (including flowers/plants) from replacing this plant; they'll try adjacent instead
 		return false;
 	}
+
 }
 
 

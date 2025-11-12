@@ -53,6 +53,7 @@ public class MoldSporeSproutBlock extends TallPlantBlock {
 		// Do not allow other items to replace this plant directly
 		return false;
 	}
+
 }
 
 

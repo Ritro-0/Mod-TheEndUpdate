@@ -3,6 +3,7 @@ package com.theendupdate.world;
 import com.theendupdate.block.EtherealSporocarpBlock;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
@@ -31,6 +32,9 @@ public final class ShadowClawTreeGenerator {
 
         // Clear the sapling spot first
         world.setBlockState(startPos, net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+
+        // Ensure the ground footprint is painted with End Murk instead of reverting to End Stone
+        prepareGround(world, startPos, trunkRadius);
 
         // Chance for hollow trunk with altar: 1 in 256 (feature placement)
         boolean hollow = (random.nextInt(256) == 0);
@@ -126,6 +130,7 @@ public final class ShadowClawTreeGenerator {
             return;
         }
         world.setBlockState(startPos, net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+        prepareGround(world, startPos, trunkRadius);
         boolean hollow = true;
         BlockPos trunkBase = startPos;
         for (int y = 0; y < trunkHeight; y++) {
@@ -402,6 +407,27 @@ public final class ShadowClawTreeGenerator {
             return true;
         }
         return false;
+    }
+
+    private static void prepareGround(WorldAccess world, BlockPos trunkBase, int trunkRadius) {
+        int radius = trunkRadius + 2;
+        int radiusSquared = radius * radius;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx * dx + dz * dz > radiusSquared) continue;
+                BlockPos cursor = trunkBase.add(dx, 0, dz);
+                BlockState state = world.getBlockState(cursor);
+                int depth = 0;
+                while (depth < 3 && cursor.getY() > world.getBottomY() && (state.isAir() || state.isReplaceable())) {
+                    cursor = cursor.down();
+                    state = world.getBlockState(cursor);
+                    depth++;
+                }
+                if (state.isOf(Blocks.END_STONE)) {
+                    world.setBlockState(cursor, ModBlocks.END_MURK.getDefaultState(), 3);
+                }
+            }
+        }
     }
 }
 

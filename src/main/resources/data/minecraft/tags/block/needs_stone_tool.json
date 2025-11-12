@@ -2,6 +2,14 @@
   "replace": false,
   "values": [
     "theendupdate:end_mire",
-    "theendupdate:end_murk"
+    "theendupdate:end_murk",
+    "theendupdate:ash_stone",
+    "theendupdate:ash_stone_stairs",
+    "theendupdate:ash_stone_slab",
+    "theendupdate:ash_stone_wall",
+    "theendupdate:smooth_ash_stone",
+    "theendupdate:smooth_ash_stone_stairs",
+    "theendupdate:smooth_ash_stone_slab",
+    "theendupdate:smooth_ash_stone_wall"
   ]
 }

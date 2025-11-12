@@ -32,6 +32,14 @@ public final class ModItemGroups {
             entries.add(ModBlocks.END_MIRE);
             entries.add(ModBlocks.END_MURK);
             entries.add(ModBlocks.MOLD_BLOCK);
+            entries.add(ModBlocks.ASH_STONE);
+            entries.add(ModBlocks.ASH_STONE_STAIRS);
+            entries.add(ModBlocks.ASH_STONE_SLAB);
+            entries.add(ModBlocks.ASH_STONE_WALL);
+            entries.add(ModBlocks.SMOOTH_ASH_STONE);
+            entries.add(ModBlocks.SMOOTH_ASH_STONE_STAIRS);
+            entries.add(ModBlocks.SMOOTH_ASH_STONE_SLAB);
+            entries.add(ModBlocks.SMOOTH_ASH_STONE_WALL);
             
             // Plants
             entries.add(ModBlocks.VOID_BLOOM);

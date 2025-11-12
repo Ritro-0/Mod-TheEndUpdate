@@ -49,16 +49,18 @@ public class NebulaVentBlockEntity extends BlockEntity {
         }
 
         long time = world.getTime();
-        boolean burstActive = isBurstActive(time);
 
-        if (burstActive) {
+        if (this.burstEndTick != -1) {
             if (time >= this.burstEndTick) {
                 endBurst(world, pos, state, time);
             } else if (!state.get(NebulaVentBlock.WATERLOGGED)) {
                 spawnBurstParticles(world, pos);
                 applyPlayerBoost(world, pos);
             }
-        } else if (shouldStartBurst(time)) {
+            return;
+        }
+
+        if (shouldStartBurst(time)) {
             startBurst(world, pos, state, time);
         }
     }
@@ -140,10 +142,6 @@ public class NebulaVentBlockEntity extends BlockEntity {
 
     private boolean shouldStartBurst(long currentTime) {
         return this.burstEndTick == -1 && this.nextBurstTick != -1 && currentTime >= this.nextBurstTick;
-    }
-
-    private boolean isBurstActive(long currentTime) {
-        return this.burstEndTick != -1 && currentTime < this.burstEndTick;
     }
 
     private static int randomRange(Random random, int minInclusive, int maxInclusive) {

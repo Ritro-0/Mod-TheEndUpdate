@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "bottom": "theendupdate:block/smooth_ash_stone",
+    "top": "theendupdate:block/smooth_ash_stone",
+    "side": "theendupdate:block/smooth_ash_stone"
+  }
+}
+
