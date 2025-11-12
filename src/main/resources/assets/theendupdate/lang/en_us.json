@@ -1,4 +1,8 @@
 {
+  "modmenu.nameTranslation.theendupdate": "The End Update",
+  "modmenu.summaryTranslation.theendupdate": "by: Ritro",
+  "modmenu.descriptionTranslation.theendupdate": "Foundations for The End Update mod.",
+
   "entity.theendupdate.ethereal_orb": "Ethereal Orb",
   "entity.theendupdate.king_phantom": "King Phantom",
   "entity.theendupdate.shadow_creaking": "Shadow Creaking",
