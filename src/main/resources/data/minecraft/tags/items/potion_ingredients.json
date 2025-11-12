@@ -2,7 +2,8 @@
   "replace": false,
   "values": [
     "#theendupdate:brewing_reagents",
-    "theendupdate:ender_chrysanthemum"
+    "theendupdate:ender_chrysanthemum",
+    "theendupdate:closed_ender_chrysanthemum"
   ]
 }
 

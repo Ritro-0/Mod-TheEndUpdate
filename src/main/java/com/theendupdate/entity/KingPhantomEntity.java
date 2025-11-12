@@ -14,6 +14,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import java.util.EnumSet;
@@ -33,6 +34,9 @@ public class KingPhantomEntity extends PhantomEntity {
     // Data tracker for persistent phase state
     private static final TrackedData<Integer> CURRENT_PHASE = DataTracker.registerData(KingPhantomEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> HAS_TRIGGERED_PHASE_TRANSITION = DataTracker.registerData(KingPhantomEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    // Data tracker for attack states (synced to client for rendering)
+    private static final TrackedData<Boolean> IS_SWOOPING = DataTracker.registerData(KingPhantomEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> IS_SUMMONING = DataTracker.registerData(KingPhantomEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     
     // Boss bar management
     public KingPhantomBossBarManager bossBarManager;
@@ -51,10 +55,9 @@ public class KingPhantomEntity extends PhantomEntity {
     private static final int ATTACK_INTERVAL_PHASE_1 = 200; // 10 seconds (200 ticks)
     private static final int ATTACK_INTERVAL_PHASE_2 = 100; // 5 seconds (100 ticks)
     private int attackCooldown = ATTACK_INTERVAL_PHASE_1; // Start with full cooldown for initial hover phase
-    private boolean isSwooping = false; // Track if currently executing a swoop attack
+    // Note: isSwooping and isSummoning are now tracked via DataTracker (see getters/setters below)
     
     // Summon attack tracking
-    private boolean isSummoning = false;
     private int summonPhase = 0; // 0 = not summoning, 1 = descending, 2 = ascending after summon
     private PlayerEntity summonTarget = null;
     private Vec3d summonTargetPos = null;
@@ -66,6 +69,9 @@ public class KingPhantomEntity extends PhantomEntity {
     private Vec3d rangedBeamStart;
     private Vec3d rangedBeamEnd;
     private double rangedBeamSpeedPerTick = 40.0 / 60.0; // ~0.666 blocks/tick
+    private Vec3d rangedBeamCurrentPos; // Current position of beam head (for deflection detection)
+    private boolean rangedBeamDeflected = false; // Whether beam has been deflected
+    private Vec3d rangedBeamDeflectedDirection = null; // New direction if deflected
     
     public KingPhantomEntity(EntityType<? extends PhantomEntity> entityType, World world) {
         super(entityType, world);
@@ -81,6 +87,8 @@ public class KingPhantomEntity extends PhantomEntity {
         super.initDataTracker(builder);
         builder.add(CURRENT_PHASE, PHASE_1);
         builder.add(HAS_TRIGGERED_PHASE_TRANSITION, Boolean.FALSE);
+        builder.add(IS_SWOOPING, Boolean.FALSE);
+        builder.add(IS_SUMMONING, Boolean.FALSE);
     }
     
     @Override
@@ -132,6 +140,40 @@ public class KingPhantomEntity extends PhantomEntity {
     }
     
     @Override
+    public boolean damage(ServerWorld world, net.minecraft.entity.damage.DamageSource source, float amount) {
+        // If suffocating inside a block, clear any blocks intersecting our hitbox
+        try {
+            if (source != null && source.isOf(net.minecraft.entity.damage.DamageTypes.IN_WALL)) {
+                clearBlocksInHitbox(world);
+            }
+        } catch (Throwable ignored) {}
+        return super.damage(world, source, amount);
+    }
+    
+    private void clearBlocksInHitbox(ServerWorld sw) {
+        if (sw == null) return;
+        Box box = this.getBoundingBox();
+        int minX = (int)Math.floor(box.minX);
+        int minY = (int)Math.floor(box.minY);
+        int minZ = (int)Math.floor(box.minZ);
+        int maxX = (int)Math.ceil(box.maxX) - 1;
+        int maxY = (int)Math.ceil(box.maxY) - 1;
+        int maxZ = (int)Math.ceil(box.maxZ) - 1;
+        
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    net.minecraft.util.math.BlockPos pos = new net.minecraft.util.math.BlockPos(x, y, z);
+                    net.minecraft.block.BlockState state = sw.getBlockState(pos);
+                    if (state.isAir()) continue;
+                    // Remove the block without drops to avoid unintended item spam on spawn
+                    sw.breakBlock(pos, false, this);
+                }
+            }
+        }
+    }
+    
+    @Override
     public boolean isInvulnerable() {
         // Invulnerable during phase transition
         return super.isInvulnerable() || this.isInPhaseTransition;
@@ -152,7 +194,7 @@ public class KingPhantomEntity extends PhantomEntity {
         Vec3d velocity = this.getVelocity();
         
         // Only prevent downward velocity when NOT swooping or summoning
-        if (!this.isSwooping && !this.isSummoning) {
+        if (!this.isSwooping() && !this.isSummoning()) {
             // Prevent downward velocity from pushing the entity into the ground
             // This is especially important on entity load/reload
             if (velocity.y < -0.1) {
@@ -167,17 +209,41 @@ public class KingPhantomEntity extends PhantomEntity {
             }
         }
         
-        // Update velocity for friction
-        this.setVelocity(velocity.multiply(0.91, 0.91, 0.91));
+        // Update velocity for friction (but NOT during active summon ascent to prevent getting stuck)
+        // Only apply friction if not in the ascent phase of summon attack
+        if (this.isSummoning() && this.summonPhase == 2) {
+            // During summon ascent, FORCE upward movement - bypass all vanilla physics
+            velocity = new Vec3d(velocity.x, 0.3, velocity.z); // GUARANTEED upward velocity
+        } else {
+            velocity = velocity.multiply(0.91, 0.91, 0.91);
+        }
         
         // Use vanilla entity movement with collision detection
         // This respects block collisions while still allowing our custom velocity control
         this.move(net.minecraft.entity.MovementType.SELF, velocity);
+        this.setVelocity(velocity); // CRITICAL: Ensure velocity persists after move()
+        this.velocityModified = true;
+    }
+    
+    @Override
+    public void tickMovement() {
+        super.tickMovement();
+        // Pitch is now handled at the end of tick() to ensure it runs after all velocity updates
     }
     
     @Override
     public void tick() {
         super.tick();
+        
+        // CRITICAL: Handle summon attack AFTER super.tick() and FORCE velocity
+        if (!this.getEntityWorld().isClient() && this.isSummoning()) {
+            handleSummonAttack();
+            // FORCE the velocity to persist even if something else tries to modify it
+            if (this.summonPhase == 2) {
+                this.setVelocity(this.getVelocity().x, 0.3, this.getVelocity().z);
+                this.velocityModified = true;
+            }
+        }
         
         // Sync phase state from command tags on server (persists across saves)
         if (!this.getEntityWorld().isClient()) {
@@ -190,7 +256,7 @@ public class KingPhantomEntity extends PhantomEntity {
         }
         
         // Ensure the phantom never lands - but NOT during swoop or summon attacks!
-        if (!this.isSwooping && !this.isSummoning) {
+        if (!this.isSwooping() && !this.isSummoning()) {
             if (this.isOnGround()) {
                 // If somehow on ground, push upward strongly
                 this.setVelocity(this.getVelocity().add(0, 0.5, 0));
@@ -231,11 +297,6 @@ public class KingPhantomEntity extends PhantomEntity {
             if (this.isInPhaseTransition) {
                 handlePhaseTransition();
             } else {
-                // Handle summon attack
-                if (this.isSummoning) {
-                    handleSummonAttack();
-                }
-                
                 // Normal behavior: advance ranged beam and cooldown
                 if (this.rangedBeamTravelTicks > 0 && this.rangedBeamStart != null && this.rangedBeamEnd != null) {
                     advanceRangedBeam();
@@ -244,6 +305,40 @@ public class KingPhantomEntity extends PhantomEntity {
                 // Decrement attack cooldown
                 if (this.attackCooldown > 0) {
                     this.attackCooldown--;
+                }
+            }
+            
+            // CRITICAL: Update pitch at the END of tick, after all velocity updates from AI goals
+            // This ensures pitch reflects the current velocity and can't be overridden
+            // Using direct set (not lerp) for maximum responsiveness and to ensure client sees the change
+            if (this.isSwooping() || this.isSummoning()) {
+                Vec3d velocity = this.getVelocity();
+                double horizSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+                
+                if (horizSpeed > 1.0E-5D) {
+                    float targetPitch = (float) (Math.atan2(velocity.y, horizSpeed) * 180.0D / Math.PI * -1.0D);
+                    targetPitch = MathHelper.clamp(targetPitch, -45.0f, 45.0f);
+                    // Direct set for immediate sync - no lerp to ensure client receives the change
+                    this.setPitch(targetPitch);
+                } else {
+                    this.setPitch(0.0f);
+                }
+            } else if (!this.isInPhaseTransition) {
+                // Not attacking - check if still ascending/descending with significant vertical velocity
+                // If so, maintain pitch based on velocity to show natural movement
+                Vec3d velocity = this.getVelocity();
+                double horizSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+                double vertSpeed = Math.abs(velocity.y);
+                
+                // If moving vertically with significant speed, maintain pitch based on movement direction
+                // This allows smooth transition after summon attack ends while still ascending
+                if (horizSpeed > 1.0E-5D && vertSpeed > 0.1) {
+                    float targetPitch = (float) (Math.atan2(velocity.y, horizSpeed) * 180.0D / Math.PI * -1.0D);
+                    targetPitch = MathHelper.clamp(targetPitch, -45.0f, 45.0f);
+                    this.setPitch(targetPitch);
+                } else {
+                    // Moving horizontally or stationary - ensure flat
+                    this.setPitch(0.0f);
                 }
             }
         }
@@ -413,7 +508,7 @@ public class KingPhantomEntity extends PhantomEntity {
         // Don't summon on creative or spectator players
         if (target.isCreative() || target.isSpectator()) return;
         
-        this.isSummoning = true;
+        this.setSummoning(true);
         this.summonPhase = 1; // Start descending
         this.summonTarget = target;
         this.hasSummoned = false; // Reset summon flag
@@ -437,7 +532,7 @@ public class KingPhantomEntity extends PhantomEntity {
      * Handles summon attack logic each tick
      */
     private void handleSummonAttack() {
-        if (!this.isSummoning || this.summonPhase == 0) return;
+        if (!this.isSummoning() || this.summonPhase == 0) return;
         
         if (this.summonPhase == 1) {
             // Phase 1: Descending toward player
@@ -471,6 +566,21 @@ public class KingPhantomEntity extends PhantomEntity {
         Vec3d velocity = direction.multiply(speed);
         this.setVelocity(velocity);
         this.velocityDirty = true;
+        
+        // Make the phantom face the dive direction
+        double yaw = Math.atan2(velocity.z, velocity.x) * (180.0 / Math.PI) - 90.0;
+        this.setYaw((float)yaw);
+        this.headYaw = (float)yaw;
+        this.bodyYaw = (float)yaw;
+        
+        // Immediately update pitch based on velocity - use direct set for immediate response
+        double horizSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        if (horizSpeed > 1.0E-5D) {
+            float targetPitch = (float) (Math.atan2(velocity.y, horizSpeed) * 180.0D / Math.PI * -1.0D);
+            targetPitch = MathHelper.clamp(targetPitch, -45.0f, 45.0f);
+            // Use direct set for immediate, noticeable pitch changes during attacks
+            this.setPitch(targetPitch);
+        }
         
         // Spawn dramatic particles during descent
         if (this.getEntityWorld() instanceof ServerWorld sw) {
@@ -599,29 +709,131 @@ public class KingPhantomEntity extends PhantomEntity {
         }
         
         // Ascend back to hovering position
-        double speed = 0.4;
-        Vec3d velocity = direction.normalize().multiply(speed);
+        // CRITICAL FIX: Use separate speed for vertical ascent to prevent getting stuck
+        // If horizontal distance is large, the Y component becomes tiny after normalize()
+        // So we ensure minimum upward velocity regardless of horizontal distance
+        double horizontalDistance = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+        double verticalDistance = Math.abs(direction.y);
+        
+        // Calculate velocity components separately to ensure upward movement
+        double horizontalSpeed = 0.3; // Enough to close horizontal distance
+        double verticalSpeed = 0.4; // Slightly quicker ascent
+        
+        // Calculate velocity - prioritize upward movement
+        double velocityX = 0;
+        double velocityZ = 0;
+        double velocityY = verticalSpeed; // Always ascend upward
+        
+        // Add horizontal correction if we need to move horizontally
+        if (horizontalDistance > 1.0) {
+            velocityX = (direction.x / horizontalDistance) * horizontalSpeed;
+            velocityZ = (direction.z / horizontalDistance) * horizontalSpeed;
+        }
+        
+        Vec3d velocity = new Vec3d(velocityX, velocityY, velocityZ);
         this.setVelocity(velocity);
         this.velocityDirty = true;
+        
+        // Make the phantom face the ascent direction
+        double yaw = Math.atan2(velocity.z, velocity.x) * (180.0 / Math.PI) - 90.0;
+        this.setYaw((float)yaw);
+        this.headYaw = (float)yaw;
+        this.bodyYaw = (float)yaw;
+        
+        // Immediately update pitch based on velocity - use direct set for immediate response
+        double horizSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        if (horizSpeed > 1.0E-5D) {
+            float targetPitch = (float) (Math.atan2(velocity.y, horizSpeed) * 180.0D / Math.PI * -1.0D);
+            targetPitch = MathHelper.clamp(targetPitch, -45.0f, 45.0f);
+            // Use direct set for immediate, noticeable pitch changes during attacks
+            this.setPitch(targetPitch);
+        }
     }
     
     /**
      * Ends the summon attack and resets state
      */
     private void endSummonAttack() {
-        this.isSummoning = false;
+        this.setSummoning(false);
         this.summonPhase = 0;
         this.summonTarget = null;
         this.summonTargetPos = null;
         this.summonReturnPos = null;
         this.hasSummoned = false;
+        
+        // Set attack cooldown now that summon attack is complete
+        this.attackCooldown = this.getAttackInterval();
+    }
+    
+    /**
+     * Returns whether currently executing a swoop attack
+     */
+    public boolean isSwooping() {
+        return this.getDataTracker().get(IS_SWOOPING);
+    }
+    
+    /**
+     * Sets whether the phantom is currently swooping (synced to client)
+     */
+    public void setSwooping(boolean swooping) {
+        this.getDataTracker().set(IS_SWOOPING, swooping);
     }
     
     /**
      * Returns whether currently executing a summon attack
      */
     public boolean isSummoning() {
-        return this.isSummoning;
+        return this.getDataTracker().get(IS_SUMMONING);
+    }
+    
+    /**
+     * Sets whether the phantom is currently summoning (synced to client)
+     */
+    public void setSummoning(boolean summoning) {
+        this.getDataTracker().set(IS_SUMMONING, summoning);
+    }
+    
+    /**
+     * Checks if a player attack hits the beam and deflects it if so
+     * Called from mixin when player attacks
+     */
+    public boolean tryDeflectBeam(PlayerEntity player) {
+        if (this.rangedBeamTravelTicks <= 0 || this.rangedBeamCurrentPos == null) {
+            return false; // No active beam
+        }
+        
+        if (this.rangedBeamDeflected) {
+            return false; // Already deflected
+        }
+        
+        // Check if player's attack reach intersects with beam current position
+        double reachDistance = 3.0; // Player attack reach (typically 3 blocks)
+        double distance = this.rangedBeamCurrentPos.distanceTo(player.getEyePos());
+        
+        if (distance <= reachDistance) {
+            // Deflect the beam in the direction the player is looking
+            Vec3d playerLook = player.getRotationVec(1.0f).normalize();
+            this.rangedBeamDeflected = true;
+            this.rangedBeamDeflectedDirection = playerLook;
+            
+            // Update start position to current position for new trajectory
+            this.rangedBeamStart = this.rangedBeamCurrentPos;
+            
+            // Calculate new end position based on remaining travel time
+            // Keep the same travel time remaining, just change direction
+            double remainingDistance = this.rangedBeamTravelTicks * this.rangedBeamSpeedPerTick;
+            this.rangedBeamEnd = this.rangedBeamStart.add(playerLook.multiply(remainingDistance));
+            
+            // Play deflection sound
+            if (this.getEntityWorld() instanceof ServerWorld sw) {
+                sw.playSound(null, this.rangedBeamCurrentPos.x, this.rangedBeamCurrentPos.y, this.rangedBeamCurrentPos.z,
+                    net.minecraft.sound.SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, net.minecraft.sound.SoundCategory.PLAYERS, 0.5f, 1.5f);
+            }
+            
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -649,6 +861,9 @@ public class KingPhantomEntity extends PhantomEntity {
         int ticksElapsed = Math.max(0, (int)Math.ceil(totalDistance / this.rangedBeamSpeedPerTick) - ticksRemaining);
         double headDistance = Math.min(totalDistance, ticksElapsed * this.rangedBeamSpeedPerTick);
         Vec3d head = this.rangedBeamStart.add(dir.multiply(headDistance));
+        
+        // Update current position for deflection detection
+        this.rangedBeamCurrentPos = head;
         
         // Check for block collision along the beam's path for this tick
         double nextHeadDistance = Math.min(totalDistance, (ticksElapsed + 1) * this.rangedBeamSpeedPerTick);
@@ -678,6 +893,9 @@ public class KingPhantomEntity extends PhantomEntity {
             this.rangedBeamStart = null;
             this.rangedBeamEnd = null;
             this.rangedBeamTravelTicks = 0;
+            this.rangedBeamCurrentPos = null;
+            this.rangedBeamDeflected = false;
+            this.rangedBeamDeflectedDirection = null;
             return;
         }
         
@@ -700,6 +918,9 @@ public class KingPhantomEntity extends PhantomEntity {
             spawnBeamExplosion(this.rangedBeamEnd.x, this.rangedBeamEnd.y, this.rangedBeamEnd.z);
             this.rangedBeamStart = null;
             this.rangedBeamEnd = null;
+            this.rangedBeamCurrentPos = null;
+            this.rangedBeamDeflected = false;
+            this.rangedBeamDeflectedDirection = null;
         }
     }
     
@@ -857,24 +1078,32 @@ public class KingPhantomEntity extends PhantomEntity {
             .add(EntityAttributes.MAX_HEALTH, 640.0) // 32x normal phantom health (20)
             .add(EntityAttributes.ATTACK_DAMAGE, 12.0) // 2x normal phantom damage (6)
             .add(EntityAttributes.FOLLOW_RANGE, 64.0) // Extended range for larger mob
-            .add(EntityAttributes.FLYING_SPEED, 0.6); // Flying speed
+            .add(EntityAttributes.FLYING_SPEED, 0.4); // Flying speed (slower, more majestic)
     }
     
     /**
-     * Custom AI Goal: Hovers approximately 25 blocks above the nearest player's head
+     * Custom AI Goal: Hovers approximately 20 blocks above the nearest player's head
      */
     static class HoverAbovePlayerGoal extends Goal {
         private final KingPhantomEntity phantom;
-        private static final double HOVER_HEIGHT = 25.0;
-        private static final double HOVER_RADIUS = 3.0; // Circle around the player
+        private static final double HOVER_HEIGHT = 20.0;
+        private static final double HOVER_RADIUS = 20.0; // Larger circle radius for more definitive circling
         private Vec3d targetPosition;
         private Vec3d idleCircleCenter; // Position to circle around when no target
+        // Per-entity phases to keep motion unique and non-robotic
+        private final double phaseA;
+        private final double phaseB;
+        private final double phaseC;
         
         public HoverAbovePlayerGoal(KingPhantomEntity phantom) {
             this.phantom = phantom;
             this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
             // Initialize idle circle center to phantom's spawn position
             this.idleCircleCenter = null;
+            // Randomize phases so each King Phantom has a unique wobble pattern
+            this.phaseA = this.phantom.getRandom().nextDouble() * Math.PI * 2.0;
+            this.phaseB = this.phantom.getRandom().nextDouble() * Math.PI * 2.0;
+            this.phaseC = this.phantom.getRandom().nextDouble() * Math.PI * 2.0;
         }
         
         /**
@@ -943,25 +1172,50 @@ public class KingPhantomEntity extends PhantomEntity {
                 }
                 circleCenter = this.idleCircleCenter;
             } else {
-                // Player found - circle around player position (25 blocks above)
+                // Player found - circle around player position (20 blocks above head)
+                // Use eye Y position to center above the player's head
                 circleCenter = new Vec3d(
                     targetPlayer.getX(),
-                    targetPlayer.getY() + HOVER_HEIGHT,
+                    targetPlayer.getEyeY() + HOVER_HEIGHT,
                     targetPlayer.getZ()
                 );
                 // Update idle circle center to player's position for when player leaves
                 this.idleCircleCenter = circleCenter;
             }
             
-            // Calculate a position around the circle center
-            // Add some horizontal offset so it circles like a vulture
-            double angle = (this.phantom.age * 0.05) % (2 * Math.PI);
-            double offsetX = Math.cos(angle) * HOVER_RADIUS;
-            double offsetZ = Math.sin(angle) * HOVER_RADIUS;
+            // Calculate a position around the circle center - clear, definitive circle with slight imperfections
+            int t = this.phantom.age;
+            // Faster angular velocity to complete circle more quickly - for 20 block radius, need ~0.05-0.06 for visible circle
+            double baseAngleSpeed = 0.05; // Angular velocity for circling
+            double angleJitter = 0.003 * Math.sin(t * 0.015 + phaseA); // Very subtle angular variation
+            double angle = (t * (baseAngleSpeed + angleJitter)) % (2 * Math.PI);
+
+            // Minimal radius wobble - keep it clearly circular
+            double radiusJitter = 0.3 * Math.sin(t * 0.05 + phaseB) + 0.2 * Math.sin(t * 0.03 + phaseC);
+            double radius = HOVER_RADIUS + radiusJitter;
+            double minRadius = HOVER_RADIUS * 0.95; // Keep radius very close to target for clear circle
+            double maxRadius = HOVER_RADIUS * 1.05;
+            if (radius < minRadius) radius = minRadius;
+            if (radius > maxRadius) radius = maxRadius;
+
+            // Very minimal ellipse variation - keep it mostly circular
+            double ellipseX = 1.0 + 0.01 * Math.sin(t * 0.02 + phaseA);
+            double ellipseZ = 1.0 - 0.01 * Math.sin(t * 0.02 + phaseA);
+            double wobbleX = 0.1 * Math.sin(t * 0.08 + phaseB);
+            double wobbleZ = 0.1 * Math.cos(t * 0.06 + phaseC);
+
+            // Lead the target ahead along the circle to avoid chasing and spinning in place
+            double lead = 1.0; // radians to lead by (slightly more for smoother tracking)
+            double leadAngle = angle + lead;
+            double offsetX = Math.cos(leadAngle) * radius * ellipseX + wobbleX;
+            double offsetZ = Math.sin(leadAngle) * radius * ellipseZ + wobbleZ;
+
+            // Gentle vertical bob so wings match perceived effort
+            double bobY = 0.2 * Math.sin(t * 0.05 + phaseC);
             
             this.targetPosition = new Vec3d(
                 circleCenter.x + offsetX,
-                circleCenter.y,
+                circleCenter.y + bobY,
                 circleCenter.z + offsetZ
             );
             
@@ -970,25 +1224,33 @@ public class KingPhantomEntity extends PhantomEntity {
             Vec3d direction = this.targetPosition.subtract(currentPos);
             double distance = direction.length();
             
-            if (distance > 0.5) {
+            if (distance > 0.1) {
                 direction = direction.normalize();
                 
-                // Set velocity based on distance (faster when far, slower when close)
-                double speed = Math.min(1.0, distance * 0.1);
-                speed = Math.max(0.2, speed); // Minimum speed
+                // Set velocity based on distance - faster movement for larger circle
+                // For a 20-block radius circle, need speed of ~1.0-1.5 blocks/tick to maintain circle
+                double speed = Math.min(1.5, distance * 0.2);
+                speed = Math.max(0.8, speed); // Higher minimum speed to maintain circle
                 
-                Vec3d velocity = direction.multiply(speed);
-                this.phantom.setVelocity(velocity);
+                // More responsive velocity changes to track circle better
+                Vec3d desiredVelocity = direction.multiply(speed);
+                Vec3d currentVelocity = this.phantom.getVelocity();
+                Vec3d blendedVelocity = currentVelocity.lerp(desiredVelocity, 0.5); // More responsive blending
+                // Ensure we never stall
+                if (blendedVelocity.lengthSquared() < 0.25) { // < 0.5 blocks/tick
+                    blendedVelocity = desiredVelocity.normalize().multiply(0.8);
+                }
+                this.phantom.setVelocity(blendedVelocity);
                 this.phantom.velocityModified = true;
                 
                 // Make the phantom face the direction it's moving
-                double yaw = Math.atan2(velocity.z, velocity.x) * (180.0 / Math.PI) - 90.0;
-                double pitch = Math.atan2(velocity.y, Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z)) * (180.0 / Math.PI) * -1.0;
-                
+                double yaw = Math.atan2(blendedVelocity.z, blendedVelocity.x) * (180.0 / Math.PI) - 90.0;
                 this.phantom.setYaw((float)yaw);
-                this.phantom.setPitch((float)pitch);
                 this.phantom.headYaw = (float)yaw;
                 this.phantom.bodyYaw = (float)yaw;
+                
+                // Always strict flat for hover/circling—no tilt bias
+                this.phantom.setPitch(0.0f);
             }
             
             // Look at the player if there is one, otherwise look at circle center
@@ -1016,6 +1278,7 @@ public class KingPhantomEntity extends PhantomEntity {
         private PlayerEntity targetPlayer;
         private boolean isSwooping = false;
         private Vec3d swoopTarget;
+        private double swoopTargetInitialY = Double.NaN; // Track target's initial Y level when swoop starts
         private int swoopTimer = 0;
         private boolean hasDamagedThisSwoop = false; // Track if we've already hit during this swoop
         private static final int SWOOP_DURATION = 40; // 2 seconds
@@ -1069,7 +1332,7 @@ public class KingPhantomEntity extends PhantomEntity {
                 if (useSwoop) {
                     // Swoop attack
                     this.isSwooping = true;
-                    this.phantom.isSwooping = true; // Update entity flag
+                    this.phantom.setSwooping(true); // Update entity flag (synced to client)
                     this.swoopTimer = SWOOP_DURATION;
                     this.hasDamagedThisSwoop = false;
                     
@@ -1077,10 +1340,12 @@ public class KingPhantomEntity extends PhantomEntity {
                     Vec3d playerVel = this.targetPlayer.getVelocity();
                     Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
                     this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
+                    // Store target's initial Y level for pitch flattening
+                    this.swoopTargetInitialY = this.targetPlayer.getY();
                 } else {
                     // Ranged beam attack
                     this.isSwooping = false;
-                    this.phantom.isSwooping = false; // Update entity flag
+                    this.phantom.setSwooping(false); // Update entity flag (synced to client)
                     
                     // Fire at player's current position
                     Vec3d targetPos = new Vec3d(
@@ -1098,7 +1363,7 @@ public class KingPhantomEntity extends PhantomEntity {
                 if (attackChoice < 40) {
                     // Swoop attack (40%)
                     this.isSwooping = true;
-                    this.phantom.isSwooping = true; // Update entity flag
+                    this.phantom.setSwooping(true); // Update entity flag (synced to client)
                     this.swoopTimer = SWOOP_DURATION;
                     this.hasDamagedThisSwoop = false;
                     
@@ -1106,10 +1371,12 @@ public class KingPhantomEntity extends PhantomEntity {
                     Vec3d playerVel = this.targetPlayer.getVelocity();
                     Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
                     this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
+                    // Store target's initial Y level for pitch flattening
+                    this.swoopTargetInitialY = this.targetPlayer.getY();
                 } else if (attackChoice < 80) {
                     // Ranged beam attack (40%)
                     this.isSwooping = false;
-                    this.phantom.isSwooping = false; // Update entity flag
+                    this.phantom.setSwooping(false); // Update entity flag (synced to client)
                     
                     // Fire at player's current position
                     Vec3d targetPos = new Vec3d(
@@ -1122,8 +1389,10 @@ public class KingPhantomEntity extends PhantomEntity {
                 } else {
                     // Summon attack (20%)
                     this.isSwooping = false;
-                    this.phantom.isSwooping = false; // Update entity flag
+                    this.phantom.setSwooping(false); // Update entity flag (synced to client)
                     this.phantom.startSummonAttack(this.targetPlayer);
+                    // Note: Cooldown for summon attack will be set when summon ends
+                    return; // Don't set cooldown yet for summon attacks
                 }
             }
             
@@ -1150,14 +1419,32 @@ public class KingPhantomEntity extends PhantomEntity {
                 this.phantom.setVelocity(velocity);
                 this.phantom.velocityModified = true;
                 
+                // Check if we've reached the target level without hitting - end swoop immediately
+                if (!Double.isNaN(this.swoopTargetInitialY) && !this.hasDamagedThisSwoop) {
+                    double currentY = this.phantom.getY();
+                    if (currentY <= this.swoopTargetInitialY + 1.0) { // Within 1 block of target Y
+                        // Missed the player - end swoop immediately
+                        this.swoopTimer = 0;
+                        this.isSwooping = false;
+                        this.phantom.setSwooping(false);
+                        return; // Exit early
+                    }
+                }
+                
                 // Make the phantom face the swoop direction
                 double yaw = Math.atan2(velocity.z, velocity.x) * (180.0 / Math.PI) - 90.0;
-                double pitch = Math.atan2(velocity.y, Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z)) * (180.0 / Math.PI) * -1.0;
-                
                 this.phantom.setYaw((float)yaw);
-                this.phantom.setPitch((float)pitch);
                 this.phantom.headYaw = (float)yaw;
                 this.phantom.bodyYaw = (float)yaw;
+                
+                // Immediately update pitch based on velocity - use direct set for immediate response
+                double horizSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+                if (horizSpeed > 1.0E-5D) {
+                    float targetPitch = (float) (Math.atan2(velocity.y, horizSpeed) * 180.0D / Math.PI * -1.0D);
+                    targetPitch = MathHelper.clamp(targetPitch, -45.0f, 45.0f);
+                    // Use direct set for immediate, noticeable pitch changes during attacks
+                    this.phantom.setPitch(targetPitch);
+                }
                 
                 // Try to damage player if close enough (increased range) - but only once per swoop!
                 if (!this.hasDamagedThisSwoop) {
@@ -1171,7 +1458,7 @@ public class KingPhantomEntity extends PhantomEntity {
                                 // End the swoop immediately after landing a hit
                                 this.swoopTimer = 0;
                                 this.isSwooping = false;
-                                this.phantom.isSwooping = false; // Update entity flag
+                                this.phantom.setSwooping(false); // Update entity flag (synced to client)
                             }
                         }
                     }
@@ -1181,16 +1468,17 @@ public class KingPhantomEntity extends PhantomEntity {
             // End swoop early if we've passed the target
             if (this.swoopTimer <= 0) {
                 this.isSwooping = false;
-                this.phantom.isSwooping = false; // Update entity flag
+                this.phantom.setSwooping(false); // Update entity flag (synced to client)
             }
         }
         
         @Override
         public void stop() {
             this.isSwooping = false;
-            this.phantom.isSwooping = false; // Update entity flag
+            this.phantom.setSwooping(false); // Update entity flag (synced to client)
             this.swoopTimer = 0;
             this.swoopTarget = null;
+            this.swoopTargetInitialY = Double.NaN; // Reset initial Y tracking
             this.hasDamagedThisSwoop = false; // Reset damage flag when swoop ends
             
             // Reset velocity when swoop ends to prevent phantom from continuing to descend

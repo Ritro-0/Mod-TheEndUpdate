@@ -14,6 +14,7 @@ public class BrewingIngredientSlotMixin {
     private void theendupdate$acceptChrysanthemum(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
         if (stack != null && (
             stack.isOf(Registries.ITEM.get(Identifier.of("theendupdate", "ender_chrysanthemum"))) ||
+            stack.isOf(Registries.ITEM.get(Identifier.of("theendupdate", "closed_ender_chrysanthemum"))) ||
             stack.isOf(Registries.ITEM.get(Identifier.of("theendupdate", "king_phantom_essence")))
         )) {
             cir.setReturnValue(true);

@@ -5,11 +5,11 @@
 	"name": "The End Update",
 	"description": "Foundations for TheEndUpdate mod.",
 	"authors": [
-		"Me!"
+		"Ritro"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://example.com/TheEndUpdate"
+		"homepage": "https://modrinth.com/mod/ritro-the-end-update",
+		"sources": "https://github.com/Ritro/TheEndUpdate"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/template-mod/icon.png",

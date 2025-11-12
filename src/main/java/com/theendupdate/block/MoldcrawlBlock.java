@@ -302,17 +302,19 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 
 		// Recompute chain tip flags on ANY neighbor change to reflect new base-candidate conditions
 		if (world instanceof net.minecraft.world.World w && !w.isClient()) {
-			try {
-				com.theendupdate.TemplateMod.LOGGER.info(
-					"MoldCrawl neighborUpdate ENTER: pos={} neighborPos={} dir={} thisFacing={} isClient={} stateTip={} stateTipVines={}",
-					pos.toShortString(), neighborPos.toShortString(), direction, state.get(FACING), false,
-					state.getOrEmpty(TIP).orElse(false), state.getOrEmpty(TIP_VINES).orElse(false)
-				);
-				com.theendupdate.TemplateMod.LOGGER.info(
-					"MoldCrawl neighborUpdate neighborBlock={}",
-					net.minecraft.registry.Registries.BLOCK.getId(neighborState.getBlock())
-				);
-			} catch (Throwable ignored) {}
+			if (com.theendupdate.TemplateMod.DEBUG_MODE) {
+				try {
+					com.theendupdate.TemplateMod.LOGGER.info(
+						"MoldCrawl neighborUpdate ENTER: pos={} neighborPos={} dir={} thisFacing={} isClient={} stateTip={} stateTipVines={}",
+						pos.toShortString(), neighborPos.toShortString(), direction, state.get(FACING), false,
+						state.getOrEmpty(TIP).orElse(false), state.getOrEmpty(TIP_VINES).orElse(false)
+					);
+					com.theendupdate.TemplateMod.LOGGER.info(
+						"MoldCrawl neighborUpdate neighborBlock={}",
+						net.minecraft.registry.Registries.BLOCK.getId(neighborState.getBlock())
+					);
+				} catch (Throwable ignored) {}
+			}
 			// Fast-path: if the forward neighbor of this block changed, immediately recompute this block's tip/vines flags
 			try {
 				Direction f = state.get(FACING);
@@ -377,10 +379,14 @@ public class MoldcrawlBlock extends Block implements Fertilizable {
 			updateChainTipFlags(world, pos);
 			return;
 		}
-		com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick unsupported at {} facing {}", pos.toShortString(), state.get(FACING));
+		if (com.theendupdate.TemplateMod.DEBUG_MODE) {
+			com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick unsupported at {} facing {}", pos.toShortString(), state.get(FACING));
+		}
 		BlockState reattached = tryReattachChain(state, world, pos);
 		if (reattached != null) {
-			com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick reattached at {} new facing {}", pos.toShortString(), reattached.get(FACING));
+			if (com.theendupdate.TemplateMod.DEBUG_MODE) {
+				com.theendupdate.TemplateMod.LOGGER.info("MoldCrawl scheduledTick reattached at {} new facing {}", pos.toShortString(), reattached.get(FACING));
+			}
 			return;
 		}
 		// No reattachment possible; break with chance like vines (loot table's random_chance doesn't run here)

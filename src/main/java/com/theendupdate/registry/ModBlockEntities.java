@@ -3,7 +3,7 @@ package com.theendupdate.registry;
 import com.theendupdate.TemplateMod;
 import com.theendupdate.block.QuantumGatewayBlockEntity;
 import com.theendupdate.block.ShadowAltarBlockEntity;
-import net.fabricmc.loader.api.FabricLoader;
+import com.theendupdate.block.entity.NebulaVentBlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.HangingSignBlockEntity;
@@ -15,6 +15,7 @@ import net.minecraft.util.Identifier;
 import java.lang.reflect.Field;
 
 public final class ModBlockEntities {
+    public static BlockEntityType<NebulaVentBlockEntity> NEBULA_VENT;
     public static BlockEntityType<QuantumGatewayBlockEntity> QUANTUM_GATEWAY;
     public static BlockEntityType<ShadowAltarBlockEntity> SHADOW_ALTAR;
     public static BlockEntityType<SignBlockEntity> ETHEREAL_SIGN;
@@ -25,6 +26,11 @@ public final class ModBlockEntities {
     public static BlockEntityType<ShelfBlockEntity> SHADOW_SHELF;
 
     public static void register() {
+        NEBULA_VENT = Registry.register(
+            Registries.BLOCK_ENTITY_TYPE,
+            Identifier.of(TemplateMod.MOD_ID, "nebula_vent"),
+            net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder.<NebulaVentBlockEntity>create(NebulaVentBlockEntity::new, ModBlocks.NEBULA_VENT_BLOCK).build()
+        );
         QUANTUM_GATEWAY = Registry.register(
             Registries.BLOCK_ENTITY_TYPE,
             Identifier.of(TemplateMod.MOD_ID, "quantum_gateway"),
@@ -66,7 +72,9 @@ public final class ModBlockEntities {
                 throw new RuntimeException("Could not find blocks field in BlockEntityType");
             }
             
-            TemplateMod.LOGGER.info("Found blocks field: {}", blocksField.getName());
+            if (TemplateMod.DEBUG_MODE) {
+                TemplateMod.LOGGER.info("Found blocks field: {}", blocksField.getName());
+            }
             
             // The blocks Set is immutable, so we need to create a new mutable Set with our blocks added
             @SuppressWarnings("unchecked")
@@ -97,7 +105,9 @@ public final class ModBlockEntities {
             newShelfBlocks.add(ModBlocks.SHADOW_SHELF);
             blocksField.set(BlockEntityType.SHELF, newShelfBlocks);
             
-            TemplateMod.LOGGER.info("Successfully added custom sign and shelf blocks to vanilla block entity types");
+            if (TemplateMod.DEBUG_MODE) {
+                TemplateMod.LOGGER.info("Successfully added custom sign and shelf blocks to vanilla block entity types");
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to add custom sign and shelf blocks to vanilla block entity types", e);
         }

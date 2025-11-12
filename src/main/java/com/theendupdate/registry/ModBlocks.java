@@ -52,6 +52,8 @@ public final class ModBlocks {
         key -> new com.theendupdate.block.EndMireBlock(
             AbstractBlock.Settings
                 .copy(Blocks.END_STONE)
+                .requiresTool()
+                .strength(0.4F)
                 .registryKey(key)
         )
     );
@@ -61,6 +63,8 @@ public final class ModBlocks {
         key -> new com.theendupdate.block.EndMurkBlock(
             AbstractBlock.Settings
                 .copy(Blocks.END_STONE)
+                .requiresTool()
+                .strength(0.4F)
                 .registryKey(key)
         )
     );
@@ -106,6 +110,25 @@ public final class ModBlocks {
         "potted_ender_chrysanthemum",
         key -> new FlowerPotBlock(
             ENDER_CHRYSANTHEMUM,
+            AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
+        )
+    );
+
+    public static final Block CLOSED_ENDER_CHRYSANTHEMUM = registerBlock(
+        "closed_ender_chrysanthemum",
+        key -> new com.theendupdate.block.ClosedEnderChrysanthemumBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.POPPY)
+                .offset(AbstractBlock.OffsetType.NONE)
+                .nonOpaque()
+                .registryKey(key)
+        )
+    );
+
+    public static final Block POTTED_CLOSED_ENDER_CHRYSANTHEMUM = registerBlockNoItem(
+        "potted_closed_ender_chrysanthemum",
+        key -> new com.theendupdate.block.PottedClosedEnderChrysanthemumBlock(
+            CLOSED_ENDER_CHRYSANTHEMUM,
             AbstractBlock.Settings.copy(Blocks.POTTED_DANDELION).nonOpaque().registryKey(key)
         )
     );
@@ -612,6 +635,22 @@ public final class ModBlocks {
         )
     );
 
+    // Nebula Vent Block - block with solid base and non-solid tube extending upward
+    // Note: Cannot use offset type with custom collision shapes in 1.21.10
+    public static final Block NEBULA_VENT_BLOCK = registerBlock(
+        "nebula_vent_block",
+        key -> new com.theendupdate.block.NebulaVentBlock(
+            AbstractBlock.Settings
+                .copy(Blocks.SPONGE)
+                .strength(0.6F, 0.6F)
+                .nonOpaque()
+                .solidBlock((state, world, pos) -> false)
+                .suffocates((state, world, pos) -> false)
+                .blockVision((state, world, pos) -> false)
+                .registryKey(key)
+        )
+    );
+
     private static Block registerBlock(String name, java.util.function.Function<RegistryKey<Block>, Block> factory) {
         Identifier id = Identifier.of(TemplateMod.MOD_ID, name);
         RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK.getKey(), id);
@@ -811,6 +850,7 @@ public final class ModBlocks {
             entries.add(SPECTRAL_BLOCK);
             entries.add(QUANTUM_GATEWAY);
             entries.add(SHADOW_ALTAR);
+            entries.add(NEBULA_VENT_BLOCK);
         });
         
         // NATURAL tab - plants and natural items

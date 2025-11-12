@@ -31,10 +31,10 @@ import net.minecraft.block.BlockState;
 public class TemplateMod implements ModInitializer {
     public static final String MOD_ID = "theendupdate";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final boolean DEBUG_MODE = false; // Set to true for development debugging
 
     @Override
     public void onInitialize() {
-        LOGGER.info("[EndUpdate] onInitialize() starting");
         
         // Initialize mod content
         com.theendupdate.registry.ModItemGroups.register();
@@ -61,8 +61,10 @@ public class TemplateMod implements ModInitializer {
             );
         });
         com.theendupdate.registry.ModSounds.register();
+        // Particle code commented out temporarily
         com.theendupdate.registry.ModEntities.registerModEntities();
         com.theendupdate.registry.ModWorldgen.registerAll();
+        com.theendupdate.network.EndFlashNetworking.registerServerReceiver();
         
         
         // Register strippable blocks (axe right-click)
@@ -145,12 +147,23 @@ public class TemplateMod implements ModInitializer {
         // Post-gen spawners
         com.theendupdate.world.EtherealOrbOnCrystalsSpawner.init();
         
+        // World load complete - using in-memory tracking
+        // (Silent - no logging)
+        
+        // Scan chunks for existing closed chrysanthemums on load (async, End-only, player-vicinity, disabled by default)
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents.CHUNK_LOAD.register((world, chunk) -> {
+            // End dimension check
+            if (world.getRegistryKey() != net.minecraft.world.World.END) return;
+            if (world instanceof net.minecraft.server.world.ServerWorld serverWorld) {
+                com.theendupdate.network.EnderChrysanthemumCloser.scanChunkForClosed(serverWorld, chunk);
+            }
+        });
+        
         // Register commands
         net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             com.theendupdate.command.FixFlowersCommand.register(dispatcher);
+            com.theendupdate.command.TestChrysanthemumCommand.register(dispatcher);
         });
-        
-        LOGGER.info("[EndUpdate] onInitialize() completed");
 
         // Server tick: spawn subtle END_ROD particles around players wearing spectral trims
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
@@ -158,6 +171,7 @@ public class TemplateMod implements ModInitializer {
                 if (world != null) {
                     com.theendupdate.entity.ShadowCreakingBossBarRegistry.tickAll(world);
                     com.theendupdate.entity.KingPhantomBossBarRegistry.tickAll(world);
+                    com.theendupdate.network.EnderChrysanthemumCloser.tick(world);
                 }
                 
                 // Handle cow and mooshroom milking animation  
@@ -213,18 +227,12 @@ public class TemplateMod implements ModInitializer {
                         theendupdate$autoBindShadowHuntersTrackers(world, player);
                     }
                     
-                    int count = theendupdate$countSpectralTrimPieces(player);
-                    if (count >= 2) {
-                        theendupdate$pullItems(world, player);
-                    }
-                    if (count >= 3 && theendupdate$cadence) {
-                        double x = player.getX();
-                        double y = player.getY() + 1.0;
-                        double z = player.getZ();
-                        theendupdate$spawnForOthers(world, player, x, y, z);
+                    // Spectral trim: spawn particles at each piece's location (throttled to every 3 ticks)
+                    if (theendupdate$cadence) {
+                        theendupdate$spawnSpectralTrimParticles(world, player);
                     }
 
-                    // Gravitite trim: attract nearby items based on number of pieces (2,4,6,8 blocks)
+                    // Gravitite trim: attract nearby items based on number of pieces (2,4,6,8 blocks, throttled to every 3 ticks)
                     int gravititePieces = theendupdate$countGravititeTrimPieces(player);
                     if (gravititePieces > 0 && theendupdate$cadence) {
                         theendupdate$pullNearbyItems(world, player, gravititePieces);
@@ -291,34 +299,45 @@ public class TemplateMod implements ModInitializer {
         } catch (Throwable ignored) {}
     }
 
-    private static void theendupdate$spawnForOthers(ServerWorld world, ServerPlayerEntity owner, double x, double y, double z) {
+    private static void theendupdate$spawnSpectralTrimParticles(ServerWorld world, ServerPlayerEntity player) {
         try {
-            for (ServerPlayerEntity other : world.getPlayers()) {
-                if (other == owner) continue;
-                other.networkHandler.sendPacket(new ParticleS2CPacket(
-                    ParticleTypes.END_ROD,
-                    false, false,
-                    x, y, z,
-                    0.0f, 0.0f, 0.0f,
-                    0.0f, 1
-                ));
-            }
-        } catch (Throwable ignored) {}
-    }
-
-    private static void theendupdate$pullItems(ServerWorld world, ServerPlayerEntity player) {
-        try {
-            Box box = player.getBoundingBox().expand(2.5);
-            var items = world.getEntitiesByClass(ItemEntity.class, box, item -> true);
-            for (ItemEntity item : items) {
-                if (item == null || item.isRemoved()) continue;
-                Vec3d playerPos = new Vec3d(player.getX(), player.getY(), player.getZ());
-                Vec3d itemPos = new Vec3d(item.getX(), item.getY(), item.getZ());
-                Vec3d pull = playerPos.subtract(itemPos).normalize().multiply(0.15);
-                Vec3d vel = item.getVelocity().multiply(0.80).add(pull.multiply(0.90));
-                if (vel.lengthSquared() > 1.4) vel = vel.normalize().multiply(1.15);
-                item.setVelocity(vel);
-                item.velocityModified = true;
+            double baseX = player.getX();
+            double baseZ = player.getZ();
+            double baseY = player.getY();
+            
+            // Check each armor slot and spawn particles at appropriate positions
+            for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
+                ItemStack armor = player.getEquippedStack(slot);
+                if (armor == null || armor.isEmpty()) continue;
+                ArmorTrim trim = armor.get(DataComponentTypes.TRIM);
+                if (trim == null) continue;
+                Identifier matId = trim.material().getKey().map(RegistryKey::getValue).orElse(null);
+                if (matId == null) continue;
+                String path = matId.getPath();
+                if (!"spectral".equals(path) && !"spectral_cluster".equals(path)) continue;
+                
+                // Calculate Y position based on slot
+                double yOffset = switch (slot) {
+                    case HEAD -> player.getEyeHeight(player.getPose()); // ~1.6 for standing
+                    case CHEST -> 1.0;
+                    case LEGS -> 0.6;
+                    case FEET -> 0.1;
+                    default -> 1.0;
+                };
+                
+                double particleY = baseY + yOffset;
+                
+                // Spawn particles visible to other players
+                for (ServerPlayerEntity other : world.getPlayers()) {
+                    if (other == player) continue;
+                    other.networkHandler.sendPacket(new ParticleS2CPacket(
+                        ParticleTypes.END_ROD,
+                        false, false,
+                        baseX, particleY, baseZ,
+                        0.0f, 0.0f, 0.0f,
+                        0.0f, 1
+                    ));
+                }
             }
         } catch (Throwable ignored) {}
     }

@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(BrewingStandBlockEntity.class)
 public class BrewingStandBlockEntityTickMixin {
     private static final Identifier ENDER_CHRYS = Identifier.of("theendupdate", "ender_chrysanthemum");
+    private static final Identifier CLOSED_ENDER_CHRYS = Identifier.of("theendupdate", "closed_ender_chrysanthemum");
     private static final Identifier KING_PHANTOM_ESSENCE = Identifier.of("theendupdate", "king_phantom_essence");
 
     @Shadow
@@ -34,7 +35,7 @@ public class BrewingStandBlockEntityTickMixin {
                 for (int i = 0; i < slots.size(); i++) copy.set(i, slots.get(i));
                 
                 // Substitute ender chrysanthemum with cobweb
-                if (reagent.isOf(Registries.ITEM.get(ENDER_CHRYS))) {
+                if (reagent.isOf(Registries.ITEM.get(ENDER_CHRYS)) || reagent.isOf(Registries.ITEM.get(CLOSED_ENDER_CHRYS))) {
                     copy.set(3, new ItemStack(Items.COBWEB));
                     return copy;
                 }
@@ -65,7 +66,7 @@ public class BrewingStandBlockEntityTickMixin {
             ItemStack top = slots.get(3);
             if (!top.isEmpty()) {
                 // Handle ender chrysanthemum -> cobweb
-                if (top.isOf(Registries.ITEM.get(ENDER_CHRYS))) {
+                if (top.isOf(Registries.ITEM.get(ENDER_CHRYS)) || top.isOf(Registries.ITEM.get(CLOSED_ENDER_CHRYS))) {
                     savedReagent = top.copy();
                     substituteItem = Items.COBWEB;
                     vanillaInit = 1;

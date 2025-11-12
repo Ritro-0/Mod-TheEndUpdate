@@ -47,7 +47,9 @@ public class SignBlockEntityRendererMixin {
                 
                 // Replace the immutable map with our mutable one
                 typeToModelField.set(this, newMap);
-                com.theendupdate.TemplateMod.LOGGER.info("Successfully registered custom sign wood types");
+                if (com.theendupdate.TemplateMod.DEBUG_MODE) {
+                    com.theendupdate.TemplateMod.LOGGER.info("Successfully registered custom sign wood types");
+                }
             }
         } catch (Exception e) {
             // Log but don't crash

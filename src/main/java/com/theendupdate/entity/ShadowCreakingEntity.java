@@ -11,6 +11,7 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.mob.CreakingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -150,6 +151,112 @@ public class ShadowCreakingEntity extends CreakingEntity {
 	}
 	
 	@Override
+	public boolean damage(ServerWorld world, DamageSource source, float amount) {
+		// If suffocating inside a block, instantly blink to safety near the nearest player and cancel damage
+		try {
+			if (source != null && source.isOf(DamageTypes.IN_WALL)) {
+				this.teleportOutOfWallNearPlayer(world);
+				return false; // cancel suffocation damage
+			}
+		} catch (Throwable ignored) {}
+		return super.damage(world, source, amount);
+	}
+
+	private void teleportOutOfWallNearPlayer(ServerWorld sw) {
+		// Prefer current attack target if it's a player; otherwise nearest player
+		Entity preferred = null;
+		try {
+			Entity t = this.getTarget();
+			if (t instanceof PlayerEntity && t.isAlive()) preferred = t;
+		} catch (Throwable ignored) {}
+		if (preferred == null) {
+			PlayerEntity nearest = sw.getClosestPlayer(this, 64.0);
+			if (nearest != null && nearest.isAlive()) preferred = nearest;
+		}
+
+		Vec3d dest = null;
+		if (preferred != null) {
+			dest = findSafeSpotAroundEntity(sw, preferred, 5);
+		}
+		if (dest == null) {
+			// Fallback: find safe spot near current position within small radius
+			dest = findSafeSpotAroundPos(sw, new Vec3d(this.getX(), this.getY(), this.getZ()), 3);
+		}
+		if (dest == null) {
+			// Last resort: move up by 1 block
+			dest = new Vec3d(this.getX(), this.getY() + 1.0, this.getZ());
+		}
+
+		// Teleport and zero motion
+		this.refreshPositionAndAngles(dest.x, dest.y, dest.z, this.getYaw(), this.getPitch());
+		this.setVelocity(0.0, 0.0, 0.0);
+		this.velocityDirty = true;
+		this.fallDistance = 0.0F;
+		// Small visual hint
+		spawnExplosionVfx(sw, dest.x, dest.y + 0.6, dest.z);
+	}
+
+	private Vec3d findSafeSpotAroundEntity(ServerWorld sw, Entity around, int maxRadius) {
+		float width = this.getWidth();
+		float height = this.getHeight();
+		double baseX = around.getX();
+		double baseY = around.getY();
+		double baseZ = around.getZ();
+
+		// Try standing at player's feet first
+		Box box = new Box(
+			baseX - width / 2, baseY, baseZ - width / 2,
+			baseX + width / 2, baseY + height, baseZ + width / 2
+		);
+		if (sw.isSpaceEmpty(box) && isValidSpawnPosition(sw, box, baseY)) {
+			return new Vec3d(baseX, baseY, baseZ);
+		}
+
+		for (int r = 1; r <= Math.max(1, maxRadius); r++) {
+			int steps = Math.max(8, r * 14);
+			for (int i = 0; i < steps; i++) {
+				double ang = (2.0 * Math.PI * i) / steps;
+				double tx = baseX + Math.cos(ang) * r;
+				double tz = baseZ + Math.sin(ang) * r;
+				for (double yOff = -1.0; yOff <= 1.0; yOff += 0.5) {
+					double ty = baseY + yOff;
+					Box tryBox = new Box(
+						tx - width / 2, ty, tz - width / 2,
+						tx + width / 2, ty + height, tz + width / 2
+					);
+					if (sw.isSpaceEmpty(tryBox) && isValidSpawnPosition(sw, tryBox, ty)) {
+						return new Vec3d(tx, ty, tz);
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	private Vec3d findSafeSpotAroundPos(ServerWorld sw, Vec3d pos, int maxRadius) {
+		float width = this.getWidth();
+		float height = this.getHeight();
+		for (int r = 1; r <= Math.max(1, maxRadius); r++) {
+			int steps = Math.max(8, r * 14);
+			for (int i = 0; i < steps; i++) {
+				double ang = (2.0 * Math.PI * i) / steps;
+				double tx = pos.x + Math.cos(ang) * r;
+				double tz = pos.z + Math.sin(ang) * r;
+				for (double yOff = -1.0; yOff <= 1.0; yOff += 0.5) {
+					double ty = pos.y + yOff;
+					Box tryBox = new Box(
+						tx - width / 2, ty, tz - width / 2,
+						tx + width / 2, ty + height, tz + width / 2
+					);
+					if (sw.isSpaceEmpty(tryBox) && isValidSpawnPosition(sw, tryBox, ty)) {
+						return new Vec3d(tx, ty, tz);
+					}
+				}
+			}
+		}
+		return null;
+	}
+
 	public void onDeath(DamageSource damageSource) {
 		super.onDeath(damageSource);
 		if (!(this.getEntityWorld() instanceof ServerWorld sw)) return;

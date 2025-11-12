@@ -36,6 +36,7 @@ public final class ModItemGroups {
             // Plants
             entries.add(ModBlocks.VOID_BLOOM);
             entries.add(ModBlocks.ENDER_CHRYSANTHEMUM);
+            entries.add(ModBlocks.CLOSED_ENDER_CHRYSANTHEMUM);
             entries.add(ModBlocks.VOID_SAP);
             entries.add(ModBlocks.TENDRIL_SPROUT);
             entries.add(ModBlocks.TENDRIL_THREAD);
@@ -110,6 +111,7 @@ public final class ModItemGroups {
             entries.add(ModBlocks.ASTRAL_REMNANT);
             entries.add(ModBlocks.SPECTRAL_BLOCK);
             entries.add(ModBlocks.QUANTUM_GATEWAY);
+            entries.add(ModBlocks.NEBULA_VENT_BLOCK);
             entries.add(ModBlocks.GRAVITITE_ORE);
             entries.add(ModBlocks.SHADOW_ALTAR);
             

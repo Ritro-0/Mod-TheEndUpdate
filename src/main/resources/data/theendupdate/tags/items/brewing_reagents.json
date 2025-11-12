@@ -1,7 +1,7 @@
 {
   "replace": false,
   "values": [
-    "theendupdate:ender_chrysanthemum",
+    "#theendupdate:ender_chrysanthemum_reagents",
     "theendupdate:king_phantom_essence"
   ]
 }

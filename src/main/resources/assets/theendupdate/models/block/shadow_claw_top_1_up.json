@@ -1,7 +1,8 @@
 {
   "ambientocclusion": false,
   "textures": {
-    "layer": "theendupdate:block/shadow_claw_1_top"
+    "layer": "theendupdate:block/shadow_claw_1_top",
+    "particle": "theendupdate:block/shadow_claw_1_top"
   },
   "elements": [
     {

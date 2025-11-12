@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "facing=north,waterlogged=false": { "model": "theendupdate:block/nebula_vent_block", "y": 180 },
+    "facing=north,waterlogged=true":  { "model": "theendupdate:block/nebula_vent_block", "y": 180 },
+    "facing=south,waterlogged=false": { "model": "theendupdate:block/nebula_vent_block" },
+    "facing=south,waterlogged=true":  { "model": "theendupdate:block/nebula_vent_block" },
+    "facing=east,waterlogged=false":  { "model": "theendupdate:block/nebula_vent_block", "y": 90 },
+    "facing=east,waterlogged=true":   { "model": "theendupdate:block/nebula_vent_block", "y": 90 },
+    "facing=west,waterlogged=false":  { "model": "theendupdate:block/nebula_vent_block", "y": 270 },
+    "facing=west,waterlogged=true":   { "model": "theendupdate:block/nebula_vent_block", "y": 270 }
+  }
+}
+

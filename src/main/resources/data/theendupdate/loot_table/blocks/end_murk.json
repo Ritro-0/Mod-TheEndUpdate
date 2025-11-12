@@ -9,7 +9,6 @@
           "children": [
             {
               "type": "minecraft:item",
-              "name": "theendupdate:end_murk",
               "conditions": [
                 {
                   "condition": "minecraft:match_tool",
@@ -17,12 +16,15 @@
                     "enchantments": [
                       {
                         "enchantment": "minecraft:silk_touch",
-                        "levels": { "min": 1 }
+                        "levels": {
+                          "min": 1
+                        }
                       }
                     ]
                   }
                 }
-              ]
+              ],
+              "name": "theendupdate:end_murk"
             },
             {
               "type": "minecraft:item",
@@ -31,7 +33,11 @@
           ]
         }
       ],
-      "conditions": [ { "condition": "minecraft:survives_explosion" } ]
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
     }
   ]
 }

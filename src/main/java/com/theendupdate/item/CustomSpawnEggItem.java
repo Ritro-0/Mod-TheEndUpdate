@@ -53,10 +53,14 @@ public class CustomSpawnEggItem extends Item {
             spawnPos, SpawnReason.MOB_SUMMONED, true, !blockPos.equals(spawnPos));
             
         if (entity != null) {
-            TemplateMod.LOGGER.info("Created entity: {}, now adding to world...", entity);
+            if (TemplateMod.DEBUG_MODE) {
+                TemplateMod.LOGGER.info("Created entity: {}, now adding to world...", entity);
+            }
             // CRITICAL: Actually add the entity to the world!
             boolean added = serverWorld.spawnEntity(entity);
-            TemplateMod.LOGGER.info("Entity added to world: {} (success: {})", entity, added);
+            if (TemplateMod.DEBUG_MODE) {
+                TemplateMod.LOGGER.info("Entity added to world: {} (success: {})", entity, added);
+            }
             
             if (added) {
                 itemStack.decrementUnlessCreative(1, context.getPlayer());

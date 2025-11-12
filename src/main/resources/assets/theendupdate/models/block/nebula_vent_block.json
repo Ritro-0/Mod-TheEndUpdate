@@ -1,0 +1,128 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "theendupdate:block/nebula_vent",
+    "body": "theendupdate:block/nebula_vent",
+    "mouth": "theendupdate:block/nebula_vent_mouth"
+  },
+  "elements": [
+    {
+      "comment": "Base block - matches mouth width (5.5 voxels wide, full depth) all the way down",
+      "from": [5.5, 0, 0],
+      "to": [10.5, 16, 16],
+      "faces": {
+        "down":  { "uv": [5.5, 0, 10.5, 16], "texture": "#body" },
+        "up":    { "uv": [5.5, 0, 10.5, 16], "texture": "#body" },
+        "north": { "uv": [0, 0, 5, 16], "texture": "#body" },
+        "south": { "uv": [0, 0, 5, 16], "texture": "#body" },
+        "west":  { "uv": [0, 0, 16, 16], "texture": "#body" },
+        "east":  { "uv": [0, 0, 16, 16], "texture": "#body" }
+      }
+    },
+    {
+      "comment": "First lip tube - base section (forward/south direction), 5.5 voxels wide",
+      "from": [5.5, 16, 8.0],
+      "to": [10.5, 20, 16.0],
+      "faces": {
+        "down":  { "uv": [5.5, 5.5, 10.5, 10.5], "texture": "#mouth" },
+        "up":    { "uv": [5.5, 5.5, 10.5, 10.5], "texture": "#mouth" },
+        "north": { "uv": [0, 0, 5, 4], "texture": "#mouth" },
+        "south": { "uv": [0, 0, 5, 4], "texture": "#mouth" },
+        "west":  { "uv": [0, 0, 8, 4], "texture": "#mouth" },
+        "east":  { "uv": [0, 0, 8, 4], "texture": "#mouth" }
+      }
+    },
+    {
+      "comment": "First lip tube - middle section (tapering forward)",
+      "from": [5.75, 20, 10.0],
+      "to": [10.25, 22, 16.0],
+      "faces": {
+        "down":  { "uv": [5.75, 5.75, 10.25, 10.25], "texture": "#mouth" },
+        "up":    { "uv": [5.75, 5.75, 10.25, 10.25], "texture": "#mouth" },
+        "north": { "uv": [0, 4, 6, 6], "texture": "#mouth" },
+        "south": { "uv": [0, 4, 6, 6], "texture": "#mouth" },
+        "west":  { "uv": [0, 4, 4.5, 6], "texture": "#mouth" },
+        "east":  { "uv": [0, 4, 4.5, 6], "texture": "#mouth" }
+      }
+    },
+    {
+      "comment": "First lip tube - extended middle section (making it taller)",
+      "from": [5.875, 22, 11.0],
+      "to": [10.125, 26, 15.5],
+      "faces": {
+        "down":  { "uv": [5.875, 5.875, 10.125, 10.125], "texture": "#mouth" },
+        "up":    { "uv": [5.875, 5.875, 10.125, 10.125], "texture": "#mouth" },
+        "north": { "uv": [0, 6, 4.5, 10], "texture": "#mouth" },
+        "south": { "uv": [0, 6, 4.5, 10], "texture": "#mouth" },
+        "west":  { "uv": [0, 6, 4.5, 4], "texture": "#mouth" },
+        "east":  { "uv": [0, 6, 4.5, 4], "texture": "#mouth" }
+      }
+    },
+    {
+      "comment": "First lip tube - pointy tip (forward/south), tapering to sharp point, raised significantly",
+      "from": [6.5, 26, 13.0],
+      "to": [9.5, 32, 16.0],
+      "faces": {
+        "down":  { "uv": [6.5, 6.5, 9.5, 9.5], "texture": "#mouth" },
+        "up":    { "uv": [0, 0, 3, 3], "texture": "#mouth" },
+        "north": { "uv": [0, 10, 3, 16], "texture": "#mouth" },
+        "south": { "uv": [0, 10, 3, 16], "texture": "#mouth" },
+        "west":  { "uv": [0, 10, 3, 6], "texture": "#mouth" },
+        "east":  { "uv": [0, 10, 3, 6], "texture": "#mouth" }
+      }
+    },
+    {
+      "comment": "Second lip tube - base section (backward/north direction), 5.5 voxels wide",
+      "from": [5.5, 16, 0.0],
+      "to": [10.5, 20, 8.0],
+      "faces": {
+        "down":  { "uv": [5.5, 5.5, 10.5, 10.5], "texture": "#mouth" },
+        "up":    { "uv": [5.5, 5.5, 10.5, 10.5], "texture": "#mouth" },
+        "north": { "uv": [0, 0, 5, 4], "texture": "#mouth" },
+        "south": { "uv": [0, 0, 5, 4], "texture": "#mouth" },
+        "west":  { "uv": [0, 0, 8, 4], "texture": "#mouth" },
+        "east":  { "uv": [0, 0, 8, 4], "texture": "#mouth" }
+      }
+    },
+    {
+      "comment": "Second lip tube - middle section (tapering backward)",
+      "from": [5.75, 20, 0.0],
+      "to": [10.25, 22, 6.0],
+      "faces": {
+        "down":  { "uv": [5.75, 5.75, 10.25, 10.25], "texture": "#mouth" },
+        "up":    { "uv": [5.75, 5.75, 10.25, 10.25], "texture": "#mouth" },
+        "north": { "uv": [0, 4, 6, 6], "texture": "#mouth" },
+        "south": { "uv": [0, 4, 6, 6], "texture": "#mouth" },
+        "west":  { "uv": [0, 4, 4.5, 6], "texture": "#mouth" },
+        "east":  { "uv": [0, 4, 4.5, 6], "texture": "#mouth" }
+      }
+    },
+    {
+      "comment": "Second lip tube - extended middle section (making it taller)",
+      "from": [5.875, 22, 0.5],
+      "to": [10.125, 26, 5.0],
+      "faces": {
+        "down":  { "uv": [5.875, 5.875, 10.125, 10.125], "texture": "#mouth" },
+        "up":    { "uv": [5.875, 5.875, 10.125, 10.125], "texture": "#mouth" },
+        "north": { "uv": [0, 6, 4.5, 10], "texture": "#mouth" },
+        "south": { "uv": [0, 6, 4.5, 10], "texture": "#mouth" },
+        "west":  { "uv": [0, 6, 4.5, 4], "texture": "#mouth" },
+        "east":  { "uv": [0, 6, 4.5, 4], "texture": "#mouth" }
+      }
+    },
+    {
+      "comment": "Second lip tube - pointy tip (backward/north), tapering to sharp point, raised significantly",
+      "from": [6.5, 26, 0.0],
+      "to": [9.5, 32, 3.0],
+      "faces": {
+        "down":  { "uv": [6.5, 6.5, 9.5, 9.5], "texture": "#mouth" },
+        "up":    { "uv": [0, 0, 3, 3], "texture": "#mouth" },
+        "north": { "uv": [0, 10, 3, 16], "texture": "#mouth" },
+        "south": { "uv": [0, 10, 3, 16], "texture": "#mouth" },
+        "west":  { "uv": [0, 10, 3, 6], "texture": "#mouth" },
+        "east":  { "uv": [0, 10, 3, 6], "texture": "#mouth" }
+      }
+    }
+  ]
+}

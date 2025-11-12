@@ -23,6 +23,7 @@
 		"BiomeAccessMixin",
 		"ShadowCreakingGazeMixin",
 		"ShadowCreakingDamageMixin",
+		"KingPhantomBeamDeflectionMixin",
 		"MobEntitySetAiMixin",
 		"EntityNavigationStopMixin",
 		"PlayerEntityMiningSpeedMixin",

@@ -16,7 +16,8 @@
 		"SignBlockEntityRendererMixin",
 		"LoadedEntityModelsMixin",
 		"BeaconBlockEntityRenderStateMixin",
-		"BeaconBlockEntityRendererMixin"
+		"BeaconBlockEntityRendererMixin",
+		"SoundManagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

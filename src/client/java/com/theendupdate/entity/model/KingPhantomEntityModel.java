@@ -24,12 +24,13 @@ public class KingPhantomEntityModel extends PhantomEntityModel {
     private final ModelPart rightWingTip;
     private final ModelPart tailBase;
     private final ModelPart tailTip;
+    private final ModelPart body;
     
     public KingPhantomEntityModel(ModelPart root) {
         super(root);
         
         // Get references to wing parts for animation
-        ModelPart body = root.getChild("body");
+        this.body = root.getChild("body");
         this.leftWingBase = body.getChild("left_wing_base");
         this.leftWingTip = leftWingBase.getChild("left_wing_tip");
         this.rightWingBase = body.getChild("right_wing_base");
@@ -40,7 +41,7 @@ public class KingPhantomEntityModel extends PhantomEntityModel {
     
     @Override
     public void setAngles(PhantomEntityRenderState state) {
-        // Call parent to set base angles
+        // Call parent - vanilla PhantomEntityModel handles pitch rotation
         super.setAngles(state);
         
         // Manually animate wings to ensure they always flap
@@ -65,6 +66,9 @@ public class KingPhantomEntityModel extends PhantomEntityModel {
         float tailCycle = ageInTicks * 1.2f;
         this.tailBase.yaw = MathHelper.cos(tailCycle * 0.3f) * 0.1f;
         this.tailTip.yaw = MathHelper.cos(tailCycle * 0.3f + 0.5f) * 0.15f;
+        
+        // Pitch rotation is now handled in the renderer via MatrixStack
+        // This is more reliable than trying to modify model parts
     }
     
     /**

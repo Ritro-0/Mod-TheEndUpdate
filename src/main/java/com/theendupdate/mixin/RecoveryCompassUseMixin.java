@@ -293,7 +293,9 @@ public abstract class RecoveryCompassUseMixin {
                     BlockPos checkPos = playerPos.add(dx, dy, dz);
                     try {
                         if (world.getBlockState(checkPos).isOf(com.theendupdate.registry.ModBlocks.SHADOW_ALTAR)) {
-                            com.theendupdate.TemplateMod.LOGGER.info("Found altar at {} (searched from player pos {})", checkPos, playerPos);
+                            if (com.theendupdate.TemplateMod.DEBUG_MODE) {
+                                com.theendupdate.TemplateMod.LOGGER.info("Found altar at {} (searched from player pos {})", checkPos, playerPos);
+                            }
                             return checkPos;
                         }
                     } catch (Exception e) {
@@ -310,7 +312,9 @@ public abstract class RecoveryCompassUseMixin {
                     BlockPos checkPos = structurePos.add(dx, dy, dz);
                     try {
                         if (world.getBlockState(checkPos).isOf(com.theendupdate.registry.ModBlocks.SHADOW_ALTAR)) {
-                            com.theendupdate.TemplateMod.LOGGER.info("Found altar at {} (searched from structure pos {})", checkPos, structurePos);
+                            if (com.theendupdate.TemplateMod.DEBUG_MODE) {
+                                com.theendupdate.TemplateMod.LOGGER.info("Found altar at {} (searched from structure pos {})", checkPos, structurePos);
+                            }
                             return checkPos;
                         }
                     } catch (Exception e) {

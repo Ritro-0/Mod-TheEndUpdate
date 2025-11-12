@@ -11,21 +11,64 @@
               "type": "minecraft:item",
               "name": "theendupdate:shadow_altar",
               "conditions": [
-                { "condition": "minecraft:match_tool", "predicate": { "items": ["minecraft:iron_axe","minecraft:diamond_axe","minecraft:netherite_axe","minecraft:stone_axe","minecraft:golden_axe","minecraft:wooden_axe"], "enchantments": [{"enchantment": "minecraft:silk_touch", "levels": {"min": 1}}] } }
+                {
+                  "condition": "minecraft:match_tool",
+                  "predicate": {
+                    "enchantments": [{"enchantment": "minecraft:silk_touch", "levels": {"min": 1}}]
+                  }
+                }
               ]
             },
             {
-              "type": "minecraft:item",
-              "name": "minecraft:stick",
-              "functions": [
-                { "function": "minecraft:set_count", "count": 3 }
-              ]
-            },
-            {
-              "type": "minecraft:item",
-              "name": "minecraft:gunpowder",
-              "functions": [
-                { "function": "minecraft:set_count", "count": 1 }
+              "type": "minecraft:group",
+              "children": [
+                {
+                  "type": "minecraft:item",
+                  "name": "minecraft:gunpowder",
+                  "functions": [
+                    {
+                      "function": "minecraft:set_count",
+                      "count": {
+                        "type": "minecraft:uniform",
+                        "min": 1.0,
+                        "max": 3.0
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "minecraft:item",
+                  "name": "minecraft:blaze_rod",
+                  "functions": [
+                    {
+                      "function": "minecraft:set_count",
+                      "count": {
+                        "type": "minecraft:uniform",
+                        "min": 0.0,
+                        "max": 1.0
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "minecraft:item",
+                  "name": "theendupdate:shadow_cryptomycota",
+                  "functions": [
+                    {
+                      "function": "minecraft:set_count",
+                      "count": {
+                        "type": "minecraft:uniform",
+                        "min": 0.0,
+                        "max": 3.0
+                      }
+                    }
+                  ]
+                }
+              ],
+              "conditions": [
+                {
+                  "condition": "minecraft:survives_explosion"
+                }
               ]
             }
           ]

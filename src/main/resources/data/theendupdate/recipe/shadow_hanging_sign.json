@@ -6,8 +6,8 @@
     "LLL"
   ],
   "key": {
-    "C": "minecraft:chain",
-    "L": "theendupdate:shadow_cryptomycota"
+    "C": "minecraft:iron_chain",
+    "L": "theendupdate:stripped_shadow_cryptomycota"
   },
   "result": {
     "id": "theendupdate:shadow_hanging_sign",

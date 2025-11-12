@@ -2,6 +2,10 @@
 	"sources": [
 		{
 			"type": "directory",
+			"source": "theendupdate:item"
+		},
+		{
+			"type": "directory",
 			"source": "theendupdate:gui/container"
 		}
 	]

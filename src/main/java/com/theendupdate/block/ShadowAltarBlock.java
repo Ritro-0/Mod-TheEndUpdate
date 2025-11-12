@@ -2,6 +2,8 @@ package com.theendupdate.block;
 
 import com.mojang.serialization.MapCodec;
 import com.theendupdate.registry.ModBlockEntities;
+import com.theendupdate.registry.ModBlocks;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
@@ -9,6 +11,8 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.piston.PistonBehavior;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -111,6 +115,46 @@ public class ShadowAltarBlock extends BlockWithEntity {
 		// Only clean up if the block entity is actually being removed (checked by getting it after state change)
 		// We'll rely on the other variant for proper cleanup on break
 		super.onStateReplaced(state, world, pos, moved);
+	}
+	
+	@Override
+	public void afterBreak(net.minecraft.world.World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
+		if (!world.isClient() && world instanceof ServerWorld serverWorld) {
+			// Check if tool has silk touch enchantment
+			boolean hasSilkTouch = false;
+			try {
+				ItemEnchantmentsComponent ench = tool.get(DataComponentTypes.ENCHANTMENTS);
+				if (ench != null) {
+					hasSilkTouch = ench.toString().contains("minecraft:silk_touch");
+				}
+			} catch (Throwable ignore) {}
+			
+			if (hasSilkTouch) {
+				// Drop the block itself when using silk touch
+				Block.dropStack(world, pos, new ItemStack(this.asItem()));
+			} else {
+				// Drop multiple items: 1-3 gunpowder, 0-1 blaze rods, 0-3 shadow cryptomycota
+				int gunpowder = 1 + world.random.nextInt(3); // 1-3
+				Block.dropStack(world, pos, new ItemStack(Items.GUNPOWDER, gunpowder));
+				
+				// 0-1 blaze rod (50% chance for 1)
+				if (world.random.nextBoolean()) {
+					Block.dropStack(world, pos, new ItemStack(Items.BLAZE_ROD));
+				}
+				
+				// 0-3 shadow cryptomycota (0 to 3 inclusive)
+				int cryptomycota = world.random.nextInt(4); // 0-3
+				if (cryptomycota > 0) {
+					Block.dropStack(world, pos, new ItemStack(ModBlocks.SHADOW_CRYPTOMYCOTA.asItem(), cryptomycota));
+				}
+				
+				// Drop custom XP amount: 30-87 (2x spawner's 15-43)
+				int xpAmount = world.random.nextInt(58) + 30; // Random range 30-87
+				this.dropExperience(serverWorld, pos, xpAmount);
+			}
+			serverWorld.emitGameEvent(player, net.minecraft.world.event.GameEvent.BLOCK_DESTROY, pos);
+		}
+		// Do not call super to avoid default loot table path
 	}
 }
 
