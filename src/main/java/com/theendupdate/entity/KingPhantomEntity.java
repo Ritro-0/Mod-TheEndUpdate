@@ -1282,6 +1282,15 @@ public class KingPhantomEntity extends PhantomEntity {
         private int swoopTimer = 0;
         private boolean hasDamagedThisSwoop = false; // Track if we've already hit during this swoop
         private static final int SWOOP_DURATION = 40; // 2 seconds
+        private AttackType lastAttack = AttackType.NONE;
+        private int phase2SequenceIndex = 0;
+        
+        private enum AttackType {
+            NONE,
+            SWOOP,
+            BEAM,
+            SUMMON
+        }
         
         public PeriodicAttackGoal(KingPhantomEntity phantom) {
             this.phantom = phantom;
@@ -1324,78 +1333,57 @@ public class KingPhantomEntity extends PhantomEntity {
             if (this.targetPlayer == null) return;
             
             int currentPhase = this.phantom.getCurrentPhase();
-            
+            AttackType selectedAttack;
+
             if (currentPhase == PHASE_1) {
-                // Phase 1: 50% swoop, 50% ranged
-                boolean useSwoop = this.phantom.getRandom().nextBoolean();
-                
-                if (useSwoop) {
-                    // Swoop attack
-                    this.isSwooping = true;
-                    this.phantom.setSwooping(true); // Update entity flag (synced to client)
-                    this.swoopTimer = SWOOP_DURATION;
-                    this.hasDamagedThisSwoop = false;
-                    
-                    // Target slightly in front of player to account for movement
-                    Vec3d playerVel = this.targetPlayer.getVelocity();
-                    Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
-                    this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
-                    // Store target's initial Y level for pitch flattening
-                    this.swoopTargetInitialY = this.targetPlayer.getY();
-                } else {
-                    // Ranged beam attack
-                    this.isSwooping = false;
-                    this.phantom.setSwooping(false); // Update entity flag (synced to client)
-                    
-                    // Fire at player's current position
-                    Vec3d targetPos = new Vec3d(
-                        this.targetPlayer.getX(),
-                        this.targetPlayer.getY() + this.targetPlayer.getStandingEyeHeight() * 0.5,
-                        this.targetPlayer.getZ()
-                    );
-                    
-                    this.phantom.startRangedBeamAttack(targetPos);
-                }
+                // Alternate between swoop and beam to avoid repeats
+                selectedAttack = (lastAttack == AttackType.SWOOP) ? AttackType.BEAM : AttackType.SWOOP;
             } else {
-                // Phase 2: 40% swoop, 40% ranged, 20% summon
-                int attackChoice = this.phantom.getRandom().nextInt(100);
-                
-                if (attackChoice < 40) {
-                    // Swoop attack (40%)
-                    this.isSwooping = true;
-                    this.phantom.setSwooping(true); // Update entity flag (synced to client)
-                    this.swoopTimer = SWOOP_DURATION;
-                    this.hasDamagedThisSwoop = false;
-                    
-                    // Target slightly in front of player to account for movement
-                    Vec3d playerVel = this.targetPlayer.getVelocity();
-                    Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
-                    this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
-                    // Store target's initial Y level for pitch flattening
-                    this.swoopTargetInitialY = this.targetPlayer.getY();
-                } else if (attackChoice < 80) {
-                    // Ranged beam attack (40%)
-                    this.isSwooping = false;
-                    this.phantom.setSwooping(false); // Update entity flag (synced to client)
-                    
-                    // Fire at player's current position
-                    Vec3d targetPos = new Vec3d(
-                        this.targetPlayer.getX(),
-                        this.targetPlayer.getY() + this.targetPlayer.getStandingEyeHeight() * 0.5,
-                        this.targetPlayer.getZ()
-                    );
-                    
-                    this.phantom.startRangedBeamAttack(targetPos);
-                } else {
-                    // Summon attack (20%)
-                    this.isSwooping = false;
-                    this.phantom.setSwooping(false); // Update entity flag (synced to client)
-                    this.phantom.startSummonAttack(this.targetPlayer);
-                    // Note: Cooldown for summon attack will be set when summon ends
-                    return; // Don't set cooldown yet for summon attacks
+                AttackType[] sequence = new AttackType[]{AttackType.SWOOP, AttackType.BEAM, AttackType.SUMMON};
+                selectedAttack = sequence[phase2SequenceIndex % sequence.length];
+                phase2SequenceIndex++;
+                if (selectedAttack == lastAttack) {
+                    selectedAttack = sequence[phase2SequenceIndex % sequence.length];
+                    phase2SequenceIndex++;
                 }
             }
-            
+
+            switch (selectedAttack) {
+                case SWOOP -> {
+                    this.isSwooping = true;
+                    this.phantom.setSwooping(true); // Update entity flag (synced to client)
+                    this.swoopTimer = SWOOP_DURATION;
+                    this.hasDamagedThisSwoop = false;
+                    
+                    // Target slightly in front of player to account for movement
+                    Vec3d playerVel = this.targetPlayer.getVelocity();
+                    Vec3d playerPos = new Vec3d(this.targetPlayer.getX(), this.targetPlayer.getY(), this.targetPlayer.getZ());
+                    this.swoopTarget = playerPos.add(playerVel.multiply(0.5));
+                    // Store target's initial Y level for pitch flattening
+                    this.swoopTargetInitialY = this.targetPlayer.getY();
+                }
+                case BEAM -> {
+                    this.isSwooping = false;
+                    this.phantom.setSwooping(false);
+                    Vec3d targetPos = new Vec3d(
+                        this.targetPlayer.getX(),
+                        this.targetPlayer.getY() + this.targetPlayer.getStandingEyeHeight() * 0.5,
+                        this.targetPlayer.getZ()
+                    );
+                    this.phantom.startRangedBeamAttack(targetPos);
+                }
+                case SUMMON -> {
+                    this.isSwooping = false;
+                    this.phantom.setSwooping(false);
+                    this.phantom.startSummonAttack(this.targetPlayer);
+                    lastAttack = AttackType.SUMMON;
+                    return; // Cooldown will be applied when summon finishes
+                }
+                case NONE -> {
+                    // no-op
+                }
+            }
+            lastAttack = selectedAttack;
             // Set cooldown for next attack based on current phase
             this.phantom.setAttackCooldown(this.phantom.getAttackInterval());
         }

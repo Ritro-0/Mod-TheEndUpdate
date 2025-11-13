@@ -61,6 +61,17 @@ public class MirelandsVegetationFeature extends Feature<DefaultFeatureConfig> {
                     continue;
                 }
 
+                // Verify the ground block is actually solid and supported (not floating in air above a crater)
+                if (!ground.isSolid() || ground.isAir()) {
+                    continue;
+                }
+                BlockPos groundBelow = surface.down();
+                BlockState groundBelowState = world.getBlockState(groundBelow);
+                // If there's air below the ground block, we might be over a crater - skip placement
+                if (groundBelowState.isAir() && surface.getY() > world.getBottomY() + 5) {
+                    continue;
+                }
+
                 // Restrict to our Mirelands biomes for safety
                 RegistryEntry<Biome> biome = world.getBiome(surface);
                 boolean isMire = biome.matchesKey(ModWorldgen.MIRELANDS_HIGHLANDS_KEY)

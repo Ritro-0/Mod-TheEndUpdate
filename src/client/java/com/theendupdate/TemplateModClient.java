@@ -6,9 +6,11 @@ import net.fabricmc.api.EnvType;
 
 import com.theendupdate.entity.model.EtherealOrbEntityModel;
 import com.theendupdate.entity.model.KingPhantomEntityModel;
+import com.theendupdate.entity.model.VoidTardigradeEntityModel;
 import com.theendupdate.entity.renderer.EtherealOrbEntityRenderer;
 import com.theendupdate.entity.renderer.KingPhantomEntityRenderer;
 import com.theendupdate.entity.renderer.ShadowCreakingEntityRenderer;
+import com.theendupdate.entity.renderer.VoidTardigradeEntityRenderer;
 import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.registry.ModBlockEntities;
 import com.theendupdate.registry.ModEntities;
@@ -116,6 +118,9 @@ public class TemplateModClient implements ClientModInitializer {
         // Reuse same renderer for mini/tiny (uses scaled dimensions)
         EntityRendererRegistry.register(ModEntities.MINI_SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.TINY_SHADOW_CREAKING, ShadowCreakingEntityRenderer::new);
+        // Void tardigrade renderer
+        EntityModelLayerRegistry.registerModelLayer(VoidTardigradeEntityModel.LAYER_LOCATION, VoidTardigradeEntityModel::getTexturedModelData);
+        EntityRendererRegistry.register(ModEntities.VOID_TARDIGRADE, VoidTardigradeEntityRenderer::new);
         // Register custom screen for Quantum Gateway
         HandledScreens.register(com.theendupdate.registry.ModScreenHandlers.GATEWAY, com.theendupdate.screen.GatewayScreen::new);
 

@@ -6,6 +6,7 @@ import com.theendupdate.entity.KingPhantomEntity;
 import com.theendupdate.entity.ShadowCreakingEntity;
 import com.theendupdate.entity.MiniShadowCreakingEntity;
 import com.theendupdate.entity.TinyShadowCreakingEntity;
+import com.theendupdate.entity.VoidTardigradeEntity;
 
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 // removed unused imports
@@ -24,6 +25,7 @@ public final class ModEntities {
     private static final Identifier SHADOW_CREAKING_ID = Identifier.of(TemplateMod.MOD_ID, "shadow_creaking");
     private static final Identifier MINI_SHADOW_CREAKING_ID = Identifier.of(TemplateMod.MOD_ID, "mini_shadow_creaking");
     private static final Identifier TINY_SHADOW_CREAKING_ID = Identifier.of(TemplateMod.MOD_ID, "tiny_shadow_creaking");
+    private static final Identifier VOID_TARDIGRADE_ID = Identifier.of(TemplateMod.MOD_ID, "void_tardigrade");
     
     // The ethereal orb entity - a floating, glowing orb creature
     public static final EntityType<EtherealOrbEntity> ETHEREAL_ORB = Registry.register(
@@ -87,6 +89,17 @@ public final class ModEntities {
             .trackingTickInterval(2)
             .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, TINY_SHADOW_CREAKING_ID))
     );
+
+    public static final EntityType<VoidTardigradeEntity> VOID_TARDIGRADE = Registry.register(
+        Registries.ENTITY_TYPE,
+        VOID_TARDIGRADE_ID,
+        EntityType.Builder.create(VoidTardigradeEntity::new, SpawnGroup.AMBIENT)
+            .dimensions(0.8f, 0.6f)
+            .eyeHeight(0.4f)
+            .maxTrackingRange(48)
+            .trackingTickInterval(2)
+            .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, VOID_TARDIGRADE_ID))
+    );
     
     public static void registerModEntities() {
         // cleaned debug log
@@ -95,5 +108,6 @@ public final class ModEntities {
         FabricDefaultAttributeRegistry.register(SHADOW_CREAKING, ShadowCreakingEntity.createShadowCreakingAttributes());
         FabricDefaultAttributeRegistry.register(MINI_SHADOW_CREAKING, MiniShadowCreakingEntity.createMiniAttributes());
         FabricDefaultAttributeRegistry.register(TINY_SHADOW_CREAKING, TinyShadowCreakingEntity.createTinyAttributes());
+        FabricDefaultAttributeRegistry.register(VOID_TARDIGRADE, VoidTardigradeEntity.createVoidTardigradeAttributes());
     }
 }

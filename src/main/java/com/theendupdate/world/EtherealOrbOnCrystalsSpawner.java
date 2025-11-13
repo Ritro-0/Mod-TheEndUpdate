@@ -7,7 +7,6 @@ import com.theendupdate.registry.ModEntities;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
-import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -49,7 +48,7 @@ public final class EtherealOrbOnCrystalsSpawner {
                 for (int dx = -2; dx <= 2; dx++) {
                     for (int dz = -2; dz <= 2; dz++) {
                         ChunkPos cp = new ChunkPos(center.x + dx, center.z + dz);
-                        long key = chunkKey(world.getRegistryKey(), cp);
+                        long key = chunkKey(cp);
                         if (processedChunks.contains(key)) continue;
                         queue.add(key);
                     }
@@ -62,14 +61,10 @@ public final class EtherealOrbOnCrystalsSpawner {
             while (budget-- > 0 && it.hasNext()) {
                 long key = it.next();
                 it.remove();
-                int cx = (int) ((key >> 16) & 0xFFFF);
-                if ((cx & 0x8000) != 0) cx |= 0xFFFF0000; // sign-extend
-                int cz = (int) (key & 0xFFFF);
-                if ((cz & 0x8000) != 0) cz |= 0xFFFF0000;
+                int cx = ChunkPos.getPackedX(key);
+                int cz = ChunkPos.getPackedZ(key);
                 ChunkPos cp = new ChunkPos(cx, cz);
                 if (!world.isChunkLoaded(cp.x, cp.z)) {
-                    // keep it processed to avoid requeue loops; it will be re-enqueued by player proximity when loaded
-                    processedChunks.add(key);
                     continue;
                 }
                 List<BlockPos> candidates = findNaturalCrystalTopsNearSurface(world, cp);
@@ -81,8 +76,8 @@ public final class EtherealOrbOnCrystalsSpawner {
         } catch (Throwable ignored) {}
     }
 
-    private static long chunkKey(RegistryKey<World> dim, ChunkPos pos) {
-        return (((long) dim.getValue().hashCode()) << 32) ^ (((long) pos.x) << 16) ^ (pos.z & 0xFFFFL);
+    private static long chunkKey(ChunkPos pos) {
+        return ChunkPos.toLong(pos.x, pos.z);
     }
 
     // Collect the top-most crystal blocks per x,z column that are likely part of natural spikes

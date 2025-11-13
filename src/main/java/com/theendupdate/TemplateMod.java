@@ -5,6 +5,8 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.util.ActionResult;
 import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -13,7 +15,12 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.equipment.trim.ArmorTrim;
+import net.minecraft.entity.attribute.EntityAttribute;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 import net.minecraft.entity.EquipmentSlot;
 import net.fabricmc.fabric.api.registry.FuelRegistryEvents;
@@ -22,6 +29,10 @@ import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.GameRules;
+import net.fabricmc.fabric.api.gamerule.v1.GameRuleRegistry;
+import net.fabricmc.fabric.api.gamerule.v1.GameRuleFactory;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import net.minecraft.entity.passive.CowEntity;
@@ -32,6 +43,17 @@ public class TemplateMod implements ModInitializer {
     public static final String MOD_ID = "theendupdate";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static final boolean DEBUG_MODE = false; // Set to true for development debugging
+    public static final GameRules.Key<GameRules.IntRule> VOID_SAP_SPREAD_RULE = GameRuleRegistry.register(
+        "voidSapSpreadRadius",
+        GameRules.Category.UPDATES,
+        GameRuleFactory.createIntRule(5, 0, 64)
+    );
+    private static final int SPECTRAL_INTERVAL = 5;
+    private static final int MAGNET_INTERVAL = 7;
+    private static final Object2IntOpenHashMap<UUID> SPECTRAL_TICKERS = new Object2IntOpenHashMap<>();
+    private static final Object2IntOpenHashMap<UUID> MAGNET_TICKERS = new Object2IntOpenHashMap<>();
+    private static final Identifier TARD_SHELL_ARMOR_MODIFIER_ID = Identifier.of(MOD_ID, "tard_shell_armor_bonus");
+    private static final Identifier TARD_SHELL_TOUGHNESS_MODIFIER_ID = Identifier.of(MOD_ID, "tard_shell_toughness_bonus");
 
     @Override
     public void onInitialize() {
@@ -63,6 +85,7 @@ public class TemplateMod implements ModInitializer {
         com.theendupdate.registry.ModSounds.register();
         // Particle code commented out temporarily
         com.theendupdate.registry.ModEntities.registerModEntities();
+        com.theendupdate.world.ModEntitySpawns.register();
         com.theendupdate.registry.ModWorldgen.registerAll();
         com.theendupdate.network.EndFlashNetworking.registerServerReceiver();
         
@@ -217,29 +240,46 @@ public class TemplateMod implements ModInitializer {
                 }
                 
                 
-                boolean theendupdate$cadence = (world.getTime() % 3) == 0;
                 boolean theendupdate$trackerCadence = (world.getTime() % 20) == 0; // Every second
+                ObjectOpenHashSet<UUID> tickPlayers = new ObjectOpenHashSet<>();
                 for (ServerPlayerEntity player : world.getPlayers()) {
                     if (!player.isAlive()) continue;
+                    UUID uuid = player.getUuid();
+                    tickPlayers.add(uuid);
                     
                     // Auto-bind Shadow Hunter's Trackers that don't have coordinates yet
                     if (theendupdate$trackerCadence) {
                         theendupdate$autoBindShadowHuntersTrackers(world, player);
                     }
                     
-                    // Spectral trim: spawn particles at each piece's location (throttled to every 3 ticks)
-                    if (theendupdate$cadence) {
+                    // Spectral trim: spawn particles at each piece's location (per-player cadence)
+                    if (theendupdate$shouldExecute(SPECTRAL_TICKERS, uuid, SPECTRAL_INTERVAL)) {
                         theendupdate$spawnSpectralTrimParticles(world, player);
                     }
 
-                    // Gravitite trim: attract nearby items based on number of pieces (2,4,6,8 blocks, throttled to every 3 ticks)
+                    // Gravitite trim: attract nearby items based on number of pieces (2,4,6,8 blocks)
                     int gravititePieces = theendupdate$countGravititeTrimPieces(player);
-                    if (gravititePieces > 0 && theendupdate$cadence) {
+                    if (gravititePieces > 0 && theendupdate$shouldExecute(MAGNET_TICKERS, uuid, MAGNET_INTERVAL)) {
                         theendupdate$pullNearbyItems(world, player, gravititePieces);
                     }
+
+                    // Tard shell trim: boost armor hardness (armor & toughness) by 25% per trimmed piece
+                    theendupdate$updateTardShellTrimBonus(player);
                 }
+                SPECTRAL_TICKERS.keySet().removeIf(uuid -> !tickPlayers.contains(uuid));
+                MAGNET_TICKERS.keySet().removeIf(uuid -> !tickPlayers.contains(uuid));
             }
         });
+    }
+
+    private static boolean theendupdate$shouldExecute(Object2IntOpenHashMap<UUID> ticker, UUID uuid, int interval) {
+        int remaining = ticker.getOrDefault(uuid, 0);
+        if (remaining > 0) {
+            ticker.put(uuid, remaining - 1);
+            return false;
+        }
+        ticker.put(uuid, Math.max(0, interval - 1));
+        return true;
     }
 
     private static int theendupdate$countSpectralTrimPieces(ServerPlayerEntity player) {
@@ -275,26 +315,119 @@ public class TemplateMod implements ModInitializer {
         return count;
     }
 
+    private static void theendupdate$updateTardShellTrimBonus(ServerPlayerEntity player) {
+        int tardShellPieces = 0;
+        try {
+            for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
+                ItemStack armor = player.getEquippedStack(slot);
+                if (armor == null || armor.isEmpty()) continue;
+                ArmorTrim trim = armor.get(DataComponentTypes.TRIM);
+                if (!theendupdate$isTardShellTrim(trim)) continue;
+                tardShellPieces++;
+            }
+        } catch (Throwable ignored) {}
+
+        double multiplier = tardShellPieces * 0.25;
+
+        double armorBase = theendupdate$getAttributeValueWithoutModifier(player, EntityAttributes.ARMOR, TARD_SHELL_ARMOR_MODIFIER_ID);
+        double toughnessBase = theendupdate$getAttributeValueWithoutModifier(player, EntityAttributes.ARMOR_TOUGHNESS, TARD_SHELL_TOUGHNESS_MODIFIER_ID);
+
+        theendupdate$applyTardShellBonus(player, EntityAttributes.ARMOR, TARD_SHELL_ARMOR_MODIFIER_ID, armorBase * multiplier);
+        theendupdate$applyTardShellBonus(player, EntityAttributes.ARMOR_TOUGHNESS, TARD_SHELL_TOUGHNESS_MODIFIER_ID, toughnessBase * multiplier);
+    }
+
+    private static boolean theendupdate$isTardShellTrim(ArmorTrim trim) {
+        if (trim == null) return false;
+        Identifier matId = trim.material().getKey().map(RegistryKey::getValue).orElse(null);
+        return matId != null && "tard_shell".equals(matId.getPath());
+    }
+
+    private static double theendupdate$getAttributeValueWithoutModifier(
+        ServerPlayerEntity player,
+        RegistryEntry<EntityAttribute> attribute,
+        Identifier modifierId
+    ) {
+        EntityAttributeInstance instance = player.getAttributeInstance(attribute);
+        if (instance == null) {
+            return 0.0;
+        }
+        if (instance.getModifier(modifierId) != null) {
+            instance.removeModifier(modifierId);
+        }
+        return instance.getValue();
+    }
+
+    private static void theendupdate$applyTardShellBonus(
+        ServerPlayerEntity player,
+        RegistryEntry<EntityAttribute> attribute,
+        Identifier modifierId,
+        double value
+    ) {
+        EntityAttributeInstance instance = player.getAttributeInstance(attribute);
+        if (instance == null) {
+            return;
+        }
+
+        EntityAttributeModifier existing = instance.getModifier(modifierId);
+        if (value <= 0.0) {
+            if (existing != null) {
+                instance.removeModifier(modifierId);
+            }
+            return;
+        }
+
+        if (existing != null) {
+            if (existing.operation() == EntityAttributeModifier.Operation.ADD_VALUE && Math.abs(existing.value() - value) < 1.0e-4) {
+                return;
+            }
+            instance.removeModifier(modifierId);
+        }
+
+        instance.addPersistentModifier(new EntityAttributeModifier(modifierId, value, EntityAttributeModifier.Operation.ADD_VALUE));
+    }
+
     private static void theendupdate$pullNearbyItems(ServerWorld world, ServerPlayerEntity player, int pieces) {
         int range = switch (pieces) { case 1 -> 2; case 2 -> 4; case 3 -> 6; default -> 8; };
         Box box = player.getBoundingBox().expand(range);
         try {
-            java.util.List<ItemEntity> items = world.getEntitiesByClass(ItemEntity.class, box, e -> e != null && e.isAlive());
+            java.util.List<ItemEntity> items = world.getEntitiesByClass(
+                ItemEntity.class,
+                box,
+                e -> e != null && e.isAlive() && !e.hasNoGravity()
+            );
             if (items.isEmpty()) return;
-            Vec3d playerPos = new Vec3d(player.getX(), player.getY(), player.getZ()).add(0.0, 0.8, 0.0);
-            double baseAccel = 0.42 + 0.05 * pieces;
+
+            Vec3d playerPos = new Vec3d(player.getX(), player.getY() + 0.5, player.getZ());
+            double cadenceScale = MAGNET_INTERVAL;
+            double lerpFactor = Math.min(1.0, 0.08 * cadenceScale);
+            double targetSpeed = 0.16 + 0.02 * pieces;
+            double maxSpeed = 0.35 + 0.05 * pieces;
+            double upwardBias = 0.15;
+            double maxDistanceSq = range * range * 4.0;
+
             for (ItemEntity item : items) {
-                Vec3d diff = playerPos.subtract(new Vec3d(item.getX(), item.getY(), item.getZ()));
-                double dist = diff.length();
-                if (dist < 0.001) continue;
-                double strength = baseAccel * Math.min(1.0, (dist / range) + 0.35);
+                Vec3d itemPos = new Vec3d(item.getX(), item.getY(), item.getZ());
+                Vec3d diff = playerPos.subtract(itemPos);
+                double distSq = diff.lengthSquared();
+                if (distSq < 1.0e-4 || distSq > maxDistanceSq) continue;
+
+                double dist = Math.sqrt(distSq);
                 Vec3d dir = diff.normalize();
-                dir = new Vec3d(dir.x, Math.max(dir.y + 0.06, 0.035), dir.z).normalize();
-                Vec3d pull = dir.multiply(strength);
-                Vec3d vel = item.getVelocity().multiply(0.80).add(pull.multiply(0.90));
-                if (vel.lengthSquared() > 1.4) vel = vel.normalize().multiply(1.15);
-                item.setVelocity(vel);
+                dir = dir.add(0.0, upwardBias / Math.max(1.0, dist), 0.0).normalize();
+
+                Vec3d targetVel = dir.multiply(targetSpeed);
+                Vec3d currentVel = item.getVelocity();
+                Vec3d newVel = currentVel.lerp(targetVel, lerpFactor);
+
+                if (newVel.lengthSquared() > maxSpeed * maxSpeed) {
+                    newVel = newVel.normalize().multiply(maxSpeed);
+                }
+                newVel = newVel.multiply(0.96);
+
+                item.setVelocity(newVel);
                 item.velocityModified = true;
+                item.velocityDirty = true;
+                item.age = 0;
             }
         } catch (Throwable ignored) {}
     }

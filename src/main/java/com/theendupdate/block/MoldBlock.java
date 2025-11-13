@@ -50,6 +50,22 @@ public class MoldBlock extends Block implements Fertilizable {
             // Skip invalid targets: air, fluids, plants, crops, bedrock, storage, redstone, command blocks
             if (world.isAir(target)) continue;
             if (!targetState.getFluidState().isEmpty()) continue;
+            if (targetState.isIn(BlockTags.WOOL_CARPETS)
+                || targetState.isIn(BlockTags.CANDLES)
+                || targetState.isIn(BlockTags.DOORS)
+                || targetState.isIn(BlockTags.TRAPDOORS)
+                || targetState.isIn(BlockTags.STANDING_SIGNS)
+                || targetState.isIn(BlockTags.WALL_SIGNS)
+                || targetState.isIn(BlockTags.CEILING_HANGING_SIGNS)
+                || targetState.isIn(BlockTags.WALL_HANGING_SIGNS)
+                || targetState.isIn(BlockTags.BEDS)
+                || targetState.isIn(BlockTags.RAILS)
+                || targetState.isIn(BlockTags.CAULDRONS)
+                || targetState.isIn(BlockTags.CAMPFIRES)
+                || targetState.isIn(BlockTags.BANNERS)
+                || targetState.isIn(BlockTags.FIRE)) {
+                continue;
+            }
             if (targetState.isIn(BlockTags.FLOWERS)) continue;
             if (targetState.isIn(BlockTags.CROPS)) continue;
             if (targetState.isIn(BlockTags.SAPLINGS)) continue;
@@ -58,13 +74,6 @@ public class MoldBlock extends Block implements Fertilizable {
             if (targetState.isOf(Blocks.REINFORCED_DEEPSLATE)) continue;
             
             // Skip doors, signs, hanging signs, and trapdoors
-            if (targetState.isIn(BlockTags.DOORS)) continue;
-            if (targetState.isIn(BlockTags.TRAPDOORS)) continue;
-            if (targetState.isIn(BlockTags.STANDING_SIGNS)) continue;
-            if (targetState.isIn(BlockTags.WALL_SIGNS)) continue;
-            if (targetState.isIn(BlockTags.CEILING_HANGING_SIGNS)) continue;
-            if (targetState.isIn(BlockTags.WALL_HANGING_SIGNS)) continue;
-            
             // Custom mod doors and trapdoors
             if (targetState.isOf(ModBlocks.ETHEREAL_DOOR)) continue;
             if (targetState.isOf(ModBlocks.ETHEREAL_TRAPDOOR)) continue;
@@ -145,59 +154,6 @@ public class MoldBlock extends Block implements Fertilizable {
 			if (targetState.isOf(Blocks.FIRE_CORAL_WALL_FAN)) continue;
 			if (targetState.isOf(Blocks.HORN_CORAL_WALL_FAN)) continue;
 			// Carpets (explicit list to avoid tag mapping issues)
-			if (targetState.isOf(Blocks.WHITE_CARPET)) continue;
-			if (targetState.isOf(Blocks.ORANGE_CARPET)) continue;
-			if (targetState.isOf(Blocks.MAGENTA_CARPET)) continue;
-			if (targetState.isOf(Blocks.LIGHT_BLUE_CARPET)) continue;
-			if (targetState.isOf(Blocks.YELLOW_CARPET)) continue;
-			if (targetState.isOf(Blocks.LIME_CARPET)) continue;
-			if (targetState.isOf(Blocks.PINK_CARPET)) continue;
-			if (targetState.isOf(Blocks.GRAY_CARPET)) continue;
-			if (targetState.isOf(Blocks.LIGHT_GRAY_CARPET)) continue;
-			if (targetState.isOf(Blocks.CYAN_CARPET)) continue;
-			if (targetState.isOf(Blocks.PURPLE_CARPET)) continue;
-			if (targetState.isOf(Blocks.BLUE_CARPET)) continue;
-			if (targetState.isOf(Blocks.BROWN_CARPET)) continue;
-			if (targetState.isOf(Blocks.GREEN_CARPET)) continue;
-			if (targetState.isOf(Blocks.RED_CARPET)) continue;
-			if (targetState.isOf(Blocks.BLACK_CARPET)) continue;
-			// Rails via tag may not exist; explicit checks are below in redstone section.
-			// Beds via tag (widely available)
-			if (targetState.isIn(BlockTags.BEDS)) continue;
-			// Banners (explicit variants)
-			if (targetState.isOf(Blocks.WHITE_BANNER)) continue;
-			if (targetState.isOf(Blocks.ORANGE_BANNER)) continue;
-			if (targetState.isOf(Blocks.MAGENTA_BANNER)) continue;
-			if (targetState.isOf(Blocks.LIGHT_BLUE_BANNER)) continue;
-			if (targetState.isOf(Blocks.YELLOW_BANNER)) continue;
-			if (targetState.isOf(Blocks.LIME_BANNER)) continue;
-			if (targetState.isOf(Blocks.PINK_BANNER)) continue;
-			if (targetState.isOf(Blocks.GRAY_BANNER)) continue;
-			if (targetState.isOf(Blocks.LIGHT_GRAY_BANNER)) continue;
-			if (targetState.isOf(Blocks.CYAN_BANNER)) continue;
-			if (targetState.isOf(Blocks.PURPLE_BANNER)) continue;
-			if (targetState.isOf(Blocks.BLUE_BANNER)) continue;
-			if (targetState.isOf(Blocks.BROWN_BANNER)) continue;
-			if (targetState.isOf(Blocks.GREEN_BANNER)) continue;
-			if (targetState.isOf(Blocks.RED_BANNER)) continue;
-			if (targetState.isOf(Blocks.BLACK_BANNER)) continue;
-			if (targetState.isOf(Blocks.WHITE_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.ORANGE_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.MAGENTA_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.LIGHT_BLUE_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.YELLOW_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.LIME_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.PINK_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.GRAY_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.LIGHT_GRAY_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.CYAN_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.PURPLE_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.BLUE_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.BROWN_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.GREEN_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.RED_WALL_BANNER)) continue;
-			if (targetState.isOf(Blocks.BLACK_WALL_BANNER)) continue;
-            
             // Protect our custom blocks
             if (targetState.isOf(ModBlocks.QUANTUM_GATEWAY)) continue;
             if (targetState.isOf(ModBlocks.SHADOW_ALTAR)) continue;
@@ -269,14 +225,7 @@ public class MoldBlock extends Block implements Fertilizable {
             if (targetState.isOf(Blocks.DAMAGED_ANVIL)) continue;
             
 			// Protect redstone components and related
-            if (targetState.isOf(Blocks.REDSTONE_WIRE)) continue;
-            if (targetState.isOf(Blocks.REPEATER)) continue;
-            if (targetState.isOf(Blocks.COMPARATOR)) continue;
-            if (targetState.isOf(Blocks.REDSTONE_BLOCK)) continue;
-            if (targetState.isOf(Blocks.REDSTONE_LAMP)) continue;
-            if (targetState.isOf(Blocks.REDSTONE_TORCH)) continue;
-            if (targetState.isOf(Blocks.REDSTONE_WALL_TORCH)) continue;
-			if (targetState.isOf(Blocks.LIGHTNING_ROD)) continue;
+            if (targetState.isOf(Blocks.LIGHTNING_ROD)) continue;
 			// Copper bulbs and all weathered/oxidized/waxed stages
 			if (targetState.isOf(Blocks.COPPER_BULB)) continue;
 			if (targetState.isOf(Blocks.EXPOSED_COPPER_BULB)) continue;
@@ -330,32 +279,7 @@ public class MoldBlock extends Block implements Fertilizable {
 			if (targetState.isOf(Blocks.DETECTOR_RAIL)) continue;
 			if (targetState.isOf(Blocks.ACTIVATOR_RAIL)) continue;
 			// Lighting and decor commonly preserved
-			if (targetState.isOf(Blocks.TORCH)) continue;
-			if (targetState.isOf(Blocks.SOUL_TORCH)) continue;
-			if (targetState.isOf(Blocks.LANTERN)) continue;
-			if (targetState.isOf(Blocks.SOUL_LANTERN)) continue;
-			if (targetState.isOf(Blocks.END_ROD)) continue;
-			if (targetState.isOf(Blocks.CANDLE)) continue;
-			if (targetState.isOf(Blocks.WHITE_CANDLE)) continue;
-			if (targetState.isOf(Blocks.ORANGE_CANDLE)) continue;
-			if (targetState.isOf(Blocks.MAGENTA_CANDLE)) continue;
-			if (targetState.isOf(Blocks.LIGHT_BLUE_CANDLE)) continue;
-			if (targetState.isOf(Blocks.YELLOW_CANDLE)) continue;
-			if (targetState.isOf(Blocks.LIME_CANDLE)) continue;
-			if (targetState.isOf(Blocks.PINK_CANDLE)) continue;
-			if (targetState.isOf(Blocks.GRAY_CANDLE)) continue;
-			if (targetState.isOf(Blocks.LIGHT_GRAY_CANDLE)) continue;
-			if (targetState.isOf(Blocks.CYAN_CANDLE)) continue;
-			if (targetState.isOf(Blocks.PURPLE_CANDLE)) continue;
-			if (targetState.isOf(Blocks.BLUE_CANDLE)) continue;
-			if (targetState.isOf(Blocks.BROWN_CANDLE)) continue;
-			if (targetState.isOf(Blocks.GREEN_CANDLE)) continue;
-			if (targetState.isOf(Blocks.RED_CANDLE)) continue;
-			if (targetState.isOf(Blocks.BLACK_CANDLE)) continue;
-			if (targetState.isOf(Blocks.CANDLE_CAKE)) continue;
-			if (targetState.isOf(Blocks.SOUL_CAMPFIRE)) continue;
-			if (targetState.isOf(Blocks.CAMPFIRE)) continue;
-			if (targetState.isOf(Blocks.BELL)) continue;
+            if (targetState.isOf(Blocks.BELL)) continue;
 			// Skulls and heads (all variants)
 			if (targetState.isOf(Blocks.SKELETON_SKULL)) continue;
 			if (targetState.isOf(Blocks.WITHER_SKELETON_SKULL)) continue;
@@ -376,11 +300,6 @@ public class MoldBlock extends Block implements Fertilizable {
 			if (targetState.isOf(Blocks.HONEY_BLOCK)) continue;
 			
 			// Cauldrons (all variants)
-			if (targetState.isOf(Blocks.CAULDRON)) continue;
-			if (targetState.isOf(Blocks.WATER_CAULDRON)) continue;
-			if (targetState.isOf(Blocks.LAVA_CAULDRON)) continue;
-			if (targetState.isOf(Blocks.POWDER_SNOW_CAULDRON)) continue;
-			
 			// Creaking heart (Pale Garden)
 			if (targetState.isOf(Blocks.CREAKING_HEART)) continue;
 			

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": { "#": "theendupdate:tard_shell_bit" },
+  "result": { "id": "theendupdate:tard_shell_brick", "count": 1 }
+}
+

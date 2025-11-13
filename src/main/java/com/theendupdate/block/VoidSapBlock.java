@@ -22,6 +22,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import com.theendupdate.registry.ModBlocks;
+import com.theendupdate.TemplateMod;
 
 public class VoidSapBlock extends Block implements net.minecraft.block.Fertilizable {
     public static final MapCodec<VoidSapBlock> CODEC = createCodec(VoidSapBlock::new);
@@ -216,15 +217,20 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
 
     // Helper methods
     private boolean trySpread(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        int maxSpreadDistance = world.getGameRules().get(TemplateMod.VOID_SAP_SPREAD_RULE).get();
         // Try to spread to adjacent blocks
         for (Direction direction : Direction.values()) {
             BlockPos targetPos = pos.offset(direction);
             BlockState targetState = world.getBlockState(targetPos);
+            if (maxSpreadDistance > 0 && pos.getManhattanDistance(targetPos) > maxSpreadDistance) {
+                continue;
+            }
             
             if (targetState.isAir()) {
                 // Check if we can place on any face of the target block
                 for (Direction targetFace : Direction.values()) {
                     if (canPlaceOnFace(world, targetPos, targetFace)) {
+                        if (maxSpreadDistance > 0 && pos.getManhattanDistance(targetPos) > maxSpreadDistance) continue;
                         BlockState newState = this.getDefaultState().with(getPropertyForDirection(targetFace), true);
                         world.setBlockState(targetPos, newState);
                         return true;
@@ -235,12 +241,14 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
                 for (Direction face : Direction.values()) {
                     BooleanProperty property = getPropertyForDirection(face);
                     if (!targetState.get(property) && canPlaceOnFace(world, targetPos, face)) {
+                        if (maxSpreadDistance > 0 && pos.getManhattanDistance(targetPos) > maxSpreadDistance) continue;
                         world.setBlockState(targetPos, targetState.with(property, true));
                         return true;
                     }
                     // If the target block is already Void Sap and has all faces, try to spread to an adjacent block
                     if (hasAllFaces(targetState)) {
                         BlockPos adjacentPos = targetPos.offset(face);
+                        if (maxSpreadDistance > 0 && pos.getManhattanDistance(adjacentPos) > maxSpreadDistance) continue;
                         if (world.getBlockState(adjacentPos).isAir() && canPlaceOnFace(world, adjacentPos, face.getOpposite())) {
                             BlockState newState = this.getDefaultState().with(getPropertyForDirection(face.getOpposite()), true);
                             world.setBlockState(adjacentPos, newState);
@@ -265,6 +273,7 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
         for (Direction face : Direction.values()) {
             BooleanProperty property = getPropertyForDirection(face);
             if (!state.get(property) && canPlaceOnFace(world, pos, face)) {
+                if (maxSpreadDistance > 0 && pos.getManhattanDistance(pos.offset(face)) > maxSpreadDistance) continue;
                 world.setBlockState(pos, state.with(property, true));
                 return true;
             }

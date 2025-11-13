@@ -1,0 +1,8 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "theendupdate:item/void_tardigrade_spawn_egg"
+  },
+  "minecraft:entity_type": "theendupdate:void_tardigrade"
+}
+

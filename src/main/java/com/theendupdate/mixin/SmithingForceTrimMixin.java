@@ -46,8 +46,9 @@ public abstract class SmithingForceTrimMixin {
 			boolean isVoidstarAddition = addId.equals(Identifier.of("theendupdate", "voidstar_ingot"));
 			boolean isSpectralAddition = addId.equals(Identifier.of("theendupdate", "spectral_debris")) || addId.equals(Identifier.of("theendupdate", "spectral_cluster"));
 			boolean isGravititeAddition = addId.equals(Identifier.of("theendupdate", "pure_gravitite"));
+			boolean isTardShellAddition = addId.equals(Identifier.of("theendupdate", "tard_shell_brick"));
 			// Removed debug logging
-			if (!baseTrimmable || !templateOk || !(isVoidstarAddition || isSpectralAddition || isGravititeAddition)) {
+			if (!baseTrimmable || !templateOk || !(isVoidstarAddition || isSpectralAddition || isGravititeAddition || isTardShellAddition)) {
 				return;
 			}
 
@@ -81,7 +82,8 @@ public abstract class SmithingForceTrimMixin {
 				Identifier materialId =
 					isVoidstarAddition ? Identifier.of("theendupdate", "voidstar") :
 					(isGravititeAddition ? Identifier.of("theendupdate", "gravitite") :
-					(addId.getPath().equals("spectral_cluster") ? Identifier.of("theendupdate", "spectral_cluster") : Identifier.of("theendupdate", "spectral")));
+					(isTardShellAddition ? Identifier.of("theendupdate", "tard_shell") :
+					(addId.getPath().equals("spectral_cluster") ? Identifier.of("theendupdate", "spectral_cluster") : Identifier.of("theendupdate", "spectral"))));
 				var optMaterial = materials.getEntry(materialId);
 				if (optMaterial.isEmpty()) {
 					return;

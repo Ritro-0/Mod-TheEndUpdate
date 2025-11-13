@@ -50,11 +50,11 @@ public class NebulaVentBlockEntity extends BlockEntity {
 
         long time = world.getTime();
 
-        if (this.burstEndTick != -1) {
+            if (this.burstEndTick != -1) {
             if (time >= this.burstEndTick) {
                 endBurst(world, pos, state, time);
             } else if (!state.get(NebulaVentBlock.WATERLOGGED)) {
-                spawnBurstParticles(world, pos);
+                    spawnBurstParticles(world, pos, computeParticleScale(world, pos));
                 applyPlayerBoost(world, pos);
             }
             return;
@@ -65,19 +65,36 @@ public class NebulaVentBlockEntity extends BlockEntity {
         }
     }
 
-    private void spawnBurstParticles(ServerWorld world, BlockPos pos) {
+    private double computeParticleScale(ServerWorld world, BlockPos pos) {
+        double centerX = pos.getX() + 0.5;
+        double centerZ = pos.getZ() + 0.5;
+        double minDistanceSq = Double.MAX_VALUE;
+        for (PlayerEntity player : world.getPlayers()) {
+            double d = player.squaredDistanceTo(centerX, pos.getY() + 0.5, centerZ);
+            if (d < minDistanceSq) {
+                minDistanceSq = d;
+            }
+        }
+        if (minDistanceSq <= (24.0 * 24.0)) {
+            return 1.0;
+        }
+        return 0.25;
+    }
+
+    private void spawnBurstParticles(ServerWorld world, BlockPos pos, double scale) {
         Random random = world.random;
         double centerX = pos.getX() + 0.5;
         double centerZ = pos.getZ() + 0.5;
         double mouthY = pos.getY() + 1.95;
 
         // Broad plume spread that reaches several blocks up
+        int plumeCount = Math.max(1, (int)(70 * scale));
         world.spawnParticles(
             ParticleTypes.FALLING_OBSIDIAN_TEAR,
             centerX,
             mouthY + 0.8,
             centerZ,
-            70,
+            plumeCount,
             0.45,
             2.0,
             0.45,
@@ -85,7 +102,8 @@ public class NebulaVentBlockEntity extends BlockEntity {
         );
 
         // Accent jets to give the burst more height and motion variety
-        for (int i = 0; i < 25; i++) {
+        int jetCount = Math.max(1, (int)(25 * scale));
+        for (int i = 0; i < jetCount; i++) {
             double angle = random.nextDouble() * Math.PI * 2;
             double radius = 0.2 + random.nextDouble() * 0.3;
             double jetX = centerX + Math.cos(angle) * radius;

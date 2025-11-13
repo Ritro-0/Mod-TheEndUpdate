@@ -77,7 +77,9 @@ public final class EnderChrysanthemumCloser {
     }
     
     // Config flag for chunk scanning (disabled by default to prevent load freezes)
-    private static final boolean ENABLE_CHUNK_SCANNING = false;
+    private static final boolean ENABLE_CHUNK_SCANNING = Boolean.parseBoolean(
+        System.getProperty("theendupdate.enableChrysanthemumChunkScan", "false")
+    );
     
     // Track which chunks have been scanned
     private static final Map<ServerWorld, Set<net.minecraft.util.math.ChunkPos>> scannedChunks = new HashMap<>();

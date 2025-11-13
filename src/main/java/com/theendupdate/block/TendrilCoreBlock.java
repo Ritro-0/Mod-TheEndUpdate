@@ -2,6 +2,7 @@ package com.theendupdate.block;
 
 import com.mojang.serialization.MapCodec;
 import com.theendupdate.world.TendrilSporeTreeGenerator;
+import com.theendupdate.registry.ModBlocks;
 import net.minecraft.block.*;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -20,6 +21,9 @@ import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 
 /**
  * Tendril Core - Final stage of the Tendril growth cycle
@@ -79,7 +83,7 @@ public class TendrilCoreBlock extends PlantBlock implements Fertilizable {
                 if (random.nextInt(7) == 0) {
                     if (age == 6) {
                         // Ready to become a tree! Generate Tendril Spore tree
-                        generateTree(world, pos, random);
+                        generateTree(world, pos, random, state);
                     } else {
                         world.setBlockState(pos, state.with(AGE, age + 1));
                     }
@@ -91,14 +95,21 @@ public class TendrilCoreBlock extends PlantBlock implements Fertilizable {
 
     // Remove scheduled ticks and initial scheduling; match vanilla plants
 
-    private void generateTree(ServerWorld world, BlockPos pos, Random random) {
+    private void generateTree(ServerWorld world, BlockPos pos, Random random, BlockState originalState) {
         
         
         // Remove the core block first
         world.setBlockState(pos, Blocks.AIR.getDefaultState());
         
         // Generate the tree using our custom tree generator
-        TendrilSporeTreeGenerator.generateTree(world, pos, random);
+        boolean success = TendrilSporeTreeGenerator.generateTree(world, pos, random);
+        if (!success) {
+            world.setBlockState(pos, originalState);
+            world.spawnParticles(ParticleTypes.END_ROD,
+                pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5,
+                8, 0.2, 0.2, 0.2, 0.0);
+            world.playSound(null, pos, SoundEvents.BLOCK_CHORUS_FLOWER_DEATH, SoundCategory.BLOCKS, 0.7f, 1.1f);
+        }
     }
 
     @Override
@@ -140,7 +151,7 @@ public class TendrilCoreBlock extends PlantBlock implements Fertilizable {
                 int increment = 1 + random.nextInt(2); // +1 or +2
                 int newAge = Math.min(7, age + increment);
                 if (age == 6 || newAge >= 6) {
-                    generateTree(world, pos, random);
+                    generateTree(world, pos, random, state.with(AGE, 6));
                 } else {
                     world.setBlockState(pos, state.with(AGE, newAge));
                 }

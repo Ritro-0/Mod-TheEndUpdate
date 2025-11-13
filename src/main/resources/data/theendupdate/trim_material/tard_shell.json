@@ -1,0 +1,10 @@
+{
+  "asset_name": "tard",
+  "description": {
+    "color": "#FFFFFF",
+    "translate": "trim_material.theendupdate.tard_shell"
+  },
+  "ingredient": "theendupdate:tard_shell_brick",
+  "item_model_index": 0.75
+}
+

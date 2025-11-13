@@ -2,6 +2,7 @@
 alwaysApply: true
 ---
 ALWAYS, ALWAYS, ALWAYS DOUBLE CHECK THE INTERNET TO BE SURE THAT THE METHODS YOU'RE USING ARE STANDARD AND UP-TO-DATE FOR MINECRAFT/FABRIC 1.21.10. THIS IS BECAUSE A LOT CHANGED IN MINECRAFT 1.21+
+It is absolutely UNACCEPTABLE to send back a build after a prompt that doesn't build!!!! Always check before sending back to me with a simple ./gradlew.bat build, no extra information because that often causes it to hang.
 I'm fairly new to coding. Please simplify your answers to accomidate, then provide brief explanations as to what the more technical side of it means.
 Use data/<modid>/recipe/ (singular). Do not keep duplicates under data/<modid>/recipes/.-
 After editing resources, restart the dev client (or run gradlew processResources and relaunch). /reload does not rebuild mod resources.

@@ -11,13 +11,31 @@
       "theendupdate:entity/ethereal_orb/orb_death"
     ],
     "subtitle": "subtitle.theendupdate.ethereal_orb.death"
-  }
-  ,
+  },
   "entity.ethereal_orb.loses_bulb": {
     "sounds": [
       "theendupdate:entity/ethereal_orb/orb_loses_bulb"
     ],
     "subtitle": "subtitle.theendupdate.ethereal_orb.loses_bulb"
+  },
+  "entity.ethereal_orb.tamed": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_tamed"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.tamed"
+  },
+  "entity.void_tardigrade.idle": {
+    "sounds": [
+      "theendupdate:entity/void_tardigrade/tard_idle",
+      "theendupdate:entity/void_tardigrade/tard_idle1"
+    ],
+    "subtitle": "subtitle.theendupdate.void_tardigrade.idle"
+  },
+  "entity.void_tardigrade.death": {
+    "sounds": [
+      "theendupdate:entity/void_tardigrade/tard_death"
+    ],
+    "subtitle": "subtitle.theendupdate.void_tardigrade.death"
   }
 }
 

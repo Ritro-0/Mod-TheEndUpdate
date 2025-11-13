@@ -2,6 +2,8 @@ package com.theendupdate.mixin;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -28,7 +30,12 @@ public abstract class EntityWallSlidingMixin {
         World world = entity.getEntityWorld();
         
         // Only process on server side, for falling entities, and during normal movement
-        if (world.isClient() || entity.getVelocity().y >= 0 || movementType != MovementType.SELF) return;
+        if (world.isClient()
+            || movementType != MovementType.SELF
+            || !entity.horizontalCollision
+            || entity.getVelocity().y >= 0) {
+            return;
+        }
 
         // Check if entity is near any void sap blocks
         Box entityBox = entity.getBoundingBox();
@@ -55,11 +62,9 @@ public abstract class EntityWallSlidingMixin {
         }
 
         if (isNearWallVoidSap) {
-            // Apply wall sliding at half the intensity of honey blocks
-            // Honey blocks use ~0.4, so half intensity = 0.7 (less sticky than honey)
             Vec3d velocity = entity.getVelocity();
-            double newY = Math.max(velocity.y * 0.7, -0.15); // Half honey block intensity
-            entity.setVelocity(velocity.x, newY, velocity.z);
+            double newY = Math.max(velocity.y - 0.05, -0.25);
+            entity.setVelocity(velocity.x * 0.7, newY, velocity.z * 0.7);
             
             // CRITICAL: Mark velocity as dirty for proper client-server sync
             entity.velocityDirty = true;

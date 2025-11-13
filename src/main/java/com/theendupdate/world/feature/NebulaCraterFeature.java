@@ -231,6 +231,7 @@ public class NebulaCraterFeature extends Feature<DefaultFeatureConfig> {
 		}
 
 		removeUnsupportedShadowClaws(world, centerSurface, radius + 2);
+		removeFloatingMoldSpores(world, centerSurface, radius + 2);
 		return true;
 	}
 
@@ -377,6 +378,59 @@ public class NebulaCraterFeature extends Feature<DefaultFeatureConfig> {
 					BlockState state = world.getBlockState(mutable);
 					if (state.isOf(ModBlocks.SHADOW_CLAW) && world.getBlockState(mutable.down()).isAir()) {
 						world.setBlockState(mutable, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+					}
+				}
+			}
+		}
+	}
+
+	private static void removeFloatingMoldSpores(StructureWorldAccess world, BlockPos centerSurface, int radius) {
+		BlockPos.Mutable mutable = new BlockPos.Mutable();
+		int startY = centerSurface.getY() + 6;
+		int minY = Math.max(world.getBottomY() + 1, centerSurface.getY() - radius - 6);
+		for (int dx = -radius; dx <= radius; dx++) {
+			for (int dz = -radius; dz <= radius; dz++) {
+				if (dx * dx + dz * dz > radius * radius) continue;
+				int x = centerSurface.getX() + dx;
+				int z = centerSurface.getZ() + dz;
+				for (int y = startY; y >= minY; y--) {
+					mutable.set(x, y, z);
+					BlockState state = world.getBlockState(mutable);
+					
+					// Check if this is a mold spore block
+					if (state.isOf(ModBlocks.MOLD_SPORE) || state.isOf(ModBlocks.MOLD_SPORE_TUFT)) {
+						// Simple blocks: check if ground below is invalid
+						BlockPos below = mutable.down();
+						BlockState belowState = world.getBlockState(below);
+						if (belowState.isAir() || !belowState.isSolid()) {
+							world.setBlockState(mutable, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+						}
+					} else if (state.isOf(ModBlocks.MOLD_SPORE_SPROUT)) {
+						// Tall plants: check if there's valid ground support
+						BlockPos below = mutable.down();
+						BlockState belowState = world.getBlockState(below);
+						
+						// If below is also a sprout (upper half), check one more block down
+						if (belowState.isOf(ModBlocks.MOLD_SPORE_SPROUT)) {
+							BlockPos groundPos = below.down();
+							BlockState groundState = world.getBlockState(groundPos);
+							if (groundState.isAir() || !groundState.isSolid()) {
+								// Remove both halves
+								world.setBlockState(mutable, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+								world.setBlockState(below, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+							}
+						} else {
+							// This is likely the lower half - check if ground below is invalid
+							if (belowState.isAir() || !belowState.isSolid()) {
+								// Remove both halves
+								world.setBlockState(mutable, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+								BlockPos above = mutable.up();
+								BlockState aboveState = world.getBlockState(above);
+								if (aboveState.isOf(ModBlocks.MOLD_SPORE_SPROUT)) {
+									world.setBlockState(above, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+								}
+							}
+						}
 					}
 				}
 			}

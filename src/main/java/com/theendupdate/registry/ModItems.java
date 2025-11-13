@@ -40,6 +40,16 @@ public final class ModItems {
         key -> new Item(new Item.Settings().registryKey(key))
     );
 
+    public static final Item TARD_SHELL_BIT = registerItem(
+        "tard_shell_bit",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
+    public static final Item TARD_SHELL_BRICK = registerItem(
+        "tard_shell_brick",
+        key -> new Item(new Item.Settings().registryKey(key))
+    );
+
     // Quest items and components
     public static final Item ENCHANTED_BOOK_COVER = registerItem(
         "enchanted_book_cover",
@@ -167,6 +177,15 @@ public final class ModItems {
         "tiny_shadow_creaking_spawn_egg",
         key -> new com.theendupdate.item.CustomSpawnEggItem(
             ModEntities.TINY_SHADOW_CREAKING,
+            new Item.Settings().registryKey(key)
+        ),
+        net.minecraft.item.ItemGroups.SPAWN_EGGS
+    );
+
+    public static final Item VOID_TARDIGRADE_SPAWN_EGG = registerItem(
+        "void_tardigrade_spawn_egg",
+        key -> new com.theendupdate.item.CustomSpawnEggItem(
+            ModEntities.VOID_TARDIGRADE,
             new Item.Settings().registryKey(key)
         ),
         net.minecraft.item.ItemGroups.SPAWN_EGGS

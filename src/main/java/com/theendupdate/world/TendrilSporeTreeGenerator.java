@@ -17,15 +17,12 @@ import java.util.List;
 public final class TendrilSporeTreeGenerator {
     private TendrilSporeTreeGenerator() {}
 
-    public static void generateTree(ServerWorld world, BlockPos startPos, Random random) {
+    public static boolean generateTree(ServerWorld world, BlockPos startPos, Random random) {
         
         
         // Check if there's enough space (basic 5x5x8 area check)
         if (!hasEnoughSpace(world, startPos)) {
-            
-            // If not enough space, place the core back
-            world.setBlockState(startPos, ModBlocks.TENDRIL_CORE.getDefaultState());
-            return;
+            return false;
         }
         
         // Collect positions of all placed sporocarps first; mold crawl is placed after logs are finalized
@@ -48,6 +45,7 @@ public final class TendrilSporeTreeGenerator {
         }
         
         
+        return true;
     }
 
     private static boolean hasEnoughSpace(ServerWorld world, BlockPos startPos) {

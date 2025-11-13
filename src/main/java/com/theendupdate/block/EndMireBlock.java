@@ -67,6 +67,14 @@ public class EndMireBlock extends Block implements Fertilizable {
             if (!world.getBlockState(target).isOf(ModBlocks.END_MIRE)) continue;
             if (!world.isAir(above)) continue;
 
+            // Verify the ground block is actually solid and supported (not floating in air above a crater)
+            BlockState targetState = world.getBlockState(target);
+            if (!targetState.isSolid() || targetState.isAir()) continue;
+            BlockPos targetBelow = target.down();
+            BlockState targetBelowState = world.getBlockState(targetBelow);
+            // If there's air below the ground block, we might be over a crater - skip placement
+            if (targetBelowState.isAir() && target.getY() > world.getBottomY() + 5) continue;
+
             int choice = random.nextInt(3);
             if (choice == 0) {
                 world.setBlockState(above, ModBlocks.MOLD_SPORE.getDefaultState(), Block.NOTIFY_ALL);

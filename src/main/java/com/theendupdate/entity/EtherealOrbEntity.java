@@ -1,6 +1,7 @@
 package com.theendupdate.entity;
 
 import net.minecraft.entity.AnimationState;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Flutterer;
 import net.minecraft.entity.data.DataTracker;
@@ -14,6 +15,7 @@ import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 import net.minecraft.util.math.MathHelper;
@@ -38,10 +40,13 @@ import net.minecraft.item.Items;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.sound.SoundEvent;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.util.math.Box;
 import com.theendupdate.registry.ModEntities;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * EtherealOrbEntity - A floating, glowing orb creature that inhabits The End
@@ -60,7 +65,16 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     private static final TrackedData<Boolean> BREEDING = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 	private static final TrackedData<Boolean> STUNTED = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 	private static final TrackedData<Boolean> BULB_PRESENT = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> TAMED = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<String> OWNER_TRACKED = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.STRING);
+    private static final TrackedData<Boolean> AIR_SITTING = DataTracker.registerData(EtherealOrbEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final int BREED_COOLDOWN_TICKS = 3 * 60 * 20; // 3 minutes
+    private static final double TAMED_ORBIT_RADIUS = 5.0;
+    private static final double TAMED_ORBIT_HEIGHT_OFFSET = 0.5;
+    private static final double TAMED_ORBIT_ENTER_DISTANCE = TAMED_ORBIT_RADIUS * 1.1;
+    private static final double TAMED_ORBIT_EXIT_DISTANCE = TAMED_ORBIT_RADIUS * 1.35;
+    private static final int TAMED_RUSH_DURATION = 50;
+    private static final String TAMED_OWNER_TAG_PREFIX = "theendupdate:tamed_owner:";
     public final AnimationState rotateAnimationState = new AnimationState();
     public final AnimationState moveAnimationState = new AnimationState();
     public final AnimationState finishmovementAnimationState = new AnimationState();
@@ -68,6 +82,27 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
     private int breedCooldownTicks = 0;
     private int panicTicks = 0;
     private int bloodTicks = 0;
+    private int tamedRushTicks = 0;
+    private float tamedOrbitAngle = 0.0F;
+    private boolean tamedOrbiting;
+    @Nullable
+    private Vec3d tamedOrbitAnchor;
+    @Nullable
+    private Vec3d airSitAnchor;
+    
+    // Tardigrade trapping system
+    @Nullable
+    private VoidTardigradeEntity trappedTardigrade;
+    private int trapBoxTicks = 0;
+    private int trapCooldownTicks = 0;
+    private static final int TRAP_BOX_DURATION = 18 * 20; // 18 seconds (15-20 range, using 18)
+    private static final int TRAP_COOLDOWN = 15 * 20; // 15 seconds
+    private static final double TARDIGRADE_DETECTION_RANGE = 20.0;
+    private static final double TRAP_BOX_SIZE = 1.2; // Smaller box size
+    @Nullable
+    private Vec3d trapBoxCenter;
+    @Nullable
+    private Vec3d castingPosition;
 
     // Baby/growth system
     private static final int BABY_GROW_TICKS = 24000; // 20 minutes like vanilla
@@ -130,8 +165,11 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         builder.add(BREED_READY, Boolean.FALSE);
         builder.add(GROWING_AGE, 0);
         builder.add(BREEDING, Boolean.FALSE);
-		builder.add(STUNTED, Boolean.FALSE);
+        builder.add(STUNTED, Boolean.FALSE);
 		builder.add(BULB_PRESENT, Boolean.TRUE);
+        builder.add(TAMED, Boolean.FALSE);
+        builder.add(OWNER_TRACKED, "");
+        builder.add(AIR_SITTING, Boolean.FALSE);
     }
 
     public boolean isCharged() {
@@ -165,6 +203,149 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 	public void setBulbPresent(boolean value) {
 		this.dataTracker.set(BULB_PRESENT, value);
 	}
+    
+    public boolean isTamed() {
+        return this.dataTracker.get(TAMED);
+    }
+
+    public void setTamed(boolean value) {
+        this.dataTracker.set(TAMED, value);
+        if (!this.getEntityWorld().isClient()) {
+            if (value) {
+                this.addCommandTag("theendupdate:tamed");
+            } else {
+                this.removeCommandTag("theendupdate:tamed");
+                // Clear air sitting when untamed
+                this.setAirSitting(false);
+                this.airSitAnchor = null;
+            }
+        }
+    }
+
+    @Nullable
+    public UUID getOwnerUuid() {
+        String stored = this.dataTracker.get(OWNER_TRACKED);
+        if (stored == null || stored.isEmpty()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(stored);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    public void setOwnerUuid(@Nullable UUID ownerUuid) {
+        String stored = ownerUuid == null ? "" : ownerUuid.toString();
+        this.dataTracker.set(OWNER_TRACKED, stored);
+        if (!this.getEntityWorld().isClient()) {
+            this.clearOwnerTags();
+            if (ownerUuid != null) {
+                try {
+                    this.addCommandTag(TAMED_OWNER_TAG_PREFIX + ownerUuid);
+                } catch (Throwable ignored) {}
+            }
+        }
+    }
+
+    public boolean isAirSitting() {
+        return this.dataTracker.get(AIR_SITTING);
+    }
+
+    public void setAirSitting(boolean value) {
+        this.dataTracker.set(AIR_SITTING, value);
+        if (!value) {
+            this.airSitAnchor = null;
+        }
+    }
+
+    private void clearOwnerTags() {
+        if (this.getEntityWorld().isClient()) {
+            return;
+        }
+        List<String> toRemove = new ArrayList<>();
+        for (String tag : this.getCommandTags()) {
+            if (tag.startsWith(TAMED_OWNER_TAG_PREFIX)) {
+                toRemove.add(tag);
+            }
+        }
+        for (String removeTag : toRemove) {
+            try {
+                this.removeCommandTag(removeTag);
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    private void syncOwnerFromTags() {
+        if (this.getEntityWorld().isClient()) {
+            return;
+        }
+        if (this.getOwnerUuid() != null) {
+            return;
+        }
+        for (String tag : this.getCommandTags()) {
+            if (!tag.startsWith(TAMED_OWNER_TAG_PREFIX)) {
+                continue;
+            }
+            String uuidString = tag.substring(TAMED_OWNER_TAG_PREFIX.length());
+            try {
+                UUID parsed = UUID.fromString(uuidString);
+                this.setOwnerUuid(parsed);
+            } catch (IllegalArgumentException ignored) {
+                // Ignore malformed tags from older saves or manual edits
+            }
+            break;
+        }
+    }
+
+    @Nullable
+    private PlayerEntity getOwnerPlayer() {
+        UUID ownerUuid = this.getOwnerUuid();
+        if (ownerUuid == null) {
+            return null;
+        }
+        if (!(this.getEntityWorld() instanceof ServerWorld serverWorld)) {
+            return null;
+        }
+        return serverWorld.getPlayerByUuid(ownerUuid);
+    }
+
+    public void tameBy(PlayerEntity player) {
+        if (player == null || this.getEntityWorld().isClient() || this.isTamed()) {
+            return;
+        }
+        this.setOwnerUuid(player.getUuid());
+        this.setTamed(true);
+        this.tamedRushTicks = TAMED_RUSH_DURATION;
+        this.tamedOrbitAngle = this.random.nextFloat() * MathHelper.TAU;
+        this.tamedOrbiting = false;
+        this.tamedOrbitAnchor = null;
+        this.airSitAnchor = null;
+        this.setAirSitting(false);
+        this.panicTicks = 0;
+        this.bloodTicks = 0;
+        // Set initial cooldown when tamed - orb must wait before it can box
+        this.trapCooldownTicks = TRAP_COOLDOWN;
+        this.getNavigation().stop();
+        Vec3d ownerHead = new Vec3d(player.getX(), player.getY() + player.getStandingEyeHeight(), player.getZ());
+        Vec3d orbPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+        Vec3d toOwner = ownerHead.subtract(orbPos);
+        if (toOwner.lengthSquared() > 1.0E-4) {
+            this.setVelocity(toOwner.normalize().multiply(1.8));
+        }
+        if (this.getEntityWorld() instanceof ServerWorld serverWorld) {
+            spawnTamingBurst(serverWorld);
+            serverWorld.playSound(null, this.getBlockPos(), com.theendupdate.registry.ModSounds.ETHEREAL_ORB_TAMED, SoundCategory.NEUTRAL, 1.0F, 1.0F);
+        }
+    }
+
+    private void spawnTamingBurst(ServerWorld world) {
+        double x = this.getX();
+        double y = this.getY() + 0.6;
+        double z = this.getZ();
+        world.spawnParticles(ParticleTypes.END_ROD, x, y, z, 60, 0.6, 0.6, 0.6, 0.02);
+        world.spawnParticles(ParticleTypes.GLOW, x, y, z, 30, 0.5, 0.5, 0.5, 0.01);
+    }
     
     @Override
     protected void initGoals() {
@@ -230,7 +411,23 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             if (this.getCommandTags().contains("theendupdate:stunted") && !this.isStunted()) {
                 this.setStunted(true);
             }
+            if (this.getCommandTags().contains("theendupdate:tamed") && !this.isTamed()) {
+                this.setTamed(true);
+            }
+            this.syncOwnerFromTags();
+
+            if (this.isTamed()) {
+                // Check if casting trap - if so, skip normal behavior (handled in serverTickTardigradeDefense)
+                if (this.trappedTardigrade == null || this.trapBoxTicks <= 0) {
+                    this.serverTickTamedBehavior();
+                }
+                this.serverTickTardigradeDefense();
+            } else {
+                this.tamedOrbitAnchor = null;
+            }
         }
+        
+        // Particle rendering is handled server-side in serverTickTardigradeDefense
 
         // No custom suffocation logic; rely on vanilla in-wall checks only
         if (!this.getEntityWorld().isClient()) {
@@ -297,7 +494,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         }
 
         // While panicking, move erratically at higher speed to simulate fear
-        if (!this.getEntityWorld().isClient() && this.isPanicking()) {
+        if (!this.getEntityWorld().isClient() && this.isPanicking() && !this.isTamed()) {
             Vec3d pos = new Vec3d(this.getX(), this.getY(), this.getZ());
             double range = 4.0;
             double dx = (this.getRandom().nextDouble() * 2.0 - 1.0) * range;
@@ -371,6 +568,422 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
             }
         }
         return lastFree;
+    }
+
+    private void serverTickTamedBehavior() {
+        // Check for air sitting mode first (takes priority over following parent)
+        if (this.isAirSitting()) {
+            if (this.airSitAnchor == null) {
+                // Initialize air sit anchor if not set
+                this.airSitAnchor = new Vec3d(this.getX(), this.getY(), this.getZ());
+                this.tamedOrbitAngle = this.random.nextFloat() * MathHelper.TAU;
+            }
+            // Orbit around the air sit anchor with a small 2-3 block radius
+            Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+            this.getNavigation().stop();
+            
+            double airSitRadius = 2.5; // 2-3 block radius (using 2.5 as middle)
+            this.tamedOrbitAngle = (this.tamedOrbitAngle + 0.1F) % MathHelper.TAU;
+            double offsetX = Math.cos(this.tamedOrbitAngle) * airSitRadius;
+            double offsetZ = Math.sin(this.tamedOrbitAngle) * airSitRadius;
+            double desiredY = this.airSitAnchor.y;
+            Vec3d desired = new Vec3d(this.airSitAnchor.x + offsetX, desiredY, this.airSitAnchor.z + offsetZ);
+            Vec3d safeTarget = this.clampTargetToFreeSpace(currentPos, desired);
+            this.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, 2.6);
+            Vec3d velocity = this.getVelocity();
+            double verticalDelta = safeTarget.y - this.getY();
+            double desiredVerticalSpeed = MathHelper.clamp(verticalDelta * 0.25, -0.25, 0.25);
+            Vec3d adjusted = new Vec3d(
+                MathHelper.lerp(0.35, velocity.x, (safeTarget.x - this.getX()) * 0.4),
+                MathHelper.lerp(0.25, velocity.y, desiredVerticalSpeed),
+                MathHelper.lerp(0.35, velocity.z, (safeTarget.z - this.getZ()) * 0.4)
+            );
+            double speedCap = 0.7;
+            if (adjusted.lengthSquared() > speedCap * speedCap) {
+                adjusted = adjusted.normalize().multiply(speedCap);
+            }
+            this.setVelocity(adjusted.x, adjusted.y, adjusted.z);
+            
+            // Face the orbit center
+            Vec3d direction = this.airSitAnchor.subtract(currentPos);
+            if (direction.lengthSquared() > 1.0E-3) {
+                float targetYaw = (float)(MathHelper.atan2(direction.z, direction.x) * (180.0F / Math.PI)) - 90.0F;
+                float wrapped = MathHelper.wrapDegrees(targetYaw - this.getYaw());
+                this.setYaw(this.getYaw() + MathHelper.clamp(wrapped, -8.0F, 8.0F));
+                this.bodyYaw = this.getYaw();
+                this.headYaw = this.getYaw();
+            }
+            return; // Exit early when air sitting
+        }
+        
+        // For tamed babies: FollowAdultGoal handles following parents (priority 1)
+        // If no parent is available, the goal won't be active and we'll follow owner here
+        // For tamed adults: follow owner normally
+        
+        PlayerEntity owner = this.getOwnerPlayer();
+        Vec3d orbitCenter;
+        
+        if (owner == null || owner.isRemoved() || owner.getEntityWorld() != this.getEntityWorld()) {
+            if (this.tamedOrbitAnchor == null) {
+                this.tamedOrbitAnchor = new Vec3d(this.getX(), this.getY(), this.getZ());
+                this.tamedOrbiting = true;
+                this.tamedOrbitAngle = 0.0F;
+            }
+            orbitCenter = this.tamedOrbitAnchor;
+        } else {
+            this.tamedOrbitAnchor = null;
+            orbitCenter = new Vec3d(owner.getX(), owner.getY() + owner.getStandingEyeHeight(), owner.getZ());
+        }
+        Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+        this.getNavigation().stop();
+
+        if (owner != null && !owner.isRemoved() && owner.getEntityWorld() == this.getEntityWorld()) {
+            if (this.tamedRushTicks > 0) {
+                this.tamedRushTicks--;
+                Vec3d rushTarget = this.clampTargetToFreeSpace(currentPos, orbitCenter);
+                this.getMoveControl().moveTo(rushTarget.x, rushTarget.y, rushTarget.z, 3.6);
+                this.tamedOrbiting = false;
+            } else {
+                double distance = currentPos.distanceTo(orbitCenter);
+                if (distance > 12.0 && !this.getEntityWorld().isClient()) {
+                    Vec3d teleportTarget = this.clampTargetToFreeSpace(orbitCenter, orbitCenter.add(0.0, TAMED_ORBIT_HEIGHT_OFFSET, 0.0));
+                    this.refreshPositionAndAngles(teleportTarget.x, teleportTarget.y, teleportTarget.z, this.getYaw(), this.getPitch());
+                    this.setVelocity(Vec3d.ZERO);
+                    this.tamedOrbiting = false;
+                    return;
+                }
+                if (this.tamedOrbiting) {
+                    if (distance > TAMED_ORBIT_EXIT_DISTANCE) {
+                        this.tamedOrbiting = false;
+                    }
+                } else if (distance <= TAMED_ORBIT_ENTER_DISTANCE) {
+                    this.tamedOrbiting = true;
+                    this.tamedOrbitAngle = (float) MathHelper.atan2(currentPos.z - orbitCenter.z, currentPos.x - orbitCenter.x);
+                }
+
+                if (this.tamedOrbiting) {
+                    this.tamedOrbitAngle = (this.tamedOrbitAngle + 0.1F) % MathHelper.TAU;
+                    double offsetX = Math.cos(this.tamedOrbitAngle) * TAMED_ORBIT_RADIUS;
+                    double offsetZ = Math.sin(this.tamedOrbitAngle) * TAMED_ORBIT_RADIUS;
+                    double desiredY = orbitCenter.y + TAMED_ORBIT_HEIGHT_OFFSET;
+                    Vec3d desired = new Vec3d(orbitCenter.x + offsetX, desiredY, orbitCenter.z + offsetZ);
+                    Vec3d safeTarget = this.clampTargetToFreeSpace(currentPos, desired);
+                    this.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, 2.6);
+                    Vec3d velocity = this.getVelocity();
+                    double verticalDelta = safeTarget.y - this.getY();
+                    double desiredVerticalSpeed = MathHelper.clamp(verticalDelta * 0.25, -0.25, 0.25);
+                    Vec3d adjusted = new Vec3d(
+                        MathHelper.lerp(0.35, velocity.x, (safeTarget.x - this.getX()) * 0.4),
+                        MathHelper.lerp(0.25, velocity.y, desiredVerticalSpeed),
+                        MathHelper.lerp(0.35, velocity.z, (safeTarget.z - this.getZ()) * 0.4)
+                    );
+                    double speedCap = 0.7;
+                    if (adjusted.lengthSquared() > speedCap * speedCap) {
+                        adjusted = adjusted.normalize().multiply(speedCap);
+                    }
+                    this.setVelocity(adjusted.x, adjusted.y, adjusted.z);
+                } else {
+                    Vec3d followTarget = this.clampTargetToFreeSpace(currentPos, orbitCenter);
+                    this.getMoveControl().moveTo(followTarget.x, followTarget.y, followTarget.z, 3.4);
+                    Vec3d towardOwner = orbitCenter.subtract(currentPos);
+                    Vec3d velocity = this.getVelocity();
+                    Vec3d desiredVelocity = Vec3d.ZERO;
+                    if (towardOwner.lengthSquared() > 1.0E-4) {
+                        desiredVelocity = towardOwner.normalize().multiply(1.05);
+                    }
+                    Vec3d blended = new Vec3d(
+                        MathHelper.lerp(0.55, velocity.x, desiredVelocity.x),
+                        velocity.y,
+                        MathHelper.lerp(0.55, velocity.z, desiredVelocity.z)
+                    );
+                    double verticalDelta = followTarget.y - this.getY();
+                    double desiredVerticalSpeed = MathHelper.clamp(verticalDelta * 0.35, -0.3, 0.3);
+                    blended = new Vec3d(blended.x, MathHelper.lerp(0.3, blended.y, desiredVerticalSpeed), blended.z);
+                    double speedCap = 1.15;
+                    if (blended.lengthSquared() > speedCap * speedCap) {
+                        blended = blended.normalize().multiply(speedCap);
+                    }
+                    this.setVelocity(blended.x, blended.y, blended.z);
+                    if (distance > 0.35) {
+                        this.tamedOrbitAngle = (float) MathHelper.atan2(currentPos.z - orbitCenter.z, currentPos.x - orbitCenter.x);
+                    }
+                }
+            }
+        } else {
+            this.tamedRushTicks = 0;
+            this.tamedOrbiting = true;
+            this.tamedOrbitAngle = (this.tamedOrbitAngle + 0.1F) % MathHelper.TAU;
+            double offsetX = Math.cos(this.tamedOrbitAngle) * TAMED_ORBIT_RADIUS;
+            double offsetZ = Math.sin(this.tamedOrbitAngle) * TAMED_ORBIT_RADIUS;
+            double desiredY = orbitCenter.y + TAMED_ORBIT_HEIGHT_OFFSET;
+            Vec3d desired = new Vec3d(orbitCenter.x + offsetX, desiredY, orbitCenter.z + offsetZ);
+            Vec3d safeTarget = this.clampTargetToFreeSpace(currentPos, desired);
+            this.getMoveControl().moveTo(safeTarget.x, safeTarget.y, safeTarget.z, 2.6);
+            Vec3d velocity = this.getVelocity();
+            double verticalDelta = safeTarget.y - this.getY();
+            double desiredVerticalSpeed = MathHelper.clamp(verticalDelta * 0.25, -0.25, 0.25);
+            Vec3d adjusted = new Vec3d(
+                MathHelper.lerp(0.35, velocity.x, (safeTarget.x - this.getX()) * 0.4),
+                MathHelper.lerp(0.25, velocity.y, desiredVerticalSpeed),
+                MathHelper.lerp(0.35, velocity.z, (safeTarget.z - this.getZ()) * 0.4)
+            );
+            double speedCap = 0.7;
+            if (adjusted.lengthSquared() > speedCap * speedCap) {
+                adjusted = adjusted.normalize().multiply(speedCap);
+            }
+            this.setVelocity(adjusted.x, adjusted.y, adjusted.z);
+        }
+
+        Vec3d direction = orbitCenter.subtract(currentPos);
+        if (direction.lengthSquared() > 1.0E-3) {
+            float targetYaw = (float)(MathHelper.atan2(direction.z, direction.x) * (180.0F / Math.PI)) - 90.0F;
+            float wrapped = MathHelper.wrapDegrees(targetYaw - this.getYaw());
+            this.setYaw(this.getYaw() + MathHelper.clamp(wrapped, -8.0F, 8.0F));
+            this.bodyYaw = this.getYaw();
+            this.headYaw = this.getYaw();
+        }
+    }
+
+    private void serverTickTardigradeDefense() {
+        // Handle cooldown
+        if (this.trapCooldownTicks > 0) {
+            this.trapCooldownTicks--;
+        }
+        
+        // If currently trapping, update trap state
+        if (this.trappedTardigrade != null && this.trapBoxTicks > 0) {
+            this.trapBoxTicks--;
+            
+            // Check if trapped Tardigrade is still valid
+            if (this.trappedTardigrade.isRemoved() || !this.trappedTardigrade.isAlive() || 
+                this.trappedTardigrade.getEntityWorld() != this.getEntityWorld()) {
+                // Tardigrade died or despawned, end trap early
+                this.endTrap();
+                return;
+            }
+            
+            // Check if Tardigrade has escaped the box
+            if (this.trapBoxCenter != null) {
+                Vec3d tardigradePos = new Vec3d(this.trappedTardigrade.getX(), this.trappedTardigrade.getY(), this.trappedTardigrade.getZ());
+                Vec3d offset = tardigradePos.subtract(this.trapBoxCenter);
+                
+                // Check if Tardigrade is outside the box bounds
+                if (Math.abs(offset.x) > TRAP_BOX_SIZE || Math.abs(offset.y) > TRAP_BOX_SIZE || Math.abs(offset.z) > TRAP_BOX_SIZE) {
+                    // Tardigrade escaped! End trap and enter cooldown
+                    this.endTrap();
+                    return;
+                }
+                
+                // Update trap box center to follow Tardigrade (but keep it constrained)
+                // Only update if Tardigrade hasn't moved too far (prevent escape)
+                double distance = tardigradePos.distanceTo(this.trapBoxCenter);
+                if (distance < 1.0) {
+                    // Allow slight movement but keep center relatively stable
+                    this.trapBoxCenter = this.trapBoxCenter.lerp(tardigradePos, 0.05);
+                }
+            }
+            
+            // Keep orb in place while casting
+            if (this.castingPosition != null) {
+                this.setVelocity(Vec3d.ZERO);
+                this.getNavigation().stop();
+                Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+                if (currentPos.distanceTo(this.castingPosition) > 0.5) {
+                    // Teleport back to casting position if drifted
+                    this.refreshPositionAndAngles(this.castingPosition.x, this.castingPosition.y, this.castingPosition.z, this.getYaw(), this.getPitch());
+                }
+                
+                // Face the direction of the beam toward the Tardigrade
+                if (this.trapBoxCenter != null) {
+                    Vec3d toTardigrade = this.trapBoxCenter.subtract(currentPos);
+                    if (toTardigrade.lengthSquared() > 1.0E-3) {
+                        float targetYaw = (float)(MathHelper.atan2(toTardigrade.z, toTardigrade.x) * (180.0F / Math.PI)) - 90.0F;
+                        float wrapped = MathHelper.wrapDegrees(targetYaw - this.getYaw());
+                        this.setYaw(this.getYaw() + MathHelper.clamp(wrapped, -10.0F, 10.0F));
+                        this.bodyYaw = this.getYaw();
+                        this.headYaw = this.getYaw();
+                    }
+                }
+            }
+            
+            // Spawn particle beam from orb to box and box particles (every 3 ticks, reduced particles)
+            if (this.getEntityWorld() instanceof ServerWorld sw && this.castingPosition != null && this.trapBoxCenter != null && this.age % 3 == 0) {
+                this.spawnBeamParticles(sw, this.castingPosition, this.trapBoxCenter);
+                this.spawnBoxParticles(sw, this.trapBoxCenter);
+            }
+            
+            // End trap when duration expires
+            if (this.trapBoxTicks <= 0) {
+                this.endTrap();
+            }
+            return;
+        }
+        
+        // If not trapping and cooldown expired, check for threats
+        if (this.trapCooldownTicks <= 0 && this.trappedTardigrade == null) {
+            VoidTardigradeEntity threat = this.findThreateningTardigrade();
+            if (threat != null) {
+                this.startTrap(threat);
+            }
+        }
+    }
+    
+    @Nullable
+    private VoidTardigradeEntity findThreateningTardigrade() {
+        if (this.getEntityWorld().isClient()) {
+            return null;
+        }
+        
+        Box searchBox = this.getBoundingBox().expand(TARDIGRADE_DETECTION_RANGE);
+        List<VoidTardigradeEntity> nearbyTardigrades = this.getEntityWorld().getEntitiesByClass(
+            VoidTardigradeEntity.class,
+            searchBox,
+            tardigrade -> tardigrade != null && tardigrade.isAlive() && !tardigrade.isRemoved() &&
+                         tardigrade.getEntityWorld() == this.getEntityWorld() &&
+                         !tardigrade.isTrapped() // Don't target Tardigrades already being trapped
+        );
+        
+        // Find Tardigrades that are actively tracking THIS orb to eat it
+        // Only check if the Tardigrade has this orb as its chase target - nothing else
+        for (VoidTardigradeEntity tardigrade : nearbyTardigrades) {
+            double distSq = this.squaredDistanceTo(tardigrade);
+            if (distSq > TARDIGRADE_DETECTION_RANGE * TARDIGRADE_DETECTION_RANGE) {
+                continue;
+            }
+            
+            // Only return this Tardigrade if it's actively tracking THIS orb as its target
+            EtherealOrbEntity chaseTarget = tardigrade.getChasingOrb();
+            if (chaseTarget == this) {
+                return tardigrade;
+            }
+        }
+        
+        return null;
+    }
+    
+    private void startTrap(VoidTardigradeEntity tardigrade) {
+        this.trappedTardigrade = tardigrade;
+        this.trapBoxTicks = TRAP_BOX_DURATION;
+        this.trapBoxCenter = new Vec3d(tardigrade.getX(), tardigrade.getY(), tardigrade.getZ());
+        this.castingPosition = new Vec3d(this.getX(), this.getY(), this.getZ());
+        
+        // Mark Tardigrade as trapped (prevents other orbs from also trapping it)
+        tardigrade.setTrapped(true);
+        
+        // Face the direction of the beam immediately when starting
+        Vec3d currentPos = new Vec3d(this.getX(), this.getY(), this.getZ());
+        Vec3d toTardigrade = this.trapBoxCenter.subtract(currentPos);
+        if (toTardigrade.lengthSquared() > 1.0E-3) {
+            float targetYaw = (float)(MathHelper.atan2(toTardigrade.z, toTardigrade.x) * (180.0F / Math.PI)) - 90.0F;
+            this.setYaw(targetYaw);
+            this.bodyYaw = targetYaw;
+            this.headYaw = targetYaw;
+        }
+        
+        // Play sound
+        if (this.getEntityWorld() instanceof ServerWorld sw) {
+            sw.playSound(null, this.getBlockPos(), SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.NEUTRAL, 0.8f, 1.5f);
+        }
+    }
+    
+    private void endTrap() {
+        if (this.trappedTardigrade != null) {
+            // Release Tardigrade
+            this.trappedTardigrade.setTrapped(false);
+            this.trappedTardigrade = null;
+        }
+        this.trapBoxTicks = 0;
+        this.trapBoxCenter = null;
+        this.castingPosition = null;
+        this.trapCooldownTicks = TRAP_COOLDOWN;
+    }
+    
+    private void spawnBeamParticles(ServerWorld world, Vec3d from, Vec3d to) {
+        Vec3d direction = to.subtract(from);
+        double distance = direction.length();
+        // Reduced particle count - fewer steps for the beam
+        int steps = Math.max(3, Math.min(8, (int)(distance * 0.5)));
+        
+        for (int i = 0; i <= steps; i++) {
+            double t = i / (double) steps;
+            Vec3d pos = from.lerp(to, t);
+            world.spawnParticles(ParticleTypes.END_ROD, pos.x, pos.y, pos.z, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+    }
+    
+    private void spawnBoxParticles(ServerWorld world, Vec3d center) {
+        double boxSize = TRAP_BOX_SIZE; // Use the constant for box size
+        int particlesPerEdge = 5; // Reduced for performance
+        
+        // Bottom face edges (cage frame)
+        for (int i = 0; i <= particlesPerEdge; i++) {
+            double t = i / (double) particlesPerEdge;
+            // X edges
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize + t * boxSize * 2, center.y - boxSize, center.z - boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize + t * boxSize * 2, center.y - boxSize, center.z + boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            // Z edges
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize, center.y - boxSize, center.z - boxSize + t * boxSize * 2, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.GLOW, center.x + boxSize, center.y - boxSize, center.z - boxSize + t * boxSize * 2, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+        
+        // Top face edges (cage frame)
+        for (int i = 0; i <= particlesPerEdge; i++) {
+            double t = i / (double) particlesPerEdge;
+            // X edges
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize + t * boxSize * 2, center.y + boxSize, center.z - boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize + t * boxSize * 2, center.y + boxSize, center.z + boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            // Z edges
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize, center.y + boxSize, center.z - boxSize + t * boxSize * 2, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.GLOW, center.x + boxSize, center.y + boxSize, center.z - boxSize + t * boxSize * 2, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+        
+        // Vertical edges (cage frame)
+        for (int i = 0; i <= particlesPerEdge; i++) {
+            double t = i / (double) particlesPerEdge;
+            double y = center.y - boxSize + t * boxSize * 2;
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize, y, center.z - boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.GLOW, center.x + boxSize, y, center.z - boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize, y, center.z + boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.GLOW, center.x + boxSize, y, center.z + boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+        
+        // Add cage bars - vertical bars on each face
+        int barsPerFace = 3; // Number of bars per face
+        for (int bar = 1; bar < barsPerFace; bar++) {
+            double barPos = -boxSize + (bar / (double) barsPerFace) * boxSize * 2;
+            
+            // Front and back faces (X direction bars)
+            for (int i = 0; i <= particlesPerEdge; i++) {
+                double t = i / (double) particlesPerEdge;
+                double y = center.y - boxSize + t * boxSize * 2;
+                world.spawnParticles(ParticleTypes.GLOW, center.x + barPos, y, center.z - boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+                world.spawnParticles(ParticleTypes.GLOW, center.x + barPos, y, center.z + boxSize, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+            
+            // Left and right faces (Z direction bars)
+            for (int i = 0; i <= particlesPerEdge; i++) {
+                double t = i / (double) particlesPerEdge;
+                double y = center.y - boxSize + t * boxSize * 2;
+                world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize, y, center.z + barPos, 1, 0.0, 0.0, 0.0, 0.0);
+                world.spawnParticles(ParticleTypes.GLOW, center.x + boxSize, y, center.z + barPos, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+        }
+        
+        // Horizontal bars (top and bottom faces)
+        for (int bar = 1; bar < barsPerFace; bar++) {
+            double barPos = -boxSize + (bar / (double) barsPerFace) * boxSize * 2;
+            
+            // Top and bottom faces - horizontal bars
+            for (int i = 0; i <= particlesPerEdge; i++) {
+                double t = i / (double) particlesPerEdge;
+                // X direction bars on top/bottom
+                world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize + t * boxSize * 2, center.y - boxSize, center.z + barPos, 1, 0.0, 0.0, 0.0, 0.0);
+                world.spawnParticles(ParticleTypes.GLOW, center.x - boxSize + t * boxSize * 2, center.y + boxSize, center.z + barPos, 1, 0.0, 0.0, 0.0, 0.0);
+                // Z direction bars on top/bottom
+                world.spawnParticles(ParticleTypes.GLOW, center.x + barPos, center.y - boxSize, center.z - boxSize + t * boxSize * 2, 1, 0.0, 0.0, 0.0, 0.0);
+                world.spawnParticles(ParticleTypes.GLOW, center.x + barPos, center.y + boxSize, center.z - boxSize + t * boxSize * 2, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+        }
     }
 
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
@@ -523,10 +1136,45 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
                 return willConsume ? ActionResult.SUCCESS : ActionResult.PASS;
             }
         }
+        
+        // Air sit toggle for tamed orbs (only when owner right-clicks with empty hand or non-consumable item)
+        if (this.isTamed() && this.getOwnerUuid() != null && this.getOwnerUuid().equals(player.getUuid())) {
+            if (!this.getEntityWorld().isClient()) {
+                boolean wasSitting = this.isAirSitting();
+                this.setAirSitting(!wasSitting);
+                if (!wasSitting) {
+                    // Entering air sit mode - set anchor at current position
+                    this.airSitAnchor = new Vec3d(this.getX(), this.getY(), this.getZ());
+                    this.tamedOrbitAngle = this.random.nextFloat() * MathHelper.TAU;
+                    if (this.getEntityWorld() instanceof ServerWorld sw) {
+                        sw.playSound(null, this.getBlockPos(), SoundEvents.ENTITY_PARROT_IMITATE_SKELETON, SoundCategory.NEUTRAL, 0.5f, 1.2f);
+                    }
+                } else {
+                    // Exiting air sit mode - resume following
+                    this.airSitAnchor = null;
+                    if (this.getEntityWorld() instanceof ServerWorld sw) {
+                        sw.playSound(null, this.getBlockPos(), SoundEvents.ENTITY_PARROT_IMITATE_SKELETON, SoundCategory.NEUTRAL, 0.5f, 0.8f);
+                    }
+                }
+                return ActionResult.CONSUME;
+            } else {
+                return ActionResult.SUCCESS;
+            }
+        }
+        
         return ActionResult.PASS;
     }
 
     // No special drops on death; discourage killing (use empty loot table to avoid item drops)
+
+    @Override
+    public void remove(Entity.RemovalReason reason) {
+        super.remove(reason);
+        // Clean up trap when orb is removed - release any trapped Tardigrade
+        if (!this.getEntityWorld().isClient() && this.trappedTardigrade != null) {
+            this.endTrap();
+        }
+    }
 
     @Override
     public boolean isBaby() {
@@ -564,6 +1212,13 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         baby.setBabyTicks(-BABY_GROW_TICKS);
         baby.dataTracker.set(BABY, Boolean.TRUE);
         baby.dataTracker.set(GROWING_AGE, -BABY_GROW_TICKS);
+        
+        // If parent is tamed, baby inherits taming from parent
+        if (this.isTamed() && this.getOwnerUuid() != null) {
+            baby.setOwnerUuid(this.getOwnerUuid());
+            baby.setTamed(true);
+        }
+        
         world.spawnEntity(baby);
         world.spawnParticles(ParticleTypes.END_ROD, safePos.x, safePos.y + 0.4, safePos.z, 10, 0.2, 0.2, 0.2, 0.0);
         this.getEntityWorld().playSound(null, this.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.8f, 1.0f);
@@ -641,6 +1296,8 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         private final EtherealOrbEntity orb;
         private EtherealOrbEntity targetAdult;
         private int repathCooldown;
+        private static final int HOME_RESCAN_INTERVAL = 30;
+        private int homeRescanTicks;
 
         FollowAdultGoal(EtherealOrbEntity orb) {
             this.orb = orb;
@@ -650,6 +1307,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         @Override
         public boolean canStart() {
             if (!orb.isBaby() || orb.isPanicking()) return false;
+            // Allow tamed babies to follow parents too (they prioritize parents over owner)
             this.targetAdult = findNearestAdult();
             return this.targetAdult != null;
         }
@@ -698,6 +1356,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 		private static final double RADIUS_MEDIUM = 2.5;   // Tighter when default blocked
 		private static final double RADIUS_SMALL = 2.0;    // Tighter
 		private static final double RADIUS_MINIMUM = 1.5;  // Surrounding 8 blocks (one block away from home)
+        private static final int HOME_RESCAN_INTERVAL = 30;
 
         private final EtherealOrbEntity orb;
         private BlockPos homeCrystalPos;
@@ -706,6 +1365,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
         private Vec3d lastPosition;
         private int stuckCounter;
         private int repathCooldown;
+        private int homeRescanTicks;
 		
 		// Orbit mode: false = horizontal, true = vertical
 		private boolean verticalOrbitMode;
@@ -737,12 +1397,12 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 
         @Override
         public boolean canStart() {
-            return !orb.getEntityWorld().isClient() && orb.getTarget() == null && !orb.isPanicking();
+            return !orb.getEntityWorld().isClient() && orb.getTarget() == null && !orb.isPanicking() && !orb.isTamed();
         }
 
         @Override
         public boolean shouldContinue() {
-            return !orb.isPanicking(); // pause while panicking
+            return !orb.isPanicking() && !orb.isTamed(); // pause while panicking or when tamed
         }
 
         @Override
@@ -761,6 +1421,31 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 			this.modeSwitchCount = 0;
 			this.bounceRecoveryTicks = 0;
 			this.orbitDirection = 1.0; // Default direction
+        }
+
+        private void ensureHomeReference() {
+            if (homeCrystalPos != null && !isTargetBlock(homeCrystalPos)) {
+                homeCrystalPos = null;
+                homeRescanTicks = 0;
+            }
+            if (homeRescanTicks > 0 && homeCrystalPos != null) {
+                homeRescanTicks--;
+                return;
+            }
+            BlockPos found = findNearbyCrystal();
+            if (found == null) {
+                found = scanChunksForCrystal(SCAN_CHUNKS);
+            }
+            if (found != null) {
+                if (homeCrystalPos == null || !found.equals(homeCrystalPos)) {
+                    configureOrbitModeForHome(found);
+                    lastHomeCrystalPos = found.toImmutable();
+                }
+                homeCrystalPos = found.toImmutable();
+            } else {
+                homeCrystalPos = null;
+            }
+            homeRescanTicks = HOME_RESCAN_INTERVAL;
         }
 
         @Override
@@ -784,15 +1469,7 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 			}
 
 			// Validate or acquire home
-            if (homeCrystalPos == null) {
-                BlockPos found = findNearbyCrystal();
-                if (found == null) found = scanChunksForCrystal(SCAN_CHUNKS);
-                homeCrystalPos = found;
-            } else if (!isTargetBlock(homeCrystalPos)) {
-				BlockPos found = findNearbyCrystal();
-                if (found == null) found = scanChunksForCrystal(SCAN_CHUNKS);
-                homeCrystalPos = found;
-            }
+            ensureHomeReference();
 			// Configure orbit mode when home changes
 			if (homeCrystalPos != null) {
 				if (lastHomeCrystalPos == null || 
