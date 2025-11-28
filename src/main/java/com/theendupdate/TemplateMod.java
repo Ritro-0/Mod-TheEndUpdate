@@ -182,11 +182,6 @@ public class TemplateMod implements ModInitializer {
             }
         });
         
-        // Register commands
-        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            com.theendupdate.command.FixFlowersCommand.register(dispatcher);
-            com.theendupdate.command.TestChrysanthemumCommand.register(dispatcher);
-        });
 
         // Server tick: spawn subtle END_ROD particles around players wearing spectral trims
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {

@@ -1,7 +1,7 @@
 {
   "modmenu.nameTranslation.theendupdate": "The End Update",
   "modmenu.summaryTranslation.theendupdate": "by: Ritro",
-  "modmenu.descriptionTranslation.theendupdate": "Foundations for The End Update mod.",
+  "modmenu.descriptionTranslation.theendupdate": "An expansion mod for The End dimension.",
 
   "entity.theendupdate.ethereal_orb": "Ethereal Orb",
   "entity.theendupdate.king_phantom": "King Phantom",
@@ -176,12 +176,12 @@
   "trim_material.theendupdate.tard_shell": "Tard Shell Material"
   ,
   "itemGroup.theendupdate.end_update": "End Update",
-  "subtitle.theendupdate.ethereal_orb.idle": "Ethereal orb hums softly",
-  "subtitle.theendupdate.ethereal_orb.death": "Ethereal orb breaks apart",
-  "subtitle.theendupdate.ethereal_orb.loses_bulb": "Ethereal orb sheds its bulb",
-  "subtitle.theendupdate.ethereal_orb.tamed": "Ethereal orb bonds with its savior",
-  "subtitle.theendupdate.void_tardigrade.idle": "Void tardigrade chitters gently",
-  "subtitle.theendupdate.void_tardigrade.death": "Void tardigrade falls silent",
+  "subtitle.theendupdate.ethereal_orb.idle": "Ethereal Orb hums",
+  "subtitle.theendupdate.ethereal_orb.death": "Ethereal Orb fades away",
+  "subtitle.theendupdate.ethereal_orb.loses_bulb": "Ethereal Orb panics",
+  "subtitle.theendupdate.ethereal_orb.tamed": "Ethereal Orb was tamed",
+  "subtitle.theendupdate.void_tardigrade.idle": "Void Tardigrade chitters",
+  "subtitle.theendupdate.void_tardigrade.death": "Void Tardigrade disintegrates",
   "block.theendupdate.shadow_altar": "Shadow Altar",
   "item.theendupdate.shadow_altar": "Shadow Altar",
   "item.theendupdate.shadow_hunters_tracker": "Shadow Hunter's Tracker",

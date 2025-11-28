@@ -129,6 +129,8 @@ public final class ModItemGroups {
             entries.add(ModItems.VOIDSTAR_INGOT);
             entries.add(ModItems.SPECTRAL_DEBRIS);
             entries.add(ModItems.SPECTRAL_CLUSTER);
+            entries.add(ModItems.TARD_SHELL_BIT);
+            entries.add(ModItems.TARD_SHELL_BRICK);
             
             // Items - quest items
             entries.add(ModItems.ENCHANTED_BOOK_COVER);
@@ -151,6 +153,7 @@ public final class ModItemGroups {
             entries.add(ModItems.SHADOW_CREAKING_SPAWN_EGG);
             entries.add(ModItems.MINI_SHADOW_CREAKING_SPAWN_EGG);
             entries.add(ModItems.TINY_SHADOW_CREAKING_SPAWN_EGG);
+            entries.add(ModItems.VOID_TARDIGRADE_SPAWN_EGG);
         });
     }
 }

@@ -39,17 +39,55 @@ public class StellarithCrystalBlock extends Block {
     @Override
     public void afterBreak(net.minecraft.world.World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
         if (!world.isClient()) {
-            // Manual drop logic (mirror End Mire approach): Silk Touch -> drop self; else -> drop shard
+            // Manual drop logic: Silk Touch -> drop self; else -> drop 1-5 shards (weighted to 3-5) with large fortune bonuses
             boolean hasSilk = false;
+            int fortuneLevel = 0;
             try {
                 ItemEnchantmentsComponent ench = tool.get(DataComponentTypes.ENCHANTMENTS);
-                hasSilk = ench != null && ench.toString().contains("minecraft:silk_touch");
+                if (ench != null) {
+                    String s = ench.toString();
+                    hasSilk = s.contains("minecraft:silk_touch");
+                    // Detect fortune level - check from highest to lowest
+                    for (int lvl = 5; lvl >= 1; lvl--) {
+                        if (s.contains("minecraft:fortune") && s.contains(":" + lvl + "]")) {
+                            fortuneLevel = lvl;
+                            break;
+                        }
+                    }
+                    if (fortuneLevel == 0 && s.contains("minecraft:fortune")) {
+                        fortuneLevel = 1;
+                    }
+                }
             } catch (Throwable ignore) {}
 
             if (hasSilk) {
                 Block.dropStack(world, pos, new ItemStack(this.asItem()));
             } else {
-                Block.dropStack(world, pos, new ItemStack(com.theendupdate.registry.ModItems.VOIDSTAR_SHARD));
+                // Weighted base drop: favors 3-5 shards
+                // Weights: 1=5%, 2=10%, 3=30%, 4=30%, 5=25%
+                int base;
+                int roll = world.getRandom().nextInt(100);
+                if (roll < 5) {
+                    base = 1;
+                } else if (roll < 15) {
+                    base = 2;
+                } else if (roll < 45) {
+                    base = 3;
+                } else if (roll < 75) {
+                    base = 4;
+                } else {
+                    base = 5;
+                }
+                
+                // Large fortune bonus: +3 to +8 per fortune level
+                int fortuneBonus = 0;
+                if (fortuneLevel > 0) {
+                    fortuneBonus = world.getRandom().nextInt(6) + 3; // 3-8
+                    fortuneBonus *= fortuneLevel; // Multiply by fortune level
+                }
+                
+                int total = base + fortuneBonus;
+                Block.dropStack(world, pos, new ItemStack(com.theendupdate.registry.ModItems.VOIDSTAR_SHARD, total));
             }
             ((ServerWorld) world).emitGameEvent(player, net.minecraft.world.event.GameEvent.BLOCK_DESTROY, pos);
         }

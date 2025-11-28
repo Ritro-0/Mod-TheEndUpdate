@@ -89,11 +89,12 @@ public class TemplateModClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModBlocks.SHADOW_SHELF, BlockRenderLayer.CUTOUT);
         // Nebula vent block has non-opaque tube extending upward
         BlockRenderLayerMap.putBlock(ModBlocks.NEBULA_VENT_BLOCK, BlockRenderLayer.CUTOUT);
-        // Register tooltip callback for spawn eggs to show "Disabled in Peaceful"
+        // Register tooltip callback for spawn eggs to show "Disabled in Peaceful" (only for hostile mobs)
         ItemTooltipCallback.EVENT.register((stack, tooltipContext, tooltipType, lines) -> {
             if (stack.getItem() instanceof com.theendupdate.item.CustomSpawnEggItem spawnEgg) {
-                // Check if it's a hostile mob spawn egg
-                if (spawnEgg.getEntityType().getSpawnGroup() == SpawnGroup.MONSTER) {
+                // Only show for hostile mobs (MONSTER), explicitly exclude peaceful mobs (AMBIENT)
+                SpawnGroup group = spawnEgg.getEntityType().getSpawnGroup();
+                if (group == SpawnGroup.MONSTER) {
                     // Check if world is in peaceful mode using MinecraftClient
                     MinecraftClient client = MinecraftClient.getInstance();
                     if (client != null && client.world != null && 
