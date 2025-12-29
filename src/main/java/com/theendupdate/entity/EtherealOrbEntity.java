@@ -1574,7 +1574,6 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 											lateral.z * 0.6
 										);
 										orb.setVelocity(bounceVelocity);
-										orb.velocityModified = true;
 						} else {
 										// Horizontal orbit: apply bounce perpendicular to home with upward component
 										Vec3d lateral = new Vec3d(-toHome.z, 0, toHome.x).normalize();
@@ -1585,7 +1584,6 @@ public class EtherealOrbEntity extends PathAwareEntity implements Flutterer {
 											lateral.z * 0.6
 										);
 										orb.setVelocity(bounceVelocity);
-										orb.velocityModified = true;
 									}
 									
 									// Stop current navigation

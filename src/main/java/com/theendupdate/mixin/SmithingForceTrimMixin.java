@@ -47,14 +47,12 @@ public abstract class SmithingForceTrimMixin {
 			boolean isSpectralAddition = addId.equals(Identifier.of("theendupdate", "spectral_debris")) || addId.equals(Identifier.of("theendupdate", "spectral_cluster"));
 			boolean isGravititeAddition = addId.equals(Identifier.of("theendupdate", "pure_gravitite"));
 			boolean isTardShellAddition = addId.equals(Identifier.of("theendupdate", "tard_shell_brick"));
-			// Removed debug logging
 			if (!baseTrimmable || !templateOk || !(isVoidstarAddition || isSpectralAddition || isGravititeAddition || isTardShellAddition)) {
 				return;
 			}
 
 			ItemStack out = self.getSlot(3).getStack();
 			if (!out.isEmpty() && out.get(DataComponentTypes.TRIM) != null) {
-				// Removed debug logging
 				return;
 			}
 
@@ -103,12 +101,10 @@ public abstract class SmithingForceTrimMixin {
 					Object trimType = dct.getField("TRIM_TYPE").get(null);
 					var set = ItemStack.class.getMethod("set", Class.forName("net.minecraft.component.DataComponentType"), Object.class);
 					set.invoke(result, trimType, Float.valueOf(modelIndex));
-					// Removed debug logging
 				} catch (Throwable tt) {
 					TemplateMod.LOGGER.info("[SmithingForce] Unable to set TRIM_TYPE reflectively: {}", tt.toString());
 				}
 				self.getSlot(3).setStack(result);
-				// Removed debug logging
 			});
 		} catch (Throwable t) {
 		}

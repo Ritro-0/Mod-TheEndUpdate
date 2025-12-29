@@ -15,7 +15,7 @@ import net.minecraft.client.render.state.CameraRenderState;
 
 
 /**
- * Renderer for the Ethereal Orb entity - Minecraft 1.21.8 version
+ * Renderer for the Ethereal Orb entity
  * 
  * This renderer handles:
  * - Rendering the orb model

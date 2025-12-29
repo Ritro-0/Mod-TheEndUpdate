@@ -222,7 +222,6 @@ public class KingPhantomEntity extends PhantomEntity {
         // This respects block collisions while still allowing our custom velocity control
         this.move(net.minecraft.entity.MovementType.SELF, velocity);
         this.setVelocity(velocity); // CRITICAL: Ensure velocity persists after move()
-        this.velocityModified = true;
     }
     
     @Override
@@ -241,7 +240,6 @@ public class KingPhantomEntity extends PhantomEntity {
             // FORCE the velocity to persist even if something else tries to modify it
             if (this.summonPhase == 2) {
                 this.setVelocity(this.getVelocity().x, 0.3, this.getVelocity().z);
-                this.velocityModified = true;
             }
         }
         
@@ -260,7 +258,6 @@ public class KingPhantomEntity extends PhantomEntity {
             if (this.isOnGround()) {
                 // If somehow on ground, push upward strongly
                 this.setVelocity(this.getVelocity().add(0, 0.5, 0));
-                this.velocityModified = true;
             } else if (!this.getEntityWorld().isClient()) {
                 // Also check if we're too close to blocks below
                 net.minecraft.util.math.BlockPos posBelow = this.getBlockPos().down();
@@ -269,7 +266,6 @@ public class KingPhantomEntity extends PhantomEntity {
                     double distanceToGround = this.getY() - posBelow.getY() - 1.0;
                     if (distanceToGround < 2.0) {
                         this.setVelocity(this.getVelocity().add(0, 0.1, 0));
-                        this.velocityModified = true;
                     }
                 }
             }
@@ -360,7 +356,6 @@ public class KingPhantomEntity extends PhantomEntity {
         
         // Stop all movement
         this.setVelocity(Vec3d.ZERO);
-        this.velocityModified = true;
     }
     
     /**
@@ -373,7 +368,6 @@ public class KingPhantomEntity extends PhantomEntity {
         
         // Freeze in place
         this.setVelocity(Vec3d.ZERO);
-        this.velocityModified = true;
         
         // Snap to transition position to prevent any drift
         if (this.phaseTransitionPosition != null) {
@@ -1241,7 +1235,6 @@ public class KingPhantomEntity extends PhantomEntity {
                     blendedVelocity = desiredVelocity.normalize().multiply(0.8);
                 }
                 this.phantom.setVelocity(blendedVelocity);
-                this.phantom.velocityModified = true;
                 
                 // Make the phantom face the direction it's moving
                 double yaw = Math.atan2(blendedVelocity.z, blendedVelocity.x) * (180.0 / Math.PI) - 90.0;
@@ -1405,7 +1398,6 @@ public class KingPhantomEntity extends PhantomEntity {
                 
                 Vec3d velocity = direction.multiply(speed);
                 this.phantom.setVelocity(velocity);
-                this.phantom.velocityModified = true;
                 
                 // Check if we've reached the target level without hitting - end swoop immediately
                 if (!Double.isNaN(this.swoopTargetInitialY) && !this.hasDamagedThisSwoop) {
@@ -1471,7 +1463,6 @@ public class KingPhantomEntity extends PhantomEntity {
             
             // Reset velocity when swoop ends to prevent phantom from continuing to descend
             this.phantom.setVelocity(Vec3d.ZERO);
-            this.phantom.velocityModified = true;
         }
     }
 }

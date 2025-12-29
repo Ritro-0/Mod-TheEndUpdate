@@ -9,7 +9,6 @@ import com.theendupdate.entity.TinyShadowCreakingEntity;
 import com.theendupdate.entity.VoidTardigradeEntity;
 
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
-// removed unused imports
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.registry.Registries;
@@ -102,7 +101,6 @@ public final class ModEntities {
     );
     
     public static void registerModEntities() {
-        // cleaned debug log
         FabricDefaultAttributeRegistry.register(ETHEREAL_ORB, EtherealOrbEntity.createEtherealOrbAttributes());
         FabricDefaultAttributeRegistry.register(KING_PHANTOM, KingPhantomEntity.createKingPhantomAttributes());
         FabricDefaultAttributeRegistry.register(SHADOW_CREAKING, ShadowCreakingEntity.createShadowCreakingAttributes());

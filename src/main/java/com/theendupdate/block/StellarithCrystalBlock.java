@@ -13,9 +13,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
-// removed unused world imports
-
-// unused imports removed
 
 public class StellarithCrystalBlock extends Block {
     public static final BooleanProperty NATURAL = BooleanProperty.of("natural");

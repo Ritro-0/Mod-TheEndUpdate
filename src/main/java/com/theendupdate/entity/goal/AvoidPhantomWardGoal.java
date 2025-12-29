@@ -134,7 +134,6 @@ public class AvoidPhantomWardGoal extends Goal {
             ).normalize().multiply(speed);
             
             this.phantom.setVelocity(fleeVector);
-            this.phantom.velocityModified = true;
             
             // Look away from the player
             this.phantom.getLookControl().lookAt(

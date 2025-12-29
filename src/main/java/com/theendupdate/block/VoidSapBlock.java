@@ -217,7 +217,7 @@ public class VoidSapBlock extends Block implements net.minecraft.block.Fertiliza
 
     // Helper methods
     private boolean trySpread(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        int maxSpreadDistance = world.getGameRules().get(TemplateMod.VOID_SAP_SPREAD_RULE).get();
+        int maxSpreadDistance = TemplateMod.VOID_SAP_SPREAD_RADIUS; // Using hardcoded value until GameRules API is available
         // Try to spread to adjacent blocks
         for (Direction direction : Direction.values()) {
             BlockPos targetPos = pos.offset(direction);

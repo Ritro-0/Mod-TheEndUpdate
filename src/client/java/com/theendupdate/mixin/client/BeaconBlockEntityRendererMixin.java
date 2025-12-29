@@ -2,6 +2,8 @@ package com.theendupdate.mixin.client;
 
 import com.theendupdate.accessor.BeaconRenderStateQuantumAccessor;
 import com.theendupdate.block.QuantumGatewayBlock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -14,6 +16,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.block.entity.BeaconBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.state.BeaconBlockEntityRenderState;
 import net.minecraft.client.render.command.ModelCommandRenderer;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.state.CameraRenderState;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.BlockPos;
@@ -29,10 +34,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class BeaconBlockEntityRendererMixin {
     
     @Unique
+    private static final Logger theendupdate$LOGGER = LoggerFactory.getLogger("TheEndUpdate:BeaconRenderer");
+    
+    @Unique
     private static World theendupdate$lastWorld = null;
     
     @Unique
     private static long theendupdate$lastTick = 0L;
+    
+    @Unique
+    private static BlockPos theendupdate$lastBeaconPos = null;
     
     /**
      * Phase 1: Capture quantum gateway data and store world reference for animation
@@ -71,72 +82,88 @@ public abstract class BeaconBlockEntityRendererMixin {
             accessor.theendupdate$setBeaconY(beacon.getPos().getY());
             // Match vanilla beacon beam height - renders up to ~2048 blocks above beacon
             accessor.theendupdate$setTopY(beacon.getPos().getY() + 2048);
-            
-            // Spawn glowing spiral particles around the beam (only if not redstone powered)
-            if (!powered) {
-                spawnSpiralParticles(world, beacon.getPos(), accessor.theendupdate$getBeamTint(), beacon.getPos().getY() + 2048, cameraPos);
-            }
+            // Store beacon position for particle spawning
+            theendupdate$lastBeaconPos = beacon.getPos();
         } else {
             accessor.theendupdate$setHasQuantumGateway(false);
         }
     }
     
-    // ==================== Helper Methods ====================
+    /**
+     * Phase 2: Spawn spiral particles around quantum gateway beacon beam
+     */
+    @Inject(method = "render(Lnet/minecraft/client/render/block/entity/state/BeaconBlockEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V",
+            at = @At("TAIL"))
+    private void theendupdate$spawnSpiralParticles(BeaconBlockEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue commandQueue, CameraRenderState cameraState, CallbackInfo ci) {
+        try {
+            if (!(state instanceof BeaconRenderStateQuantumAccessor accessor)) return;
+            if (!accessor.theendupdate$hasQuantumGateway()) return;
+            if (accessor.theendupdate$isRedstonePowered()) return; // Don't spawn particles when powered
+            
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client == null || client.world == null || client.player == null) return;
+            
+            // Get beam parameters
+            float[] tint = accessor.theendupdate$getBeamTint();
+            int beaconY = accessor.theendupdate$getBeaconY();
+            int topY = accessor.theendupdate$getTopY();
+            
+            // Spawn spiral particles around the beam
+            spawnSpiralParticles(client, beaconY, topY, tint);
+        } catch (Exception e) {
+            theendupdate$LOGGER.error("Error in spawnSpiralParticles injection", e);
+        }
+    }
     
     /**
-     * Spawns glowing particles in a spiral pattern around the beacon beam
+     * Spawns spiral particles around the quantum gateway beacon beam
+     * Only spawns particles within a vertical range around the player to avoid lag
      */
-    private static void spawnSpiralParticles(World world, BlockPos beaconPos, float[] tint, int topY, Vec3d cameraPos) {
-        // Offset spawning based on beacon position so multiple beams don't all spawn on the same tick
-        // This prevents hitting particle budget limits when multiple beams are active
-        long tickOffset = (beaconPos.getX() + beaconPos.getY() + beaconPos.getZ()) % 3; // 0, 1, or 2
-        if ((world.getTime() + tickOffset) % 3 != 0) return; // Spawn every 3 ticks, offset per beacon
+    @Unique
+    private static void spawnSpiralParticles(MinecraftClient client, int beaconY, int topY, float[] tint) {
+        if (theendupdate$lastWorld == null || theendupdate$lastBeaconPos == null) return;
+        if (client.player == null) return;
         
-        double time = world.getTime() * 0.05; // Animation time
+        // Only spawn particles if player is within 64 blocks horizontally
+        double dx = client.player.getX() - theendupdate$lastBeaconPos.getX();
+        double dz = client.player.getZ() - theendupdate$lastBeaconPos.getZ();
+        if (dx * dx + dz * dz > 64 * 64) return;
         
-        // Spiral parameters
-        double spiralRadius = 0.6; // Radius of spiral around beam center
-        double spiralTightness = 0.4; // How tight the spiral is (radians per block)
-        int particlesPerSpiral = 2; // Number of spiral arms
-        double verticalSpacing = 2.4; // Blocks between particle layers (every 3rd row)
+        // Calculate vertical range around player (only spawn particles within 32 blocks vertically)
+        double playerY = client.player.getY();
+        double minY = Math.max(beaconY + 1, playerY - 32);
+        double maxY = Math.min(topY, playerY + 32);
         
-        // Beam center
-        double centerX = beaconPos.getX() + 0.5;
-        double centerZ = beaconPos.getZ() + 0.5;
+        // If the range is invalid (player too far from beam), don't spawn particles
+        if (minY >= maxY) return;
         
-        // Only spawn particles within a reasonable distance from the camera (vertical range)
-        double maxVerticalDistance = 64.0; // Only render particles within 64 blocks vertically from camera
-        int startY = Math.max(beaconPos.getY() + 2, (int)(cameraPos.y - maxVerticalDistance));
-        int endY = Math.min(topY, (int)(cameraPos.y + maxVerticalDistance));
+        long worldTime = theendupdate$lastWorld.getTime();
+        double beaconX = theendupdate$lastBeaconPos.getX() + 0.5;
+        double beaconZ = theendupdate$lastBeaconPos.getZ() + 0.5;
         
-        // Spawn multiple spirals at different heights
-        for (double y = startY; y < endY; y += verticalSpacing) {
-            for (int spiral = 0; spiral < particlesPerSpiral; spiral++) {
-                double spiralOffset = (Math.PI * 2.0 / particlesPerSpiral) * spiral;
-                double angle = (y * spiralTightness) + time + spiralOffset;
-                
-                double x = centerX + Math.cos(angle) * spiralRadius;
-                double z = centerZ + Math.sin(angle) * spiralRadius;
-                
-                // Spawn END_ROD particles for the glowing spiral effect using particle manager
-                MinecraftClient client = MinecraftClient.getInstance();
-                if (client != null && client.particleManager != null) {
-                    client.particleManager.addParticle(
-                        ParticleTypes.END_ROD,
-                        x, y, z,
-                        0.0, 0.02, 0.0 // Slight upward drift
-                    );
-                    
-                    // Add extra glow with ELECTRIC_SPARK particles occasionally
-                    if (world.getRandom().nextFloat() < 0.12f) {
-                        client.particleManager.addParticle(
-                            ParticleTypes.ELECTRIC_SPARK,
-                            x, y, z,
-                            0.0, 0.01, 0.0
-                        );
-                    }
-                }
-            }
+        // Spawn particles in a spiral pattern around the beam
+        int particlesPerTick = 2;
+        double spiralRadius = 0.3;
+        double spiralSpeed = 0.1;
+        
+        for (int i = 0; i < particlesPerTick; i++) {
+            double angle = (worldTime * spiralSpeed + i * Math.PI * 2 / particlesPerTick) % (Math.PI * 2);
+            double offsetX = Math.cos(angle) * spiralRadius;
+            double offsetZ = Math.sin(angle) * spiralRadius;
+            
+            // Random Y position within the visible range around the player
+            double yPos = minY + (maxY - minY) * client.world.random.nextDouble();
+            
+            // Spawn END_ROD particle (respects particle settings automatically)
+            client.particleManager.addParticle(
+                ParticleTypes.END_ROD,
+                beaconX + offsetX,
+                yPos,
+                beaconZ + offsetZ,
+                0.0,
+                0.0,
+                0.0
+            );
         }
     }
 

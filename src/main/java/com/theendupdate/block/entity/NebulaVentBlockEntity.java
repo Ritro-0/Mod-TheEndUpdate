@@ -151,7 +151,6 @@ public class NebulaVentBlockEntity extends BlockEntity {
             double targetVy = 3.5 + random.nextDouble() * 0.8;
             player.setVelocity(velocity.x, targetVy, velocity.z);
             player.velocityDirty = true;
-            player.velocityModified = true;
             player.fallDistance = 0.0f;
             world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP,
                 SoundCategory.BLOCKS, 0.8f, 0.8f + random.nextFloat() * 0.2f);

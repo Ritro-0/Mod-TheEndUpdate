@@ -193,9 +193,6 @@ public final class ModItems {
 
     // Shadow Hunter's Map is now a regular filled_map with special NBT - no custom item needed
 
-    // Shadow Altar as standalone item test
-    // Removed shadow_altar_test item - no longer needed
-
     // Closed Ender Chrysanthemum - separate item that places permanently closed flowers
 
     @SafeVarargs

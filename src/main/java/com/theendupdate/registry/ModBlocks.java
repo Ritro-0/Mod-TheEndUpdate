@@ -727,7 +727,6 @@ public final class ModBlocks {
     );
 
     // Nebula Vent Block - block with solid base and non-solid tube extending upward
-    // Note: Cannot use offset type with custom collision shapes in 1.21.10
     public static final Block NEBULA_VENT_BLOCK = registerBlock(
         "nebula_vent_block",
         key -> new com.theendupdate.block.NebulaVentBlock(

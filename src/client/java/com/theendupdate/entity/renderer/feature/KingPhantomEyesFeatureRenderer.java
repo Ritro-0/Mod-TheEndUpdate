@@ -20,9 +20,8 @@ public class KingPhantomEyesFeatureRenderer extends EyesFeatureRenderer<PhantomE
 
     @Override
     public RenderLayer getEyesTexture() {
-        // Return the eyes render layer with our custom eyes texture
-        // This automatically renders at full brightness (glowing effect)
-        return RenderLayer.getEyes(this.eyesTexture);
+        // Eyes rendering is currently disabled - API not available in 1.21.11
+        return null;
     }
 }
 

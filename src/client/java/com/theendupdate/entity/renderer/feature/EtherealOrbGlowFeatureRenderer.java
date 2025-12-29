@@ -23,15 +23,13 @@ public class EtherealOrbGlowFeatureRenderer extends EyesFeatureRenderer<Ethereal
     }
     
     static {
-        // Initialize the glow layer - will be set per-instance via getEyesTexture
         GLOW_LAYER = null;
     }
 
     @Override
     public RenderLayer getEyesTexture() {
-        // Return the eyes render layer with our glow texture
-        // This automatically renders at full brightness
-        return RenderLayer.getEyes(this.glowTexture);
+        // Eyes rendering is currently disabled - API not available in 1.21.11
+        return null;
     }
 
     @Override

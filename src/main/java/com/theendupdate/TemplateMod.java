@@ -29,9 +29,7 @@ import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.GameRules;
-import net.fabricmc.fabric.api.gamerule.v1.GameRuleRegistry;
-import net.fabricmc.fabric.api.gamerule.v1.GameRuleFactory;
+import net.minecraft.util.Identifier;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +40,8 @@ import net.minecraft.block.BlockState;
 public class TemplateMod implements ModInitializer {
     public static final String MOD_ID = "theendupdate";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-    public static final boolean DEBUG_MODE = false; // Set to true for development debugging
-    public static final GameRules.Key<GameRules.IntRule> VOID_SAP_SPREAD_RULE = GameRuleRegistry.register(
-        "voidSapSpreadRadius",
-        GameRules.Category.UPDATES,
-        GameRuleFactory.createIntRule(5, 0, 64)
-    );
+    public static final boolean DEBUG_MODE = false;
+    public static final int VOID_SAP_SPREAD_RADIUS = 5;
     private static final int SPECTRAL_INTERVAL = 5;
     private static final int MAGNET_INTERVAL = 7;
     private static final Object2IntOpenHashMap<UUID> SPECTRAL_TICKERS = new Object2IntOpenHashMap<>();
@@ -83,7 +77,6 @@ public class TemplateMod implements ModInitializer {
             );
         });
         com.theendupdate.registry.ModSounds.register();
-        // Particle code commented out temporarily
         com.theendupdate.registry.ModEntities.registerModEntities();
         com.theendupdate.world.ModEntitySpawns.register();
         com.theendupdate.registry.ModWorldgen.registerAll();
@@ -201,7 +194,6 @@ public class TemplateMod implements ModInitializer {
                             if (elapsed < 100L) {
                                 // Freeze the cow's movement
                                 cow.setVelocity(Vec3d.ZERO);
-                                cow.velocityModified = true;
                                 if (elapsed % 5 == 0) {
                                     cow.getNavigation().stop();
                                 }
@@ -222,7 +214,6 @@ public class TemplateMod implements ModInitializer {
                             if (elapsed < 100L) {
                                 // Freeze the mooshroom's movement
                                 mooshroom.setVelocity(Vec3d.ZERO);
-                                mooshroom.velocityModified = true;
                                 if (elapsed % 5 == 0) {
                                     mooshroom.getNavigation().stop();
                                 }
@@ -420,7 +411,6 @@ public class TemplateMod implements ModInitializer {
                 newVel = newVel.multiply(0.96);
 
                 item.setVelocity(newVel);
-                item.velocityModified = true;
                 item.velocityDirty = true;
                 item.age = 0;
             }

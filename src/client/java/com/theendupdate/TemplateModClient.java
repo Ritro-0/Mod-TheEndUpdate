@@ -43,7 +43,6 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.world.Difficulty;
-// predicate registration removed; compass logic handled via mixins
 
 @Environment(EnvType.CLIENT)  
 public class TemplateModClient implements ClientModInitializer {
@@ -108,7 +107,7 @@ public class TemplateModClient implements ClientModInitializer {
         // Quantum Gateway wavy beacon beam is handled via BeaconBlockEntityRendererMixin
         
         // Entity Initialization
-        // Entity renderers updated for 1.21.10 rendering API (OrderedRenderCommandQueue)
+        // Entity renderers use OrderedRenderCommandQueue API
         EntityModelLayerRegistry.registerModelLayer(MODEL_ETHEREAL_ORB_LAYER, EtherealOrbEntityModel :: getTexturedModelData);
         EntityRendererRegistry.register(ModEntities.ETHEREAL_ORB, (context) -> new EtherealOrbEntityRenderer(context));
         // King Phantom renderer (custom phantom model, scaled 4x)
@@ -132,11 +131,6 @@ public class TemplateModClient implements ClientModInitializer {
         BlockEntityRendererFactories.register(ModBlockEntities.SHADOW_SHELF, ShelfBlockEntityRenderer::new);
 
         // Visual-only top handled via model geometry extending into y+1 (no extra block used)
-
-        // Client init complete
-        // cleaned debug log
-
-        // Item models override using built-in trim_type; no explicit predicate registration required
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             try {

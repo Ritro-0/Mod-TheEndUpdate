@@ -74,10 +74,6 @@ public final class ModItemGroups {
             
             entries.add(ModBlocks.ETHEREAL_BULB);
             
-            // Cursed bed
-            // TODO: Add CURSED_BED to ModBlocks.java
-            // entries.add(ModBlocks.CURSED_BED);
-            
             // Shadow wood set
             entries.add(ModBlocks.SHADOW_CRYPTOMYCOTA);
             entries.add(ModBlocks.SHADOW_UMBRACARP);
