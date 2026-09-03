@@ -1,0 +1,108 @@
+{
+  "entity.ethereal_orb.idle": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_idle",
+      "theendupdate:entity/ethereal_orb/orb_idle2"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.idle"
+  },
+  "entity.ethereal_orb.death": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_death"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.death"
+  },
+  "entity.ethereal_orb.loses_bulb": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_loses_bulb"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.loses_bulb"
+  },
+  "entity.ethereal_orb.tamed": {
+    "sounds": [
+      "theendupdate:entity/ethereal_orb/orb_tamed"
+    ],
+    "subtitle": "subtitle.theendupdate.ethereal_orb.tamed"
+  },
+  "entity.void_tardigrade.idle": {
+    "sounds": [
+      "theendupdate:entity/void_tardigrade/tardigrade_idle",
+      "theendupdate:entity/void_tardigrade/tardigrade_idle1"
+    ],
+    "subtitle": "subtitle.theendupdate.void_tardigrade.idle"
+  },
+  "entity.void_tardigrade.death": {
+    "sounds": [
+      "theendupdate:entity/void_tardigrade/tardigrade_death"
+    ],
+    "subtitle": "subtitle.theendupdate.void_tardigrade.death"
+  },
+  "entity.tetherling.idle": {
+    "sounds": [
+      "theendupdate:entity/tetherling/tetherling_idle"
+    ],
+    "subtitle": "subtitle.theendupdate.tetherling.idle"
+  },
+  "entity.tetherling.hurt": {
+    "sounds": [
+      "theendupdate:entity/tetherling/tetherling_hurt"
+    ],
+    "subtitle": "subtitle.theendupdate.tetherling.hurt"
+  },
+  "entity.tetherling.death": {
+    "sounds": [
+      "theendupdate:entity/tetherling/tetherling_death"
+    ],
+    "subtitle": "subtitle.theendupdate.tetherling.death"
+  },
+  "entity.tetherling.grab": {
+    "sounds": [
+      "theendupdate:entity/tetherling/tetherling_grab"
+    ],
+    "subtitle": "subtitle.theendupdate.tetherling.grab"
+  },
+  "entity.tetherling.yeet": {
+    "sounds": [
+      "theendupdate:entity/tetherling/tetherling_yeet"
+    ],
+    "subtitle": "subtitle.theendupdate.tetherling.yeet"
+  },
+  "entity.shadow_creaking.idle": {
+    "sounds": [
+      "theendupdate:entity/shadow_creaking/shadow_creaking_idle"
+    ],
+    "subtitle": "subtitle.theendupdate.shadow_creaking.idle"
+  },
+  "entity.shadow_creaking.hurt": {
+    "sounds": [
+      "theendupdate:entity/shadow_creaking/shadow_creaking_hurt"
+    ],
+    "subtitle": "subtitle.theendupdate.shadow_creaking.hurt"
+  },
+  "entity.shadow_creaking.death": {
+    "sounds": [
+      "theendupdate:entity/shadow_creaking/shadow_creaking_dies"
+    ],
+    "subtitle": "subtitle.theendupdate.shadow_creaking.death"
+  },
+  "entity.shadow_creaking.roar": {
+    "sounds": [
+      "theendupdate:entity/shadow_creaking/shadow_creaking_roars"
+    ],
+    "subtitle": "subtitle.theendupdate.shadow_creaking.roar"
+  },
+  "entity.shadow_creaking.spawn": {
+    "sounds": [
+      "theendupdate:entity/shadow_creaking/shadow_creaking_spawns"
+    ],
+    "subtitle": "subtitle.theendupdate.shadow_creaking.spawn"
+  },
+  "block.shadow_altar.lit": {
+    "sounds": [
+      "theendupdate:altar_lit"
+    ],
+    "subtitle": "subtitle.theendupdate.shadow_altar.lit"
+  }
+}
+
+

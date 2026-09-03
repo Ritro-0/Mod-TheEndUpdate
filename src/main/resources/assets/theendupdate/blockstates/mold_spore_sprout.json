@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "half=lower": { "model": "theendupdate:block/mold_spore_sprout_bottom" },
+    "half=upper": { "model": "theendupdate:block/mold_spore_sprout_top" }
+  }
+}
+
+

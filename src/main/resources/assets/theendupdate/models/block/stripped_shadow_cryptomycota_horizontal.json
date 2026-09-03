@@ -1,0 +1,11 @@
+{
+  "parent": "block/cube_column_horizontal",
+  "textures": {
+    "end": "theendupdate:block/stripped_shadow_cryptomycota_top",
+    "side": "theendupdate:block/stripped_shadow_cryptomycota_side"
+  }
+}
+
+
+
+

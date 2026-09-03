@@ -1,0 +1,23 @@
+{
+	"required": true,
+	"package": "com.theendupdate.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"TheEndUpdateClientMixin",
+		"CompassPropertyContextMixin",
+		"CompassAngleStateContextMixin",
+		"PlayerEntityGetDeathPosMixin",
+		"EntityRendererHasLabelMixin",
+		"CowEntityRenderStateMixin",
+		"MooshroomEntityRenderStateMixin",
+		"CowEntityRendererMixin",
+		"MooshroomEntityRendererMixin",
+		"BeaconBlockEntityRenderStateMixin",
+		"BeaconBlockEntityRendererMixin",
+		"EquipmentLayerRendererMixin",
+		"SoundEngineMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}

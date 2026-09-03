@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "powered=false": { "model": "theendupdate:block/ethereal_pressure_plate" },
+    "powered=true":  { "model": "theendupdate:block/ethereal_pressure_plate_down" }
+  }
+}
+
+

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "theendupdate:item/king_phantom_spawn_egg"
+  }
+}
+

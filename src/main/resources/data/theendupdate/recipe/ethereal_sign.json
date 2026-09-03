@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "PPP",
+    " S "
+  ],
+  "key": {
+    "P": "theendupdate:ethereal_planks",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "theendupdate:ethereal_sign",
+    "count": 3
+  }
+}
+

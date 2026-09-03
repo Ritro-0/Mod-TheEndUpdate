@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": { "model": "theendupdate:block/stripped_shadow_cryptomycota_horizontal", "x": 90, "y": 90 },
+    "axis=y": { "model": "theendupdate:block/stripped_shadow_cryptomycota" },
+    "axis=z": { "model": "theendupdate:block/stripped_shadow_cryptomycota_horizontal", "x": 90 }
+  }
+}
+
+
+
+

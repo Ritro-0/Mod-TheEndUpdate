@@ -1,0 +1,6 @@
+{
+  "parent": "block/button",
+  "textures": {
+    "texture": "theendupdate:block/ethereal_bulb"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.theendupdate.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CowEntityMixin",
+    "MooshroomEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": { "#": "theendupdate:voidstar_shard" },
+  "result": { "id": "theendupdate:voidstar_nugget", "count": 1 }
+}
+
+

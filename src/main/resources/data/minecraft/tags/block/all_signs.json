@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "theendupdate:ethereal_sign",
+    "theendupdate:ethereal_wall_sign",
+    "theendupdate:shadow_sign",
+    "theendupdate:shadow_wall_sign"
+  ]
+}
+

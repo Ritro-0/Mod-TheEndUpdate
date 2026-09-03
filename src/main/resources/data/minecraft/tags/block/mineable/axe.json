@@ -1,0 +1,42 @@
+{
+  "replace": false,
+  "values": [
+    "theendupdate:ethereal_sporocarp",
+    "theendupdate:ethereal_pustule",
+    "theendupdate:ethereal_planks",
+    "theendupdate:ethereal_stairs",
+    "theendupdate:ethereal_slab",
+    "theendupdate:ethereal_fence",
+    "theendupdate:ethereal_fence_gate",
+    "theendupdate:ethereal_door",
+    "theendupdate:ethereal_trapdoor",
+    "theendupdate:ethereal_button",
+    "theendupdate:ethereal_pressure_plate",
+    "theendupdate:ethereal_sign",
+    "theendupdate:ethereal_wall_sign",
+    "theendupdate:ethereal_hanging_sign",
+    "theendupdate:ethereal_wall_hanging_sign",
+    "theendupdate:ethereal_shelf",
+    "theendupdate:shadow_cryptomycota",
+    "theendupdate:shadow_umbracarp",
+    "theendupdate:stripped_shadow_cryptomycota",
+    "theendupdate:stripped_shadow_umbracarp",
+    "theendupdate:shadow_planks",
+    "theendupdate:shadow_stairs",
+    "theendupdate:shadow_slab",
+    "theendupdate:shadow_fence",
+    "theendupdate:shadow_fence_gate",
+    "theendupdate:shadow_door",
+    "theendupdate:shadow_trapdoor",
+    "theendupdate:shadow_button",
+    "theendupdate:shadow_pressure_plate",
+    "theendupdate:shadow_sign",
+    "theendupdate:shadow_wall_sign",
+    "theendupdate:shadow_hanging_sign",
+    "theendupdate:shadow_wall_hanging_sign",
+    "theendupdate:shadow_shelf",
+    "theendupdate:shadow_altar"
+  ]
+}
+
+

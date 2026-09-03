@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "facing=north,tip=false": { "model": "theendupdate:block/mold_crawl_plant_north" },
+    "facing=south,tip=false": { "model": "theendupdate:block/mold_crawl_plant_south" },
+    "facing=west,tip=false": { "model": "theendupdate:block/mold_crawl_plant_west" },
+    "facing=east,tip=false": { "model": "theendupdate:block/mold_crawl_plant_east" },
+
+    "facing=north,tip=true,tip_vines=false": { "model": "theendupdate:block/mold_crawl_plant_north" },
+    "facing=south,tip=true,tip_vines=false": { "model": "theendupdate:block/mold_crawl_plant_south" },
+    "facing=west,tip=true,tip_vines=false": { "model": "theendupdate:block/mold_crawl_plant_west" },
+    "facing=east,tip=true,tip_vines=false": { "model": "theendupdate:block/mold_crawl_plant_east" },
+
+    "facing=north,tip=true,tip_vines=true": { "model": "theendupdate:block/mold_crawl_vines_north" },
+    "facing=south,tip=true,tip_vines=true": { "model": "theendupdate:block/mold_crawl_vines_south" },
+    "facing=west,tip=true,tip_vines=true": { "model": "theendupdate:block/mold_crawl_vines_west" },
+    "facing=east,tip=true,tip_vines=true": { "model": "theendupdate:block/mold_crawl_vines_east" }
+  }
+}
+
+

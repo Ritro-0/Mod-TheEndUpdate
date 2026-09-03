@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "half=bottom,open=false,facing=north": { "model": "theendupdate:block/ethereal_trapdoor_bottom" },
+    "half=bottom,open=false,facing=south": { "model": "theendupdate:block/ethereal_trapdoor_bottom", "y": 180 },
+    "half=bottom,open=false,facing=west": { "model": "theendupdate:block/ethereal_trapdoor_bottom", "y": 270 },
+    "half=bottom,open=false,facing=east": { "model": "theendupdate:block/ethereal_trapdoor_bottom", "y": 90 },
+
+    "half=top,open=false,facing=north": { "model": "theendupdate:block/ethereal_trapdoor_top" },
+    "half=top,open=false,facing=south": { "model": "theendupdate:block/ethereal_trapdoor_top", "y": 180 },
+    "half=top,open=false,facing=west": { "model": "theendupdate:block/ethereal_trapdoor_top", "y": 270 },
+    "half=top,open=false,facing=east": { "model": "theendupdate:block/ethereal_trapdoor_top", "y": 90 },
+
+    "open=true,facing=north": { "model": "theendupdate:block/ethereal_trapdoor_open" },
+    "open=true,facing=south": { "model": "theendupdate:block/ethereal_trapdoor_open", "y": 180 },
+    "open=true,facing=west": { "model": "theendupdate:block/ethereal_trapdoor_open", "y": 270 },
+    "open=true,facing=east": { "model": "theendupdate:block/ethereal_trapdoor_open", "y": 90 }
+  }
+}
+
+

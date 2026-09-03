@@ -1,0 +1,39 @@
+{
+	"required": true,
+	"package": "com.theendupdate.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"AnvilScreenHandlerChoppingMixin",
+		"BiomeAccessMixin",
+		"BrewingIngredientSlotMixin",
+		"BrewingStandBlockEntityTickMixin",
+		"ChorusFlowerBlockBreakMixin",
+		"ChorusFlowerBlockMixin",
+		"ChorusFlowerEndStoneCompatMixin",
+		"ChorusPlantBlockMixin",
+		"ChorusPlantBlockStateMixin",
+		"ChorusPlantEndStoneCompatMixin",
+		"EndIslandDensityFunctionMixin",
+		"EndermanAvoidEtherealOrbMixin",
+		"EntityWallSlidingMixin",
+		"FabricEndBiomeOverridesMixin",
+		"ItemStackMiningSpeedMixin",
+		"ItemStackTrimMaterialsMixin",
+		"KingPhantomBeamDeflectionMixin",
+		"LeashKnotEntityMixin",
+		"MobEntityAccessor",
+		"PhantomAvoidPhantomWardMixin",
+		"PlayerEntityMiningSpeedMixin",
+		"RecoveryCompassUseMixin",
+		"SmithingForceTrimMixin",
+		"SpiderEntityAvoidChrysanthemumMixin",
+		"TheEndBiomeSourceMixin",
+		"TheEndUpdateMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

@@ -1,0 +1,9 @@
+{
+  "asset_name": "tardigrade_shell",
+  "description": {
+    "color": "#FFFFFF",
+    "translate": "trim_material.theendupdate.tardigrade_shell"
+  },
+  "ingredient": "theendupdate:tardigrade_shell_brick",
+  "item_model_index": 0.75
+}

@@ -1,0 +1,7 @@
+{
+  "base": { "potion": "minecraft:awkward" },
+  "ingredient": { "tag": "theendupdate:ender_chrysanthemum_reagents" },
+  "result": { "potion": "minecraft:weaving" }
+}
+
+

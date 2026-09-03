@@ -1,0 +1,7 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "theendupdate:item/tetherling_spawn_egg"
+  },
+  "minecraft:entity_type": "theendupdate:tetherling"
+}

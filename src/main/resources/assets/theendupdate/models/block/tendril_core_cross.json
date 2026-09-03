@@ -1,0 +1,8 @@
+{
+  "parent": "block/cross",
+  "textures": {
+    "cross": "theendupdate:block/tendril_core",
+    "particle": "theendupdate:block/tendril_core"
+  }
+}
+

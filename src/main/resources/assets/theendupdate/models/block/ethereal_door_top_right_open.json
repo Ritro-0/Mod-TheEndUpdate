@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/door_top_right_open",
+  "textures": {
+    "bottom": "theendupdate:block/ethereal_door_bottom",
+    "top": "theendupdate:block/ethereal_door_top"
+  }
+}
+
+

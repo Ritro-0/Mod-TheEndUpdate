@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=south": { "model": "theendupdate:block/ethereal_wall_sign" },
+    "facing=west": { "model": "theendupdate:block/ethereal_wall_sign", "y": 90 },
+    "facing=north": { "model": "theendupdate:block/ethereal_wall_sign", "y": 180 },
+    "facing=east": { "model": "theendupdate:block/ethereal_wall_sign", "y": 270 }
+  }
+}

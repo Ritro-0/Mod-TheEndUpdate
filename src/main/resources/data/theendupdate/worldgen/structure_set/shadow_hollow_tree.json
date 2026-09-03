@@ -1,0 +1,13 @@
+{
+  "structures": [
+    { "structure": "theendupdate:shadow_hollow_tree", "weight": 1 }
+  ],
+  "placement": {
+    "type": "random_spread",
+    "salt": 14652377,
+    "separation": 32,
+    "spacing": 64
+  }
+}
+
+

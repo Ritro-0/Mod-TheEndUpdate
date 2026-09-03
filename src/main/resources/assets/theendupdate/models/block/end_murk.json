@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "bottom": "theendupdate:block/end_murk_bottom",
+    "top": "theendupdate:block/end_murk_top",
+    "side": "theendupdate:block/end_murk_side"
+  }
+}
+
+
+

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "theendupdate:item/strawberry_ice_cream_cone"
+  }
+}
+

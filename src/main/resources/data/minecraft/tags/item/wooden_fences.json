@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:oak_fence",
+    "theendupdate:ethereal_fence",
+    "theendupdate:shadow_fence"
+  ]
+}
+
+

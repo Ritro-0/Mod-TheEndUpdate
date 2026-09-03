@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/door_top_left_open",
+  "textures": {
+    "bottom": "theendupdate:block/shadow_door_bottom",
+    "top": "theendupdate:block/shadow_door_top"
+  }
+}
+
+

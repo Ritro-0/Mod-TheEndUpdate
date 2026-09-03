@@ -1,0 +1,6 @@
+{
+  "base": { "potion": "minecraft:awkward" },
+  "ingredient": { "item": "minecraft:slime_ball" },
+  "result": { "potion": "theendupdate:phantom_ward" }
+}
+

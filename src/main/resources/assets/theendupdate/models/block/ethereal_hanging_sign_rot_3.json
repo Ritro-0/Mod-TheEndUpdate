@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_hanging_sign_rot_3",
+  "textures": {
+    "all": "theendupdate:block/ethereal_hanging_sign",
+    "particle": "theendupdate:block/ethereal_planks"
+  }
+}

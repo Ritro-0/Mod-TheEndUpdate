@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "VBV",
+    "BNB",
+    "VBV"
+  ],
+  "key": {
+    "V": "theendupdate:voidstar_block",
+    "B": "minecraft:beacon",
+    "N": "minecraft:netherite_ingot"
+  },
+  "result": { "id": "theendupdate:quantum_gateway", "count": 1 }
+}
+

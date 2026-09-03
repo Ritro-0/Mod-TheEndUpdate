@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_sign_rot_1",
+  "textures": {
+    "all": "theendupdate:block/ethereal_sign",
+    "particle": "theendupdate:block/ethereal_planks"
+  }
+}

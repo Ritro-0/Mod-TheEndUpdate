@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cross",
+  "render_type": "cutout",
+  "textures": {
+    "cross": "theendupdate:block/closed_ender_chrysanthemum"
+  }
+}
+
+
