@@ -498,8 +498,10 @@ public class ShadowCreakingEntity extends Monster {
 			return;
 		}
 		double dx = target.getX() - this.getX();
+		double dy = target.getY() - this.getY();
 		double dz = target.getZ() - this.getZ();
-		if (dx * dx + dz * dz > PUNCH_HIT_RANGE_SQ) {
+		// xz alone was letting this connect through the sky
+		if (dx * dx + dy * dy + dz * dz > PUNCH_HIT_RANGE_SQ) {
 			return;
 		}
 		DamageSource source = level.damageSources().mobAttack(this);
@@ -647,8 +649,9 @@ public class ShadowCreakingEntity extends Monster {
 	/** Shared punch-or-charge decision for aggro switches and the combat goal. */
 	void tryBeginCombatAttack(LivingEntity target) {
 		double dx = target.getX() - this.getX();
+		double dy = target.getY() - this.getY();
 		double dz = target.getZ() - this.getZ();
-		double distSq = dx * dx + dz * dz;
+		double distSq = dx * dx + dy * dy + dz * dz;
 		if (distSq <= PUNCH_RANGE_SQ) {
 			if (this.canStartPunch()) {
 				this.beginPunch(target);
@@ -836,7 +839,7 @@ public class ShadowCreakingEntity extends Monster {
 		this.spawnIntroTotalTicks = SPAWN_INTRO_TICKS;
 		this.spawnIntroTicksRemaining = SPAWN_INTRO_TICKS;
 		this.spawnRevealBoomPlayed = false;
-		this.setInvulnerable(true);
+		this.setPermanentlyInvulnerable(true);
 		this.setInvisible(true);
 		this.getNavigation().stop();
 		this.setDeltaMovement(0.0, 0.0, 0.0);
@@ -848,7 +851,7 @@ public class ShadowCreakingEntity extends Monster {
 		this.spawnIntroTotalTicks = SPAWN_REVEAL_TICKS;
 		this.spawnIntroTicksRemaining = SPAWN_REVEAL_TICKS;
 		this.spawnRevealBoomPlayed = false;
-		this.setInvulnerable(true);
+		this.setPermanentlyInvulnerable(true);
 		this.setInvisible(false);
 		this.getNavigation().stop();
 		this.setDeltaMovement(0.0, 0.0, 0.0);
@@ -948,7 +951,7 @@ public class ShadowCreakingEntity extends Monster {
 
 		if (--this.spawnIntroTicksRemaining <= 0) {
 			this.spawnIntroActive = false;
-			this.setInvulnerable(false);
+			this.setPermanentlyInvulnerable(false);
 			this.setInvisible(false);
 			this.onSpawnIntroComplete();
 			if (this.bossBarManager != null) {
@@ -1083,8 +1086,9 @@ public class ShadowCreakingEntity extends Monster {
 				LivingEntity target = this.getTarget();
 				if (target != null && target.isAlive()) {
 					double dx = this.getX() - target.getX();
+					double dy = this.getY() - target.getY();
 					double dz = this.getZ() - target.getZ();
-					if (dx * dx + dz * dz <= CHARGE_HIT_RANGE_SQ) {
+					if (dx * dx + dy * dy + dz * dz <= CHARGE_HIT_RANGE_SQ) {
 						this.chargeHitLanded = true;
 						this.landChargeHit(serverLevel, target);
 					}
@@ -1187,7 +1191,7 @@ public class ShadowCreakingEntity extends Monster {
 			this.setCombatPhase(PHASE_IDLE);
 			this.setLevitating(true);
 			this.setNoGravity(true);
-			this.setInvulnerable(true);
+			this.setPermanentlyInvulnerable(true);
 			this.getNavigation().stop();
 			this.setDeltaMovement(0.0, 0.0, 0.0);
 		}
@@ -1196,7 +1200,7 @@ public class ShadowCreakingEntity extends Monster {
 			this.getNavigation().stop();
 			this.setSprinting(false);
 			this.setJumping(false);
-			this.setInvulnerable(true);
+			this.setPermanentlyInvulnerable(true);
 
 			int elapsedTicks = LEVITATE_DURATION_TICKS - this.levitateTicksRemaining;
 			double yMove = elapsedTicks >= 40 ? LEVITATE_SPEED_PER_TICK : 0.0;
@@ -1229,7 +1233,7 @@ public class ShadowCreakingEntity extends Monster {
 			this.postLandFreezeTicks = POST_LAND_FREEZE_TICKS;
 			this.getNavigation().stop();
 			this.setDeltaMovement(0.0, 0.0, 0.0);
-			this.setInvulnerable(true);
+			this.setPermanentlyInvulnerable(true);
 			if (this.pendingLevitationLandingBlast) {
 				this.pendingLevitationLandingBlast = false;
 				this.spawnSoulBurstAndDamage();
@@ -1241,7 +1245,7 @@ public class ShadowCreakingEntity extends Monster {
 			this.setDeltaMovement(0.0, 0.0, 0.0);
 			this.postLandFreezeTicks--;
 			if (this.postLandFreezeTicks == 0) {
-				this.setInvulnerable(false);
+				this.setPermanentlyInvulnerable(false);
 				if (this.getTarget() instanceof Player player && player.isAlive()) {
 					this.setIsActive(true);
 				}
@@ -1504,7 +1508,7 @@ public class ShadowCreakingEntity extends Monster {
 		this.setLevitating(levitating);
 		this.setNoGravity(levitating);
 		if (levitating || this.postLandFreezeTicks > 0) {
-			this.setInvulnerable(true);
+			this.setPermanentlyInvulnerable(true);
 		}
 		this.entityData.set(COMBAT_PHASE, input.getByteOr("CombatPhase", PHASE_IDLE));
 		this.phaseTick = input.getIntOr("PhaseTick", 0);
@@ -1514,7 +1518,7 @@ public class ShadowCreakingEntity extends Monster {
 		this.spawnIntroActive = input.getBooleanOr("SpawnIntroActive", false);
 		this.spawnIntroTicksRemaining = input.getIntOr("SpawnIntroTicks", 0);
 		if (this.spawnIntroActive) {
-			this.setInvulnerable(true);
+			this.setPermanentlyInvulnerable(true);
 		}
 	}
 
@@ -1579,8 +1583,9 @@ public class ShadowCreakingEntity extends Monster {
 			this.creaking.getLookControl().setLookAt(target, 35.0F, 35.0F);
 
 			double dx = target.getX() - this.creaking.getX();
+			double dy = target.getY() - this.creaking.getY();
 			double dz = target.getZ() - this.creaking.getZ();
-			double distSq = dx * dx + dz * dz;
+			double distSq = dx * dx + dy * dy + dz * dz;
 
 			if (distSq <= PUNCH_RANGE_SQ) {
 				if (this.creaking.canStartPunch()) {

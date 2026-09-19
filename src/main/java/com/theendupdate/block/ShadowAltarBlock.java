@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import com.theendupdate.registry.ModBlockEntities;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -25,15 +24,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public class ShadowAltarBlock extends BaseEntityBlock {
-	public static final MapCodec<ShadowAltarBlock> CODEC = simpleCodec(ShadowAltarBlock::new);
 
 	public ShadowAltarBlock(Properties settings) {
 		super(settings);
-	}
-
-	@Override
-	public MapCodec<ShadowAltarBlock> codec() {
-		return CODEC;
 	}
 
 	@Override
@@ -44,7 +37,7 @@ public class ShadowAltarBlock extends BaseEntityBlock {
 	// Mapping-safe: omit @Override for cross-version compatibility
 	public PushReaction getPistonBehavior(BlockState state) {
 		// immovable - prevents corruption/duplication of the block entity
-		return PushReaction.BLOCK;
+		return PushReaction.IMMOVEABLE;
 	}
 
 	@Nullable
@@ -116,7 +109,7 @@ public class ShadowAltarBlock extends BaseEntityBlock {
 	}
 	
 	@Override
-	public void playerDestroy(net.minecraft.world.level.Level world, Player player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
+	public void playerDestroy(ServerLevel world, net.minecraft.server.level.ServerPlayer player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
 		if (!world.isClientSide() && world instanceof ServerLevel serverWorld) {
 			boolean hasSilkTouch = false;
 			try {

@@ -1,25 +1,30 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Removes vanilla chorus plants/flowers inside the Shadowlands region after
  * vegetation placement. Runs at TOP_LAYER_MODIFICATION to ensure cleanup.
  */
-public class ShadowlandsChorusCleanupFeature extends Feature<NoneFeatureConfiguration> {
-    public ShadowlandsChorusCleanupFeature(Codec<NoneFeatureConfiguration> codec) { super(codec); }
+public class ShadowlandsChorusCleanupFeature implements Feature {
+    public static final MapCodec<ShadowlandsChorusCleanupFeature> CODEC = MapCodec.unit(ShadowlandsChorusCleanupFeature::new);
+
+    public ShadowlandsChorusCleanupFeature() {}
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        BlockPos origin = context.origin();
+    public MapCodec<ShadowlandsChorusCleanupFeature> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         // only act within Shadowlands mask
         int chunkX = origin.getX() >> 4;
         int chunkZ = origin.getZ() >> 4;

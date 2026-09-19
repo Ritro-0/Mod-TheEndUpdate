@@ -841,7 +841,7 @@ public class EtherealOrbEntity extends PathfinderMob {
             BlockPos origin = EtherealOrbEntity.this.blockPosition();
             BlockPos closest = null;
             double closestDist = Double.MAX_VALUE;
-            for (BlockPos pos : BlockPos.withinManhattan(origin, SCAN_RADIUS, SCAN_RADIUS, SCAN_RADIUS)) {
+            for (BlockPos pos : BlockPos.withinManhattan(origin, SCAN_RADIUS)) {
                 if (!isHomeBlock(EtherealOrbEntity.this.level().getBlockState(pos))) continue;
                 double dist = origin.distSqr(pos);
                 if (dist < closestDist) {

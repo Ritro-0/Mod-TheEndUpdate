@@ -80,12 +80,37 @@ final class ShadowCreakingMobility {
 			return;
 		}
 		LivingEntity target = this.mob.getTarget();
+		LivingEntity voidAnchor = target != null && target.isAlive()
+			? target
+			: this.mob.level().getNearestPlayer(this.mob, 64.0);
+		if (voidAnchor != null && voidAnchor.isAlive() && this.isFallingIntoVoid()) {
+			// don't wait out cooldowns for this, void cheese is not allowed
+			this.mobilityGraceTicks = 0;
+			this.teleportCooldownTicks = 0;
+			this.tryBlinkTeleportToTarget(voidAnchor);
+			return;
+		}
 		if (target != null
 			&& target.isAlive()
 			&& !this.mob.isInCombatWarmup()
 			&& this.mob.getCombatPhase() == ShadowCreakingEntity.PHASE_IDLE) {
 			this.tickStuckTracking(target);
 		}
+	}
+
+	/** True when we're dropping and there's just open air under us for a while. */
+	private boolean isFallingIntoVoid() {
+		if (this.mob.onGround() || this.mob.isLevitating()) {
+			return false;
+		}
+		if (this.mob.getDeltaMovement().y > -0.05) {
+			return false;
+		}
+		double x = this.mob.getX();
+		double y = this.mob.getY();
+		double z = this.mob.getZ();
+		AABB under = new AABB(x - 0.35, y - 12.0, z - 0.35, x + 0.35, y, z + 0.35);
+		return this.mob.level().noCollision(under);
 	}
 
 	void tickStuckTracking(LivingEntity target) {

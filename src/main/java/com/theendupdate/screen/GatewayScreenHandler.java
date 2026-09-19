@@ -112,7 +112,7 @@ public class GatewayScreenHandler extends AbstractContainerMenu {
                 this.inventory.setItem(i, ItemStack.EMPTY);
                 boolean inserted = player.getInventory().add(stack);
                 if (!inserted && !stack.isEmpty()) {
-                    player.drop(stack, false);
+                    player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
                 }
             }
         }

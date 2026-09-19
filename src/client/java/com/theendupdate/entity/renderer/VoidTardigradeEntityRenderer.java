@@ -45,7 +45,7 @@ public class VoidTardigradeEntityRenderer extends MobRenderer<VoidTardigradeEnti
         matrices.translate(0.0, state.hoverBob, 0.0);
         matrices.scale(1.5F, 1.5F, 1.5F);
         matrices.translate(0.0, 0.1F, 0.0);
-        matrices.mulPose(new Quaternionf().rotationY(Mth.HALF_PI));
+        matrices.rotate(new Quaternionf().rotationY(Mth.HALF_PI));
         super.submit(state, matrices, commandQueue, cameraState);
         matrices.popPose();
     }

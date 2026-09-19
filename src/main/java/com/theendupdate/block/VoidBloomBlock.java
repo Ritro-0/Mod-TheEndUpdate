@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -17,7 +16,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 public class VoidBloomBlock extends net.minecraft.world.level.block.VegetationBlock {
-    public static final MapCodec<VoidBloomBlock> CODEC = simpleCodec(VoidBloomBlock::new);
     // direction TO the chorus bud this bloom is attached to (not from it)
     public static final Property<Direction> ATTACHMENT_FACE = BlockStateProperties.FACING;
 
@@ -39,11 +37,6 @@ public class VoidBloomBlock extends net.minecraft.world.level.block.VegetationBl
         super(settings);
         // defaults to sitting on top of something (attached downward)
         this.registerDefaultState(this.stateDefinition.any().setValue(ATTACHMENT_FACE, Direction.DOWN));
-    }
-
-    @Override
-    public MapCodec<? extends net.minecraft.world.level.block.VegetationBlock> codec() { 
-        return CODEC; 
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
@@ -14,17 +13,11 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class MoldSporeSproutBlock extends DoublePlantBlock {
-    public static final MapCodec<MoldSporeSproutBlock> CODEC = simpleCodec(MoldSporeSproutBlock::new);
 
     private static final VoxelShape OUTLINE_SHAPE = Shapes.box(0.125, 0.0, 0.125, 0.875, 1.0, 0.875);
 
     public MoldSporeSproutBlock(BlockBehaviour.Properties settings) {
         super(settings);
-    }
-
-    @Override
-    public MapCodec<MoldSporeSproutBlock> codec() {
-        return CODEC;
     }
 
     @Override

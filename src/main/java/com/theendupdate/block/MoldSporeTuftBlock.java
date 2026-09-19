@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
@@ -15,18 +14,12 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class MoldSporeTuftBlock extends VegetationBlock {
-    public static final MapCodec<MoldSporeTuftBlock> CODEC = simpleCodec(MoldSporeTuftBlock::new);
 
     // 14px wide (centered) x 15px tall
     private static final VoxelShape OUTLINE_SHAPE = Shapes.box(0.125, 0.0, 0.125, 0.875, 0.9375, 0.875);
 
     public MoldSporeTuftBlock(BlockBehaviour.Properties settings) {
         super(settings);
-    }
-
-    @Override
-    public MapCodec<MoldSporeTuftBlock> codec() {
-        return CODEC;
     }
 
     @Override

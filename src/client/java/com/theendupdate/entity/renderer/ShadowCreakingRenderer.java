@@ -149,13 +149,13 @@ public class ShadowCreakingRenderer extends MobRenderer<ShadowCreakingEntity, Sh
 		float pz = pivot[2] / 16.0F;
 		matrices.translate(px, py, pz);
 		if (rotZDeg != 0.0F) {
-			matrices.mulPose(Axis.ZP.rotationDegrees(rotZDeg));
+			matrices.rotateDegrees(Axis.ZP, rotZDeg);
 		}
 		if (rotYDeg != 0.0F) {
-			matrices.mulPose(Axis.YP.rotationDegrees(rotYDeg));
+			matrices.rotateDegrees(Axis.YP, rotYDeg);
 		}
 		if (rotXDeg != 0.0F) {
-			matrices.mulPose(Axis.XP.rotationDegrees(rotXDeg));
+			matrices.rotateDegrees(Axis.XP, rotXDeg);
 		}
 		matrices.translate(-px, -py, -pz);
 	}

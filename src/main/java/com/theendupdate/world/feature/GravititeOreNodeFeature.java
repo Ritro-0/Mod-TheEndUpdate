@@ -1,17 +1,18 @@
 package com.theendupdate.world.feature;
 
+import com.mojang.serialization.MapCodec;
+
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Places single Gravitite Ore nodes that are fully encased in End Stone.
@@ -21,20 +22,21 @@ import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConf
  *
  * Density target: ~0.5 nodes per chunk on average across eligible chunks.
  */
-public class GravititeOreNodeFeature extends Feature<NoneFeatureConfiguration> {
+public class GravititeOreNodeFeature implements Feature {
     /** Place candidates only in every Nth chunk along X/Z (~32 block spacing). */
     private static final int CHUNK_SPACING = 2;
 
-    public GravititeOreNodeFeature(com.mojang.serialization.Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+    public static final MapCodec<GravititeOreNodeFeature> CODEC = MapCodec.unit(GravititeOreNodeFeature::new);
+
+    public GravititeOreNodeFeature() {}
+
+    @Override
+    public MapCodec<GravititeOreNodeFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        RandomSource random = context.random();
-        BlockPos origin = context.origin();
-
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         ChunkPos chunkPos = ChunkPos.containing(origin);
         if (Math.floorMod(chunkPos.x(), CHUNK_SPACING) != 0
             || Math.floorMod(chunkPos.z(), CHUNK_SPACING) != 0) {
@@ -90,7 +92,7 @@ public class GravititeOreNodeFeature extends Feature<NoneFeatureConfiguration> {
         return true;
     }
 
-    /** Only scan the current chunk — never touches neighboring chunks. */
+    /** Only scan the current chunk â€” never touches neighboring chunks. */
     private static boolean chunkContainsGravitite(WorldGenLevel world, ChunkPos chunkPos, int bottomY, int topY) {
         int minX = chunkPos.getMinBlockX();
         int minZ = chunkPos.getMinBlockZ();

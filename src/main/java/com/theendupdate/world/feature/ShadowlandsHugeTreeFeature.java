@@ -1,32 +1,32 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.world.ShadowClawTreeGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import com.theendupdate.registry.ModBlocks;
 
 /**
  * Places massive shadow trees sparsely across Shadowlands. Designed for very low density but monumental scale.
  */
-public class ShadowlandsHugeTreeFeature extends Feature<NoneFeatureConfiguration> {
-    public ShadowlandsHugeTreeFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+public class ShadowlandsHugeTreeFeature implements Feature {
+    public static final MapCodec<ShadowlandsHugeTreeFeature> CODEC = MapCodec.unit(ShadowlandsHugeTreeFeature::new);
+
+    public ShadowlandsHugeTreeFeature() {}
+
+    @Override
+    public MapCodec<ShadowlandsHugeTreeFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        BlockPos origin = context.origin();
-        RandomSource random = context.random();
-
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         ChunkPos chunkPos = ChunkPos.containing(origin);
         int startX = chunkPos.getMinBlockX();
         int startZ = chunkPos.getMinBlockZ();

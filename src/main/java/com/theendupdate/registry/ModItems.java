@@ -6,13 +6,19 @@ import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.equipment.trim.TrimMaterial;
 
 public final class ModItems {
+    private static ResourceKey<TrimMaterial> trimMaterial(String path) {
+        return ResourceKey.create(Registries.TRIM_MATERIAL, Identifier.fromNamespaceAndPath(TheEndUpdate.MOD_ID, path));
+    }
+
     public static final Item VOIDSTAR_SHARD = registerItem(
         "voidstar_shard",
         key -> new Item(new Item.Properties().setId(key))
@@ -25,17 +31,17 @@ public final class ModItems {
 
     public static final Item VOIDSTAR_INGOT = registerItem(
         "voidstar_ingot",
-        key -> new Item(new Item.Properties().setId(key))
+        key -> new Item(new Item.Properties().setId(key).trimMaterial(trimMaterial("voidstar")))
     );
     
     public static final Item SPECTRAL_DEBRIS = registerItem(
         "spectral_debris",
-        key -> new Item(new Item.Properties().setId(key))
+        key -> new Item(new Item.Properties().setId(key).trimMaterial(trimMaterial("spectral")))
     );
 
     public static final Item SPECTRAL_CLUSTER = registerItem(
         "spectral_cluster",
-        key -> new Item(new Item.Properties().setId(key))
+        key -> new Item(new Item.Properties().setId(key).trimMaterial(trimMaterial("spectral_cluster")))
     );
 
     public static final Item TARDIGRADE_SHELL_BIT = registerItem(
@@ -45,7 +51,7 @@ public final class ModItems {
 
     public static final Item TARDIGRADE_SHELL_BRICK = registerItem(
         "tardigrade_shell_brick",
-        key -> new Item(new Item.Properties().setId(key))
+        key -> new Item(new Item.Properties().setId(key).trimMaterial(trimMaterial("tardigrade_shell")))
     );
 
     public static final Item ENCHANTED_BOOK_COVER = registerItem(
@@ -123,7 +129,7 @@ public final class ModItems {
 
     public static final Item PURE_GRAVITITE = registerItem(
         "pure_gravitite",
-        key -> new Item(new Item.Properties().setId(key).fireResistant())
+        key -> new Item(new Item.Properties().setId(key).fireResistant().trimMaterial(trimMaterial("gravitite")))
     );
 
     // used for brewing the Phantom Ward potion

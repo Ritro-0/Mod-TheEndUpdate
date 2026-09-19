@@ -1,43 +1,44 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.block.VoidBloomBlock;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * After vanilla places chorus plants/flowers, scan the chunk and attach Void Blooms
  * to mature chorus flowers using the same rules we use during growth from manual placement.
  */
-public class VoidBloomChorusAttachmentFeature extends Feature<NoneFeatureConfiguration> {
-    public VoidBloomChorusAttachmentFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+public class VoidBloomChorusAttachmentFeature implements Feature {
+    public static final MapCodec<VoidBloomChorusAttachmentFeature> CODEC = MapCodec.unit(VoidBloomChorusAttachmentFeature::new);
+
+    public VoidBloomChorusAttachmentFeature() {}
+
+    @Override
+    public MapCodec<VoidBloomChorusAttachmentFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        RandomSource random = context.random();
-
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         // suppress chorus attachments inside Shadowlands
-        int chunkX = context.origin().getX() >> 4;
-        int chunkZ = context.origin().getZ() >> 4;
+        int chunkX = origin.getX() >> 4;
+        int chunkZ = origin.getZ() >> 4;
         if (com.theendupdate.world.ShadowlandsRegion.isInRegion(chunkX, chunkZ)) {
             return false;
         }
 
-        ChunkPos chunkPos = ChunkPos.containing(context.origin());
+        ChunkPos chunkPos = ChunkPos.containing(origin);
         int startX = chunkPos.getMinBlockX();
         int startZ = chunkPos.getMinBlockZ();
 

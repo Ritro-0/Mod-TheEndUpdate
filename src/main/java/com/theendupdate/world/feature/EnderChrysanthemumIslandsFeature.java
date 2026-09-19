@@ -1,6 +1,6 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.block.EnderChrysanthemumBlock;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -8,6 +8,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
@@ -15,26 +16,26 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Scans exposed faces of End Stone within the chunk and attaches Ender Chrysanthemums
  * to any air-exposed faces with a ~0.8% chance per face. Intended for SMALL_END_ISLANDS.
  */
-public class EnderChrysanthemumIslandsFeature extends Feature<NoneFeatureConfiguration> {
+public class EnderChrysanthemumIslandsFeature implements Feature {
     private static final float PER_FACE_CHANCE = 0.008f; // 0.8%
 
-    public EnderChrysanthemumIslandsFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+    public static final MapCodec<EnderChrysanthemumIslandsFeature> CODEC = MapCodec.unit(EnderChrysanthemumIslandsFeature::new);
+
+    public EnderChrysanthemumIslandsFeature() {}
+
+    @Override
+    public MapCodec<EnderChrysanthemumIslandsFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        RandomSource random = context.random();
-
-        ChunkPos chunkPos = ChunkPos.containing(context.origin());
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
+        ChunkPos chunkPos = ChunkPos.containing(origin);
         int startX = chunkPos.getMinBlockX();
         int startZ = chunkPos.getMinBlockZ();
 

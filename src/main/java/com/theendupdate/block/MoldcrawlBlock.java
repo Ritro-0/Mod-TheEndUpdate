@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -16,6 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.BonemealableBlock;
+import net.minecraft.world.level.block.BonemealSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -32,7 +32,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Simplified implementation that mirrors twisting vines behavior, but along a horizontal direction.
  */
 public class MoldcrawlBlock extends Block implements BonemealableBlock {
-    public static final MapCodec<MoldcrawlBlock> CODEC = simpleCodec(MoldcrawlBlock::new);
 
     public static final Property<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty AGE = BlockStateProperties.AGE_25; // 0..25, like twisting vines
@@ -57,11 +56,6 @@ public class MoldcrawlBlock extends Block implements BonemealableBlock {
             .setValue(TIP_VINES, false)
             .setValue(NATURAL_CAP, 3)
         );
-    }
-
-    @Override
-    public MapCodec<? extends Block> codec() {
-        return CODEC;
     }
 
 
@@ -204,7 +198,7 @@ public class MoldcrawlBlock extends Block implements BonemealableBlock {
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state) {
+    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state, BonemealSource source) {
         // works from any segment - walk to the tip and check the next space, even if stunted
         Direction dir = state.getValue(FACING);
         BlockPos tip = pos;
@@ -216,7 +210,7 @@ public class MoldcrawlBlock extends Block implements BonemealableBlock {
     }
 
     @Override
-    public boolean isBonemealSuccess(Level world, RandomSource random, BlockPos pos, BlockState state) {
+    public boolean isBonemealSuccess(Level world, RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         // same condition as isValidBonemealTarget
         Direction dir = state.getValue(FACING);
         BlockPos tip = pos;
@@ -228,7 +222,7 @@ public class MoldcrawlBlock extends Block implements BonemealableBlock {
     }
 
     @Override
-    public void performBonemeal(ServerLevel world, RandomSource random, BlockPos pos, BlockState state) {
+    public void performBonemeal(ServerLevel world, RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         // 1-5 segments, similar to twisting vines burst growth, starting from the tip
         int segments = 1 + random.nextInt(5);
         tryGrowSegments(world, pos, state, segments, true);

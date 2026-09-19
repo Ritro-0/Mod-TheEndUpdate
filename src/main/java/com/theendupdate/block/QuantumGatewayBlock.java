@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
@@ -31,8 +30,6 @@ public class QuantumGatewayBlock extends BaseEntityBlock {
     // beam tint for this block, hex C26D84
     public static final float[] BEAM_TINT = new float[] { 0.7608f, 0.4275f, 0.5176f };
 
-    public static final MapCodec<QuantumGatewayBlock> CODEC = simpleCodec(QuantumGatewayBlock::new);
-
     // Matches the Blockbench model: 13px body, roof sparkle to 14px, corner pillars to 20px.
     private static final VoxelShape SHAPE = Shapes.or(
         Shapes.box(0.0, 0.0, 0.0, 1.0, 13.0 / 16.0, 1.0),
@@ -42,11 +39,6 @@ public class QuantumGatewayBlock extends BaseEntityBlock {
         Shapes.box(11.0 / 16.0, 13.0 / 16.0, 3.0 / 16.0, 13.0 / 16.0, 20.0 / 16.0, 5.0 / 16.0),
         Shapes.box(11.0 / 16.0, 13.0 / 16.0, 11.0 / 16.0, 13.0 / 16.0, 20.0 / 16.0, 13.0 / 16.0)
     );
-
-    @Override
-    public MapCodec<QuantumGatewayBlock> codec() {
-        return CODEC;
-    }
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
@@ -60,7 +52,7 @@ public class QuantumGatewayBlock extends BaseEntityBlock {
     // Mapping-safe: omit @Override for cross-version compatibility
     public PushReaction getPistonBehavior(BlockState state) {
         // immovable - pushing this would lose the inventory contents
-        return PushReaction.BLOCK;
+        return PushReaction.IMMOVEABLE;
     }
 
     @Override

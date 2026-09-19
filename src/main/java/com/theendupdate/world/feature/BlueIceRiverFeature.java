@@ -1,12 +1,13 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
@@ -14,19 +15,17 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Generates surface blue-ice rivers that cross End islands and continue as hanging
  * ice beyond island edges.
  *
- * - Width: 5–8 blocks
+ * - Width: 5â€“8 blocks
  * - Bias: higher density near biome edges, but not exclusive
  * - Span: paths are generated per supercell and typically run edge-to-edge
  * - Hanging: when a river meets an island edge, continue outward/down as frozen "drips"
  */
-public class BlueIceRiverFeature extends Feature<NoneFeatureConfiguration> {
+public class BlueIceRiverFeature implements Feature {
 	private static final int MAIN_ISLAND_EXCLUSION_RADIUS = 800;
 	private static final int SUPERCELL_SIZE = 128; // generate long paths per 128x128 area
 	private static final int PATH_CELLS_SPAN = 3;   // allow paths to run across 3 cells for coast-to-coast reach
@@ -54,19 +53,21 @@ public class BlueIceRiverFeature extends Feature<NoneFeatureConfiguration> {
 		double nx1 = n01 * (1.0 - fx) + n11 * fx;
 		double n = nx0 * (1.0 - fz) + nx1 * fz; // 0..1
 		int base = 7; // widened baseline
-		int range = 3; // +0..3 → 7..10
+		int range = 3; // +0..3 â†’ 7..10
 		return base + (int) Math.round(n * range);
 	}
 
-	public BlueIceRiverFeature(Codec<NoneFeatureConfiguration> codec) {
-		super(codec);
-	}
+	public static final MapCodec<BlueIceRiverFeature> CODEC = MapCodec.unit(BlueIceRiverFeature::new);
+
+    public BlueIceRiverFeature() {}
+
+    @Override
+    public MapCodec<BlueIceRiverFeature> codec() {
+        return CODEC;
+    }
 
 	@Override
-	public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-		WorldGenLevel world = context.level();
-		BlockPos origin = context.origin();
-
+	public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
 		// rivers are global, no mask suppression
 
 		int cx = origin.getX() + 8;

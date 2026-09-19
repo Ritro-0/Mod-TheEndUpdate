@@ -22,9 +22,8 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 /**
- * A phantom boss 4x the size of a normal phantom, with a custom texture set and a
- * two-phase fight: hovers above players and alternates swoop dives, a ranged beam
- * that can be deflected by melee, and (phase 2 only) a summon-4-phantoms dive attack.
+ * End boss with a custom Blockbench mesh: hovers above players and alternates swoop dives,
+ * a ranged beam that can be deflected by melee, and (phase 2 only) a summon-4-phantoms dive.
  */
 public class KingPhantomEntity extends Phantom {
     

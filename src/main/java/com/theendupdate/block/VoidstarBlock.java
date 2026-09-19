@@ -16,7 +16,7 @@ public class VoidstarBlock extends Block {
 
     // Mapping-safe: omit @Override for cross-version compatibility
     public PushReaction getPistonBehavior(BlockState state) {
-        return PushReaction.NORMAL; // pushable/pullable, like iron/gold blocks
+        return PushReaction.PUSH_PULL; // pushable/pullable, like iron/gold blocks
     }
 }
 

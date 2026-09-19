@@ -10,7 +10,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.HangingSignItem;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.SignItem;
+import net.minecraft.world.item.StandingAndWallBlockItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ButtonBlock;
@@ -660,6 +660,7 @@ public final class ModBlocks {
         key -> new com.theendupdate.block.QuantumGatewayBlock(
             BlockBehaviour.Properties
                 .ofFullCopy(Blocks.GLASS) // non-opaque so beacon beams still pass through
+                .pushReaction(net.minecraft.world.level.material.PushReaction.IMMOVEABLE)
                 .setId(key)
         )
     );
@@ -683,6 +684,7 @@ public final class ModBlocks {
                 .strength(50.0F, 1200.0F)
                 .sound(SoundType.WOOD) // wooden theme despite being nearly indestructible
                 .noOcclusion()
+                .pushReaction(net.minecraft.world.level.material.PushReaction.IMMOVEABLE)
                 .setId(key)
         )
     );
@@ -723,7 +725,7 @@ public final class ModBlocks {
                 .noOcclusion()
                 .isRedstoneConductor((state, world, pos) -> false)
                 .isSuffocating((state, world, pos) -> false)
-                .isViewBlocking((state, world, pos) -> false)
+                .isViewBlocking((state, world, pos, shape) -> false)
                 .setId(key)
         )
     );
@@ -771,15 +773,16 @@ public final class ModBlocks {
     private static void registerSignItem(String name, Block standingSign, Block wallSign) {
         Identifier id = Identifier.fromNamespaceAndPath(TheEndUpdate.MOD_ID, name);
         ResourceKey<Item> itemKey = ResourceKey.create(BuiltInRegistries.ITEM.key(), id);
-        Item.Properties itemSettings = new Item.Properties().setId(itemKey);
-        SignItem item = new SignItem(standingSign, wallSign, itemSettings);
+        Item.Properties itemSettings = new Item.Properties().setId(itemKey).signText();
+        StandingAndWallBlockItem item = new StandingAndWallBlockItem(
+            standingSign, wallSign, net.minecraft.core.Direction.DOWN, itemSettings);
         Registry.register(BuiltInRegistries.ITEM, id, item);
     }
 
     private static void registerHangingSignItem(String name, Block hangingSign, Block wallHangingSign) {
         Identifier id = Identifier.fromNamespaceAndPath(TheEndUpdate.MOD_ID, name);
         ResourceKey<Item> itemKey = ResourceKey.create(BuiltInRegistries.ITEM.key(), id);
-        Item.Properties itemSettings = new Item.Properties().setId(itemKey);
+        Item.Properties itemSettings = new Item.Properties().setId(itemKey).signText();
         HangingSignItem item = new HangingSignItem(hangingSign, wallHangingSign, itemSettings);
         Registry.register(BuiltInRegistries.ITEM, id, item);
     }

@@ -44,8 +44,8 @@ public final class ModEntities {
 		BuiltInRegistries.ENTITY_TYPE,
 		KING_PHANTOM_ID,
 		EntityType.Builder.of(KingPhantomEntity::new, MobCategory.MONSTER)
-			.sized(3.6f, 2.0f)
-			.eyeHeight(1.0f)
+			.sized(5.4f, 3.6f)
+			.eyeHeight(1.8f)
 			.clientTrackingRange(80)
 			.updateInterval(3)
 			.build(ResourceKey.create(Registries.ENTITY_TYPE, KING_PHANTOM_ID))

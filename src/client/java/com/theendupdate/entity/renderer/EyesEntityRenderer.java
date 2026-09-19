@@ -70,8 +70,8 @@ public class EyesEntityRenderer extends MobRenderer<EyesEntity, EyesRenderState,
     public void submit(EyesRenderState state, PoseStack matrices, SubmitNodeCollector commandQueue, CameraRenderState cameraState) {
         matrices.pushPose();
         matrices.translate(0.0F, MODEL_CENTER_Y, 0.0F);
-        matrices.mulPose(cameraState.orientation);
-        matrices.mulPose(Axis.YP.rotationDegrees(180.0F));
+        matrices.rotate(cameraState.orientation);
+        matrices.rotateDegrees(Axis.YP, 180.0F);
         matrices.scale(1.6F * state.displayScale, 1.6F * state.displayScale, 1.6F * state.displayScale);
         matrices.translate(0.0F, -MODEL_CENTER_Y, 0.0F);
         super.submit(state, matrices, commandQueue, cameraState);

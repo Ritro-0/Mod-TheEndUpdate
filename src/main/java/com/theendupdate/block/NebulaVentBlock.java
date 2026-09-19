@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import com.theendupdate.block.entity.NebulaVentBlockEntity;
 import com.theendupdate.registry.ModBlockEntities;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +37,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Features waterlogging support and emits particle-driven plumes via a block entity.
  */
 public class NebulaVentBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
-    public static final MapCodec<NebulaVentBlock> CODEC = simpleCodec(NebulaVentBlock::new);
 
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     public static final Property<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -61,11 +59,6 @@ public class NebulaVentBlock extends BaseEntityBlock implements SimpleWaterlogge
         this.registerDefaultState(this.stateDefinition.any()
             .setValue(WATERLOGGED, false)
             .setValue(FACING, Direction.SOUTH));
-    }
-
-    @Override
-    public MapCodec<NebulaVentBlock> codec() {
-        return CODEC;
     }
 
     @Override

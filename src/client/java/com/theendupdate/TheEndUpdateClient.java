@@ -48,7 +48,7 @@ public class TheEndUpdateClient implements ClientModInitializer {
         MenuScreens.register(ModScreenHandlers.GATEWAY, GatewayScreen::new);
 
         ModelLayerRegistry.registerModelLayer(EtherealOrbEntityModel.ETHEREAL_ORB_LAYER, EtherealOrbEntityModel::getTexturedModelData);
-        ModelLayerRegistry.registerModelLayer(KingPhantomEntityModel.LAYER_LOCATION, KingPhantomEntityModel::getTexturedModelData);
+        ModelLayerRegistry.registerModelLayer(KingPhantomEntityModel.LAYER_LOCATION, KingPhantomEntityModel::createBodyLayer);
         ModelLayerRegistry.registerModelLayer(VoidTardigradeEntityModel.LAYER_LOCATION, VoidTardigradeEntityModel::getLayerDefinition);
         ModelLayerRegistry.registerModelLayer(TetherlingEntityModel.LAYER_LOCATION, TetherlingEntityModel::getTexturedModelData);
         ModelLayerRegistry.registerModelLayer(EyesEntityModel.LAYER_LOCATION, EyesEntityModel::createBodyLayer);

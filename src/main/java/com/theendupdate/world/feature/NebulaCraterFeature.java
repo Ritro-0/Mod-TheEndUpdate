@@ -1,46 +1,46 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.block.NebulaVentBlock;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Carves crater-shaped bowls into End island surfaces, lines them with tuff, and nests a nebula vent at the center.
  *
- * - Radius varies 5–15 blocks depending on available terrain.
+ * - Radius varies 5â€“15 blocks depending on available terrain.
  * - Walls and floors are coated with tuff to highlight the crater silhouette.
  * - Always places exactly one nebula vent block at the crater floor center.
  */
-public class NebulaCraterFeature extends Feature<NoneFeatureConfiguration> {
+public class NebulaCraterFeature implements Feature {
 	private static final int MIN_RADIUS = 5;
 	private static final int MAX_RADIUS = 15;
-	private static final int CHUNK_GRID = 6; // 6 chunks ≈ 96 blocks spacing
+	private static final int CHUNK_GRID = 6; // 6 chunks â‰ˆ 96 blocks spacing
 	private static final float CELL_CRATER_CHANCE = 0.55f; // at most one crater per cell, ~55% spawn rate
 	private static final int MAIN_ISLAND_EXCLUSION_RADIUS = 400;
 	private static final int MAX_SAMPLE_HEIGHT_VARIATION = 18;
 
-	public NebulaCraterFeature(Codec<NoneFeatureConfiguration> codec) {
-		super(codec);
-	}
+	public static final MapCodec<NebulaCraterFeature> CODEC = MapCodec.unit(NebulaCraterFeature::new);
+
+    public NebulaCraterFeature() {}
+
+    @Override
+    public MapCodec<NebulaCraterFeature> codec() {
+        return CODEC;
+    }
 
 	@Override
-	public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-		WorldGenLevel world = context.level();
-		RandomSource random = context.random();
-		BlockPos origin = context.origin();
-
+	public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
 		ChunkPos chunkPos = ChunkPos.containing(origin);
 		int chunkMinX = chunkPos.getMinBlockX();
 		int chunkMinZ = chunkPos.getMinBlockZ();

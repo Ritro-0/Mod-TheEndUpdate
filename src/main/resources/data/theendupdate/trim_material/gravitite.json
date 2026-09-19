@@ -1,11 +1,7 @@
 {
-  "asset_name": "gravitite",
   "description": {
     "color": "#7A00FF",
     "translate": "trim_material.theendupdate.gravitite"
   },
-  "ingredient": "theendupdate:pure_gravitite",
-  "item_model_index": 0.2
+  "palette_id": "theendupdate:trim/gravitite"
 }
-
-

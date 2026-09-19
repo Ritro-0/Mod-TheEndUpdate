@@ -263,14 +263,14 @@ public class MembraneBlock extends Block {
                         new com.theendupdate.entity.KingPhantomEntity(com.theendupdate.registry.ModEntities.KING_PHANTOM, world);
                     
                     kingPhantom.setPos(spawnPos.getX() + 0.5, spawnPos.getY() + 1, spawnPos.getZ() + 0.5);
-                    kingPhantom.setInvulnerable(true);
+                    kingPhantom.setPermanentlyInvulnerable(true);
                     world.addFreshEntity(kingPhantom);
                     
                     // invulnerable for its first 2 seconds so nothing kills it on spawn
                     world.getServer().execute(() -> {
                         try {
                             Thread.sleep(2000);
-                            kingPhantom.setInvulnerable(false);
+                            kingPhantom.setPermanentlyInvulnerable(false);
                         } catch (InterruptedException e) {
                         }
                     });

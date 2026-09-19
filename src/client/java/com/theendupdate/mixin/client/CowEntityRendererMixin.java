@@ -80,7 +80,7 @@ public abstract class CowEntityRendererMixin {
             matrices.pushPose();
             theendupdate$didPushMilkingPose = true;
             matrices.translate(0.0f, 0.9f, 0.0f);
-            matrices.mulPose(new Quaternionf().rotationX(rotationAngle * Mth.DEG_TO_RAD));
+            matrices.rotate(new Quaternionf().rotationX(rotationAngle * Mth.DEG_TO_RAD));
             matrices.translate(0.0f, -0.9f, 0.0f);
         }
     }

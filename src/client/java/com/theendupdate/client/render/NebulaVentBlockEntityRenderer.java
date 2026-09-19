@@ -74,18 +74,12 @@ public class NebulaVentBlockEntityRenderer implements BlockEntityRenderer<Nebula
     ) {
         matrices.pushPose();
         matrices.translate(0.5f, 1.5f / 16.0f, 0.5f);
-        matrices.mulPose(Axis.YP.rotationDegrees(BASE_ANGLE + state.spinAngle));
+        matrices.rotateDegrees(Axis.YP, BASE_ANGLE + state.spinAngle);
         matrices.translate(-0.5f, -1.5f / 16.0f, -0.5f);
-        queue.submitModelPart(
-            VENT,
-            matrices,
-            LAYER,
-            state.lightCoords,
-            OverlayTexture.NO_OVERLAY,
-            null,
-            -1,
-            state.breakProgress
-        );
+        queue.submitModelPart(VENT, matrices, LAYER, state.lightCoords, OverlayTexture.NO_OVERLAY, null, -1);
+        if (state.breakProgress != null) {
+            queue.submitCrumblingOverlay(VENT, matrices, LAYER, state.lightCoords, OverlayTexture.NO_OVERLAY, -1, state.breakProgress);
+        }
         matrices.popPose();
     }
 }

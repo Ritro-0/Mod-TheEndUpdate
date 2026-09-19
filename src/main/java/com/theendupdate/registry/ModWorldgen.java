@@ -1,13 +1,20 @@
 package com.theendupdate.registry;
 
 import com.theendupdate.TheEndUpdate;
-import com.theendupdate.world.feature.MirelandsGroundCoverFeature;
 import com.theendupdate.world.feature.BlueIceRiverFeature;
-import com.theendupdate.world.feature.ShadowlandsGroundCoverFeature;
-import com.theendupdate.world.feature.ShadowlandsChorusCleanupFeature;
-import com.theendupdate.world.feature.ShadowlandsHugeTreeFeature;
-import com.theendupdate.world.feature.ShadowClawScatterFeature;
+import com.theendupdate.world.feature.EndCrystalSpikeFeature;
+import com.theendupdate.world.feature.EnderChrysanthemumIslandsFeature;
+import com.theendupdate.world.feature.GravititeOreNodeFeature;
+import com.theendupdate.world.feature.MirelandsGroundCoverFeature;
+import com.theendupdate.world.feature.MirelandsTreeClusterFeature;
+import com.theendupdate.world.feature.MirelandsVegetationFeature;
 import com.theendupdate.world.feature.NebulaCraterFeature;
+import com.theendupdate.world.feature.ShadowClawScatterFeature;
+import com.theendupdate.world.feature.ShadowlandsChorusCleanupFeature;
+import com.theendupdate.world.feature.ShadowlandsGroundCoverFeature;
+import com.theendupdate.world.feature.ShadowlandsHugeTreeFeature;
+import com.theendupdate.world.feature.VoidBloomChorusAttachmentFeature;
+import com.mojang.serialization.MapCodec;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.biome.v1.TheEndBiomes;
@@ -20,94 +27,27 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 /**
  * Registers End biome distribution and ground cover features for Mirelands.
  */
 public final class ModWorldgen {
-    public static final Feature<NoneFeatureConfiguration> MIRELANDS_GROUND_COVER = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("mirelands_ground_cover"),
-        new MirelandsGroundCoverFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> MIRELANDS_VEGETATION = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("mirelands_vegetation"),
-        new com.theendupdate.world.feature.MirelandsVegetationFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> MIRELANDS_TREE_CLUSTER = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("mirelands_tree_cluster"),
-        new com.theendupdate.world.feature.MirelandsTreeClusterFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    // scans for chorus flowers and attaches void blooms to mature buds
-    public static final Feature<NoneFeatureConfiguration> VOID_BLOOM_CHORUS_ATTACHMENT = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("void_bloom_chorus_attachment"),
-        new com.theendupdate.world.feature.VoidBloomChorusAttachmentFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    // generates on island faces, outside the main island radius
-    public static final Feature<NoneFeatureConfiguration> END_CRYSTAL_SPIKE = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("end_crystal_spike"),
-        new com.theendupdate.world.feature.EndCrystalSpikeFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> GRAVITITE_ORE_NODE = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("gravitite_ore_node"),
-        new com.theendupdate.world.feature.GravititeOreNodeFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> ENDER_CHRYSANTHEMUM_ISLANDS = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("ender_chrysanthemum_islands"),
-        new com.theendupdate.world.feature.EnderChrysanthemumIslandsFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> BLUE_ICE_RIVER = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("blue_ice_river"),
-        new BlueIceRiverFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> NEBULA_CRATER = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("nebula_crater"),
-        new NebulaCraterFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> SHADOWLANDS_GROUND_COVER = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("shadowlands_ground_cover"),
-        new ShadowlandsGroundCoverFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> SHADOWLANDS_CHORUS_CLEANUP = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("shadowlands_chorus_cleanup"),
-        new ShadowlandsChorusCleanupFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-    public static final Feature<NoneFeatureConfiguration> SHADOWLANDS_HUGE_TREE = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("shadowlands_huge_tree"),
-        new ShadowlandsHugeTreeFeature(NoneFeatureConfiguration.CODEC)
-    );
-
-
-    public static final Feature<NoneFeatureConfiguration> SHADOW_CLAW_SCATTER = Registry.register(
-        BuiltInRegistries.FEATURE,
-        id("shadow_claw_scatter"),
-        new ShadowClawScatterFeature(NoneFeatureConfiguration.CODEC)
-    );
-
+    static {
+        registerFeatureType("mirelands_ground_cover", MirelandsGroundCoverFeature.CODEC);
+        registerFeatureType("mirelands_vegetation", MirelandsVegetationFeature.CODEC);
+        registerFeatureType("mirelands_tree_cluster", MirelandsTreeClusterFeature.CODEC);
+        registerFeatureType("void_bloom_chorus_attachment", VoidBloomChorusAttachmentFeature.CODEC);
+        registerFeatureType("end_crystal_spike", EndCrystalSpikeFeature.CODEC);
+        registerFeatureType("gravitite_ore_node", GravititeOreNodeFeature.CODEC);
+        registerFeatureType("ender_chrysanthemum_islands", EnderChrysanthemumIslandsFeature.CODEC);
+        registerFeatureType("blue_ice_river", BlueIceRiverFeature.CODEC);
+        registerFeatureType("nebula_crater", NebulaCraterFeature.CODEC);
+        registerFeatureType("shadowlands_ground_cover", ShadowlandsGroundCoverFeature.CODEC);
+        registerFeatureType("shadowlands_chorus_cleanup", ShadowlandsChorusCleanupFeature.CODEC);
+        registerFeatureType("shadowlands_huge_tree", ShadowlandsHugeTreeFeature.CODEC);
+        registerFeatureType("shadow_claw_scatter", ShadowClawScatterFeature.CODEC);
+    }
 
     public static final ResourceKey<PlacedFeature> MIRELANDS_GROUND_COVER_PLACED_KEY = ResourceKey.create(
         Registries.PLACED_FEATURE, id("mirelands_ground_cover"));
@@ -247,11 +187,13 @@ public final class ModWorldgen {
 		);
 	}
 
+	private static void registerFeatureType(String path, MapCodec<? extends Feature> codec) {
+		Registry.register(BuiltInRegistries.FEATURE_TYPE, id(path), codec);
+	}
+
 	private static Identifier id(String path) {
 		return Identifier.fromNamespaceAndPath(TheEndUpdate.MOD_ID, path);
 	}
 
 	private ModWorldgen() {}
 }
-
-

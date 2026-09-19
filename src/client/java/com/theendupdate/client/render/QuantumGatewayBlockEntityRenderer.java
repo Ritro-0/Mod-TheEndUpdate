@@ -105,9 +105,9 @@ public class QuantumGatewayBlockEntityRenderer implements BlockEntityRenderer<Qu
         for (int i = 0; i < QuantumGatewayBlockEntity.MOVING_SPARKLES; i++) {
             matrices.pushPose();
             matrices.translate(0.5f, INNER_Y + state.bob, 0.5f);
-            matrices.mulPose(Axis.XP.rotationDegrees(INNER_BASE_ROT[i][0] + state.rotX[i]));
-            matrices.mulPose(Axis.YP.rotationDegrees(INNER_BASE_ROT[i][1] + state.rotY[i]));
-            matrices.mulPose(Axis.ZP.rotationDegrees(INNER_BASE_ROT[i][2] + state.rotZ[i]));
+            matrices.rotateDegrees(Axis.XP, INNER_BASE_ROT[i][0] + state.rotX[i]);
+            matrices.rotateDegrees(Axis.YP, INNER_BASE_ROT[i][1] + state.rotY[i]);
+            matrices.rotateDegrees(Axis.ZP, INNER_BASE_ROT[i][2] + state.rotZ[i]);
             submitCube(queue, matrices, INNER_CUBE, SOLID_LAYER, FULL_BRIGHT, state);
             submitCube(queue, matrices, INNER_GLOW, GLOW_LAYER, FULL_BRIGHT, state);
             matrices.popPose();
@@ -127,15 +127,9 @@ public class QuantumGatewayBlockEntityRenderer implements BlockEntityRenderer<Qu
         int light,
         QuantumGatewayRenderState state
     ) {
-        queue.submitModelPart(
-            part,
-            matrices,
-            layer,
-            light,
-            OverlayTexture.NO_OVERLAY,
-            null,
-            -1,
-            state.breakProgress
-        );
+        queue.submitModelPart(part, matrices, layer, light, OverlayTexture.NO_OVERLAY, null, -1);
+        if (state.breakProgress != null) {
+            queue.submitCrumblingOverlay(part, matrices, layer, light, OverlayTexture.NO_OVERLAY, -1, state.breakProgress);
+        }
     }
 }

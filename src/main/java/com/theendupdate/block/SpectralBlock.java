@@ -24,7 +24,7 @@ public class SpectralBlock extends Block {
 
     // Mapping-safe: omit @Override for cross-version compatibility
     public PushReaction getPistonBehavior(BlockState state) {
-        return PushReaction.NORMAL; // pushable/pullable, like glowstone
+        return PushReaction.PUSH_PULL; // pushable/pullable, like glowstone
     }
 
     @Override
@@ -51,7 +51,7 @@ public class SpectralBlock extends Block {
     }
 
     @Override
-    public void playerDestroy(net.minecraft.world.level.Level world, Player player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
+    public void playerDestroy(ServerLevel world, net.minecraft.server.level.ServerPlayer player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
         if (!world.isClientSide()) {
             boolean hasSilk = false;
             int fortuneLevel = 0;

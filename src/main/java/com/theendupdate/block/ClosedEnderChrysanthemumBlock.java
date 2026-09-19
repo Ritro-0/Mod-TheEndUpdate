@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -17,7 +16,6 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class ClosedEnderChrysanthemumBlock extends VegetationBlock {
-	public static final MapCodec<ClosedEnderChrysanthemumBlock> CODEC = simpleCodec(ClosedEnderChrysanthemumBlock::new);
 	public static final Property<Direction> ATTACHMENT_FACE = BlockStateProperties.FACING;
 
 	// Dimensions: 6x14 px (width x height)
@@ -38,11 +36,6 @@ public class ClosedEnderChrysanthemumBlock extends VegetationBlock {
 		super(settings);
 		this.registerDefaultState(this.stateDefinition.any()
 			.setValue(ATTACHMENT_FACE, Direction.DOWN));
-	}
-
-	@Override
-	public MapCodec<? extends VegetationBlock> codec() {
-		return CODEC;
 	}
 
 	@Override

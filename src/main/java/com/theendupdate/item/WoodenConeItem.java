@@ -60,12 +60,12 @@ public class WoodenConeItem extends Item {
             } else {
                 stack.shrink(1);
                 if (!user.getInventory().add(iceCream)) {
-                    user.drop(iceCream, false);
+                    user.drop(iceCream, false, net.minecraft.util.Prediction.SERVER_ONLY);
                 }
             }
         } else {
             if (!user.getInventory().add(iceCream)) {
-                user.drop(iceCream, false);
+                user.drop(iceCream, false, net.minecraft.util.Prediction.SERVER_ONLY);
             }
         }
 

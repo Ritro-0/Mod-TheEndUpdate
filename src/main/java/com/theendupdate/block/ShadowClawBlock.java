@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import com.theendupdate.world.ShadowClawTreeGenerator;
 import com.theendupdate.registry.ModBlocks;
 import java.util.HashMap;
@@ -16,6 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.BonemealableBlock;
+import net.minecraft.world.level.block.BonemealSource;
 import net.minecraft.world.level.block.VegetationBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -27,7 +27,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Shadow Claw - a sapling-like plant that grows a massive shadow tree.
  */
 public class ShadowClawBlock extends VegetationBlock implements BonemealableBlock {
-    public static final MapCodec<ShadowClawBlock> CODEC = simpleCodec(ShadowClawBlock::new);
 
     // Variant (0..3) selects one of four textures/models on placement
     public static final IntegerProperty VARIANT = IntegerProperty.create("variant", 0, 3);
@@ -37,11 +36,6 @@ public class ShadowClawBlock extends VegetationBlock implements BonemealableBloc
     public ShadowClawBlock(Properties settings) {
         super(settings);
         this.registerDefaultState(this.stateDefinition.any().setValue(VARIANT, 0));
-    }
-
-    @Override
-    public MapCodec<? extends VegetationBlock> codec() {
-        return CODEC;
     }
 
     @Override
@@ -112,18 +106,18 @@ public class ShadowClawBlock extends VegetationBlock implements BonemealableBloc
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state) {
+    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state, BonemealSource source) {
         return true;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level world, RandomSource random, BlockPos pos, BlockState state) {
+    public boolean isBonemealSuccess(Level world, RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         // needs the 3x3 cluster, plus a chance gate so bonemeal isn't guaranteed (vanilla-like)
         return findClusterAnchor(world, pos) != null && random.nextFloat() < 0.45f;
     }
 
     @Override
-    public void performBonemeal(ServerLevel world, RandomSource random, BlockPos pos, BlockState state) {
+    public void performBonemeal(ServerLevel world, RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         // needs a 3x3 of saplings, unlike dark oak's 2x2
         BlockPos anchor = findClusterAnchor(world, pos);
         if (anchor == null) {

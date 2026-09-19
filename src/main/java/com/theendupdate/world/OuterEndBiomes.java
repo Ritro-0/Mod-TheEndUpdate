@@ -13,7 +13,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.levelgen.DensityFunction;
 
 /**
  * Cached biome holders and the final outer-End biome pick used by mixins.
@@ -102,7 +101,7 @@ public final class OuterEndBiomes {
 
         int sampleX = (sectionX * 2 + 1) * 8;
         int sampleZ = (sectionZ * 2 + 1) * 8;
-        double erosion = sampler.erosion().compute(new DensityFunction.SinglePointContext(sampleX, blockY, sampleZ));
+        double erosion = sampler.erosion().sampleValue(sampleX, blockY, sampleZ);
         return pick(OuterEndLayout.familyAt(blockX, blockZ), bandFromErosion(erosion));
     }
 

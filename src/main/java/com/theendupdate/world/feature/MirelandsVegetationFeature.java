@@ -1,12 +1,13 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.registry.ModWorldgen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
@@ -14,24 +15,23 @@ import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Scatters mold vegetation on Mirelands islands. Places a mix of mold_spore, mold_spore_tuft,
  * and mold_spore_sprout atop end_mire and mold_block. Designed to feel dense but passable.
  */
-public class MirelandsVegetationFeature extends Feature<NoneFeatureConfiguration> {
-    public MirelandsVegetationFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+public class MirelandsVegetationFeature implements Feature {
+    public static final MapCodec<MirelandsVegetationFeature> CODEC = MapCodec.unit(MirelandsVegetationFeature::new);
+
+    public MirelandsVegetationFeature() {}
+
+    @Override
+    public MapCodec<MirelandsVegetationFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        BlockPos origin = context.origin();
-        RandomSource random = context.random();
-
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         ChunkPos chunkPos = ChunkPos.containing(origin);
         int startX = chunkPos.getMinBlockX();
         int startZ = chunkPos.getMinBlockZ();

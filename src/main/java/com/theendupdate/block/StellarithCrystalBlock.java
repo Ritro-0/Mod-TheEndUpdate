@@ -29,11 +29,11 @@ public class StellarithCrystalBlock extends Block {
 
     // Mapping-safe: omit @Override for cross-version compatibility
     public PushReaction getPistonBehavior(BlockState state) {
-        return PushReaction.NORMAL; // pushable/pullable
+        return PushReaction.PUSH_PULL; // pushable/pullable
     }
 
     @Override
-    public void playerDestroy(net.minecraft.world.level.Level world, Player player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
+    public void playerDestroy(ServerLevel world, net.minecraft.server.level.ServerPlayer player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool) {
         if (!world.isClientSide()) {
             // manual drops: silk touch -> block itself, else 1-5 shards (weighted to 3-5) with fortune bonus
             boolean hasSilk = false;

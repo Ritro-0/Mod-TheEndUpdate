@@ -1,35 +1,35 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.world.OuterEndLayout;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 /**
  * Loosely scatters Shadow Claw plants across Shadowlands surfaces.
  */
-public class ShadowClawScatterFeature extends Feature<NoneFeatureConfiguration> {
-    public ShadowClawScatterFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+public class ShadowClawScatterFeature implements Feature {
+    public static final MapCodec<ShadowClawScatterFeature> CODEC = MapCodec.unit(ShadowClawScatterFeature::new);
+
+    public ShadowClawScatterFeature() {}
+
+    @Override
+    public MapCodec<ShadowClawScatterFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        RandomSource random = context.random();
-        BlockPos origin = context.origin();
-
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         ChunkPos chunkPos = ChunkPos.containing(origin);
         int startX = chunkPos.getMinBlockX();
         int startZ = chunkPos.getMinBlockZ();

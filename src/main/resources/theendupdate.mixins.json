@@ -5,8 +5,6 @@
 	"mixins": [
 		"AnvilScreenHandlerChoppingMixin",
 		"BiomeAccessMixin",
-		"BrewingIngredientSlotMixin",
-		"BrewingStandBlockEntityTickMixin",
 		"ChorusFlowerBlockBreakMixin",
 		"ChorusFlowerBlockMixin",
 		"ChorusFlowerEndStoneCompatMixin",

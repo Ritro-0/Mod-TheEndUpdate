@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import com.theendupdate.world.TendrilSporeTreeGenerator;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.world.level.block.*;
@@ -20,6 +19,7 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BonemealableBlock;
+import net.minecraft.world.level.block.BonemealSource;
 import net.minecraft.world.level.block.VegetationBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -36,7 +36,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * When fully mature, grows into a Tendril Spore tree
  */
 public class TendrilCoreBlock extends VegetationBlock implements BonemealableBlock {
-    public static final MapCodec<TendrilCoreBlock> CODEC = simpleCodec(TendrilCoreBlock::new);
     
     // 0-7, grows into tree at 7
     public static final IntegerProperty AGE = BlockStateProperties.AGE_7;
@@ -52,11 +51,6 @@ public class TendrilCoreBlock extends VegetationBlock implements BonemealableBlo
         this.registerDefaultState(this.stateDefinition.any()
             .setValue(AGE, 0)
             .setValue(STUNTED, false));
-    }
-
-    @Override
-    public MapCodec<? extends VegetationBlock> codec() {
-        return CODEC;
     }
 
     @Override
@@ -127,17 +121,17 @@ public class TendrilCoreBlock extends VegetationBlock implements BonemealableBlo
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state) {
+    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state, BonemealSource source) {
         return !state.getValue(STUNTED) && state.getValue(AGE) < 7;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level world, RandomSource random, BlockPos pos, BlockState state) {
+    public boolean isBonemealSuccess(Level world, RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         return !state.getValue(STUNTED) && state.getValue(AGE) < 7;
     }
 
     @Override
-    public void performBonemeal(ServerLevel world, RandomSource random, BlockPos pos, BlockState state) {
+    public void performBonemeal(ServerLevel world, RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         if (!state.getValue(STUNTED)) {
             int age = state.getValue(AGE);
             if (age < 7) {

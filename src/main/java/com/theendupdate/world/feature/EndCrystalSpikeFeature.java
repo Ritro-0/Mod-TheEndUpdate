@@ -1,6 +1,6 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.block.StellarithCrystalBlock;
 import com.theendupdate.registry.ModBlocks;
 import java.util.ArrayList;
@@ -9,13 +9,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -23,20 +22,21 @@ import net.minecraft.world.phys.Vec3;
  * Spikes are 4-9 blocks long, taper with distance, and have an Astral Remnant base
  * transitioning to Stellarith Crystal.
  */
-public class EndCrystalSpikeFeature extends Feature<NoneFeatureConfiguration> {
+public class EndCrystalSpikeFeature implements Feature {
     private static final int MAIN_ISLAND_EXCLUSION_RADIUS = 1100; // blocks
     private static final boolean DEBUG_SHULKER_SPAWNS = false; // logs spike anchor placements when true
 
-    public EndCrystalSpikeFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+    public static final MapCodec<EndCrystalSpikeFeature> CODEC = MapCodec.unit(EndCrystalSpikeFeature::new);
+
+    public EndCrystalSpikeFeature() {}
+
+    @Override
+    public MapCodec<EndCrystalSpikeFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        RandomSource random = context.random();
-        BlockPos origin = context.origin();
-
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         // spikes are global, no mask suppression here
 
         // exclude the dragon fight area (central island vicinity)

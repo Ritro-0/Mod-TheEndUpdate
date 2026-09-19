@@ -1,31 +1,34 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Shadowlands ground cover: Converts the exposed top End Stone to End Murk wherever there is air above.
  * Runs as a TOP_LAYER_MODIFICATION placed feature.
  */
-public class ShadowlandsGroundCoverFeature extends Feature<NoneFeatureConfiguration> {
-    public ShadowlandsGroundCoverFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+public class ShadowlandsGroundCoverFeature implements Feature {
+    public static final MapCodec<ShadowlandsGroundCoverFeature> CODEC = MapCodec.unit(ShadowlandsGroundCoverFeature::new);
+
+    public ShadowlandsGroundCoverFeature() {}
+
+    @Override
+    public MapCodec<ShadowlandsGroundCoverFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        BlockPos origin = context.origin();
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         // no RandomSource needed, placement is a strict air-only rule now
 
         // injected only into Shadowlands biomes via BiomeModifications, no region scan needed here

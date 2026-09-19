@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
@@ -16,17 +15,11 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
  * but placement is directional via the AXIS property just like logs/wood.
  */
 public class EtherealPustuleBlock extends RotatedPillarBlock {
-    public static final MapCodec<EtherealPustuleBlock> CODEC = simpleCodec(EtherealPustuleBlock::new);
     public static final EnumProperty<Direction.Axis> AXIS = BlockStateProperties.AXIS;
 
     public EtherealPustuleBlock(Properties settings) {
         super(settings);
         this.registerDefaultState(this.stateDefinition.any().setValue(AXIS, Direction.Axis.Y));
-    }
-
-    @Override
-    public MapCodec<? extends RotatedPillarBlock> codec() {
-        return CODEC;
     }
 
     @Override

@@ -3,7 +3,8 @@ package com.theendupdate;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.fabricmc.fabric.api.registry.CompostableRegistry;
+import net.fabricmc.fabric.api.item.v1.BlockTransformerHelper;
+import net.fabricmc.fabric.api.item.v1.DefaultItemComponentEvents;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -25,10 +26,15 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.Compostable;
+import net.minecraft.world.item.component.CookingFuel;
 import net.minecraft.world.item.equipment.trim.ArmorTrim;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.storage.loot.providers.number.floats.ContextFloatProviders;
+import net.minecraft.world.level.storage.loot.providers.number.floats.ResolvableFloat;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableInt;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.fabricmc.fabric.api.registry.FuelValueEvents;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,19 +64,7 @@ public class TheEndUpdate implements ModInitializer {
         com.theendupdate.registry.ModPotions.register();
         com.theendupdate.registry.ModItems.registerModItems();
         
-        // brewing recipes reference potions, so must come after ModPotions.register()
-        net.fabricmc.fabric.api.registry.FabricPotionBrewingBuilder.BUILD.register(builder -> {
-            builder.addMix(
-                net.minecraft.world.item.alchemy.Potions.AWKWARD,
-                net.minecraft.world.item.Items.SLIME_BALL,
-                com.theendupdate.registry.ModPotions.PHANTOM_WARD
-            );
-            builder.addMix(
-                com.theendupdate.registry.ModPotions.PHANTOM_WARD,
-                net.minecraft.world.item.Items.REDSTONE,
-                com.theendupdate.registry.ModPotions.LONG_PHANTOM_WARD
-            );
-        });
+        // brewing recipes are datapack JSON under data/*/recipe/brewing/
         com.theendupdate.registry.ModSounds.register();
         com.theendupdate.registry.ModParticles.registerModParticles();
         com.theendupdate.registry.ModEntities.registerModEntities();
@@ -78,61 +72,61 @@ public class TheEndUpdate implements ModInitializer {
         com.theendupdate.registry.ModWorldgen.registerAll();
         com.theendupdate.network.EndFlashNetworking.registerServerReceiver();
         
-        net.fabricmc.fabric.api.registry.StrippableBlockRegistry.register(
+        BlockTransformerHelper.registerStripping(
             com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA,
             com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA
         );
-        net.fabricmc.fabric.api.registry.StrippableBlockRegistry.register(
+        BlockTransformerHelper.registerStripping(
             com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP,
             com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP
         );
-        
-        // ethereal wood burns at half the normal rate
-        FuelValueEvents.BUILD.register((builder, context) -> {
-            final int ETHEREAL_FUEL_TICKS = context.baseSmeltTime() / 2;
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SPOROCARP, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PUSTULE, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_STAIRS, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SLAB, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE_GATE, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_DOOR, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_TRAPDOOR, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_BUTTON, context.baseSmeltTime() / 4);
-            builder.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PRESSURE_PLATE, context.baseSmeltTime() / 4);
-            // shadow wood uses the same fuel values as ethereal
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA, ETHEREAL_FUEL_TICKS);
-            builder.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP, ETHEREAL_FUEL_TICKS);
-        });
 
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_SPORE.asItem(), 0.30f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_SPORE_TUFT.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_SPORE_SPROUT.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_SPROUT.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_THREAD.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.TENDRIL_CORE.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_BUTTON.asItem(), 0.70f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PRESSURE_PLATE.asItem(), 0.72f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE.asItem(), 0.74f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE_GATE.asItem(), 0.74f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_TRAPDOOR.asItem(), 0.74f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_DOOR.asItem(), 0.74f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SLAB.asItem(), 0.78f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_STAIRS.asItem(), 0.82f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS.asItem(), 0.85f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_SPOROCARP.asItem(), 0.85f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ETHEREAL_PUSTULE.asItem(), 0.85f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA.asItem(), 0.85f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP.asItem(), 0.85f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA.asItem(), 0.85f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP.asItem(), 0.85f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_BLOCK.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.ENDER_CHRYSANTHEMUM.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.VOID_BLOOM.asItem(), 0.65f);
-        CompostableRegistry.INSTANCE.add(com.theendupdate.registry.ModBlocks.MOLD_CRAWL.asItem(), 0.50f);
+        // ethereal/shadow wood burns at half the normal base smelt time (200 → 100)
+        final int etherealFuelTicks = 100;
+        final int etherealButtonFuelTicks = 50;
+        DefaultItemComponentEvents.MODIFY.register(ctx -> {
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_SPOROCARP, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_PUSTULE, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_STAIRS, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_SLAB, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE_GATE, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_DOOR, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_TRAPDOOR, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_BUTTON, etherealButtonFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_PRESSURE_PLATE, etherealButtonFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA, etherealFuelTicks);
+            setCookingFuel(ctx, com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP, etherealFuelTicks);
+
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.MOLD_SPORE, 30);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.MOLD_SPORE_TUFT, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.MOLD_SPORE_SPROUT, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.TENDRIL_SPROUT, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.TENDRIL_THREAD, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.TENDRIL_CORE, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_BUTTON, 70);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_PRESSURE_PLATE, 72);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE, 74);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_FENCE_GATE, 74);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_TRAPDOOR, 74);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_DOOR, 74);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_SLAB, 78);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_STAIRS, 82);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_PLANKS, 85);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_SPOROCARP, 85);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ETHEREAL_PUSTULE, 85);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.SHADOW_CRYPTOMYCOTA, 85);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.SHADOW_UMBRACARP, 85);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_CRYPTOMYCOTA, 85);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.STRIPPED_SHADOW_UMBRACARP, 85);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.MOLD_BLOCK, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.ENDER_CHRYSANTHEMUM, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.VOID_BLOOM, 65);
+            setCompostable(ctx, com.theendupdate.registry.ModBlocks.MOLD_CRAWL, 50);
+        });
 
         // catches cases where mold_crawl should react but vanilla neighbor updates get skipped
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
@@ -234,6 +228,23 @@ public class TheEndUpdate implements ModInitializer {
                 MAGNET_TICKERS.keySet().removeIf(uuid -> !tickPlayers.contains(uuid));
             }
         });
+    }
+
+    private static void setCookingFuel(DefaultItemComponentEvents.ModifyContext ctx, Block block, int burnTicks) {
+        ctx.modify(block.asItem(), builder -> builder.set(
+            DataComponents.COOKING_FUEL,
+            new CookingFuel(
+                new ResolvableInt.Constant(burnTicks),
+                ResolvableFloat.fromKey(ContextFloatProviders.COOKING_DEFAULT_SPEED_MULTIPLIER)
+            )
+        ));
+    }
+
+    private static void setCompostable(DefaultItemComponentEvents.ModifyContext ctx, Block block, int layers) {
+        ctx.modify(block.asItem(), builder -> builder.set(
+            DataComponents.COMPOSTABLE,
+            new Compostable(new ResolvableInt.Constant(layers))
+        ));
     }
 
     private static boolean theendupdate$shouldExecute(Object2IntOpenHashMap<UUID> ticker, UUID uuid, int interval) {

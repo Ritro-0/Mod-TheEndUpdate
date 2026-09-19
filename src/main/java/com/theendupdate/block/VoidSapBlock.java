@@ -1,6 +1,5 @@
 package com.theendupdate.block;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.world.level.block.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -28,7 +27,6 @@ import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.TheEndUpdate;
 
 public class VoidSapBlock extends Block implements net.minecraft.world.level.block.BonemealableBlock {
-    public static final MapCodec<VoidSapBlock> CODEC = simpleCodec(VoidSapBlock::new);
     
     public static final BooleanProperty NORTH = BlockStateProperties.NORTH;
     public static final BooleanProperty SOUTH = BlockStateProperties.SOUTH;
@@ -60,11 +58,6 @@ public class VoidSapBlock extends Block implements net.minecraft.world.level.blo
     protected void onPlace(BlockState state, net.minecraft.world.level.Level world, BlockPos pos, BlockState oldState, boolean notify) {
         super.onPlace(state, world, pos, oldState, notify);
         // wall sliding is handled by EntityWallSlidingMixin, no scheduled ticks needed here
-    }
-
-    @Override
-    public MapCodec<? extends Block> codec() {
-        return CODEC;
     }
 
     @Override
@@ -142,17 +135,17 @@ public class VoidSapBlock extends Block implements net.minecraft.world.level.blo
 
     // bonemeal, mirrors MoldBlock
     @Override
-    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state) {
+    public boolean isValidBonemealTarget(LevelReader world, BlockPos pos, BlockState state, BonemealSource source) {
         return true;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level world, net.minecraft.util.RandomSource random, BlockPos pos, BlockState state) {
+    public boolean isBonemealSuccess(Level world, net.minecraft.util.RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel world, net.minecraft.util.RandomSource random, BlockPos pos, BlockState state) {
+    public void performBonemeal(ServerLevel world, net.minecraft.util.RandomSource random, BlockPos pos, BlockState state, BonemealSource source) {
         trySpread(state, world, pos, random);
     }
 

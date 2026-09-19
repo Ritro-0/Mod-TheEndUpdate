@@ -16,7 +16,7 @@ public class ShadowPlanksBlock extends Block {
 
     // Mapping-safe: omit @Override for cross-version compatibility
     public PushReaction getPistonBehavior(BlockState state) {
-        return PushReaction.NORMAL; // pushable/pullable, like all planks
+        return PushReaction.PUSH_PULL; // pushable/pullable, like all planks
     }
 }
 

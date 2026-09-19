@@ -1,12 +1,13 @@
 package com.theendupdate.world.feature;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.theendupdate.registry.ModBlocks;
 import com.theendupdate.registry.ModWorldgen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
@@ -14,24 +15,23 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
  * Replaces the top exposed End Stone on Mirelands islands with 80% End Mire and 20% Mold Block.
  * Runs as a TOP_LAYER_MODIFICATION placed feature.
  */
-public class MirelandsGroundCoverFeature extends Feature<NoneFeatureConfiguration> {
-    public MirelandsGroundCoverFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+public class MirelandsGroundCoverFeature implements Feature {
+    public static final MapCodec<MirelandsGroundCoverFeature> CODEC = MapCodec.unit(MirelandsGroundCoverFeature::new);
+
+    public MirelandsGroundCoverFeature() {}
+
+    @Override
+    public MapCodec<MirelandsGroundCoverFeature> codec() {
+        return CODEC;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel world = context.level();
-        BlockPos origin = context.origin();
-        RandomSource random = context.random();
-
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
         ChunkPos chunkPos = ChunkPos.containing(origin);
         int startX = chunkPos.getMinBlockX();
         int startZ = chunkPos.getMinBlockZ();

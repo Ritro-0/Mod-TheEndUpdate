@@ -16,7 +16,7 @@ public class AstralRemnantBlock extends Block {
 
     // Mapping-safe: omit @Override for cross-version compatibility
     public PushReaction getPistonBehavior(BlockState state) {
-        return PushReaction.NORMAL; // pushable/pullable
+        return PushReaction.PUSH_PULL; // pushable/pullable
     }
 }
 

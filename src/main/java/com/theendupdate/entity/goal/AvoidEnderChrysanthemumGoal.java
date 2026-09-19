@@ -75,7 +75,7 @@ public class AvoidEnderChrysanthemumGoal extends Goal {
         BlockPos closest = null;
         double closestDistSq = Double.MAX_VALUE;
 
-        for (BlockPos p : BlockPos.withinManhattan(origin, r, r, r)) {
+        for (BlockPos p : BlockPos.withinManhattan(origin, r)) {
             if (origin.distSqr(p) > (long) r * r) continue;
             BlockState state = world.getBlockState(p);
             if (state.is(ModBlocks.ENDER_CHRYSANTHEMUM) || state.is(ModBlocks.POTTED_ENDER_CHRYSANTHEMUM)) {

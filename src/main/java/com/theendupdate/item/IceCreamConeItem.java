@@ -43,7 +43,7 @@ public class IceCreamConeItem extends Item {
 			return cone;
 		} else {
 			if (!player.getInventory().add(cone)) {
-				player.drop(cone, false);
+				player.drop(cone, false, net.minecraft.util.Prediction.SERVER_ONLY);
 			}
 			return result;
 		}
